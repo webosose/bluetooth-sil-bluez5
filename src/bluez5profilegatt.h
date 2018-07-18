@@ -59,6 +59,7 @@ public:
 	bool stopNotify();
 	std::vector<unsigned char> characteristicReadValue(uint16_t offset = 0);
 	bool characteristicWriteValue(const std::vector<unsigned char> &characteristicValue, uint16_t offset = 0);
+	BluetoothGattCharacteristicProperties readProperties();
 	std::string parentObjectPath;
 	std::string objectPath;
 	BluetoothGattCharacteristic characteristic;
@@ -154,7 +155,7 @@ private:
 
 	typedef std::unordered_map <id_type, std::unique_ptr<Bluez5GattLocalDescriptor>> GattLocalDescriptorsMap;
 	typedef std::unordered_map <id_type, std::unique_ptr<Bluez5GattLocalCharacteristic>> GattLocalCharacteristicsMap;
-	typedef std::unordered_map<id_type, std::unique_ptr <Bluez5GattLocalService>> GattLocalServiceMap;
+	typedef std::unordered_map <id_type, std::unique_ptr<Bluez5GattLocalService>> GattLocalServiceMap;
 
 	class Bluez5GattLocalDescriptor
 	{
@@ -174,6 +175,10 @@ private:
 			mCharObject(object)
 			{
 			}
+			static gboolean onHandleReadValue(BluezGattCharacteristic1* obj, GDBusMethodInvocation *invocation, GVariant *arg_options, gpointer user_data);
+			static gboolean onHandleWriteValue(BluezGattCharacteristic1* interface, GDBusMethodInvocation *invocation, GVariant *arg_value, GVariant *arg_options, gpointer user_data);
+			static gboolean onHandleStartNotify(BluezGattCharacteristic1 *object, GDBusMethodInvocation *invocation, gpointer user_data);
+			static gboolean onHandleStopNotify(BluezGattCharacteristic1 *object, GDBusMethodInvocation *invocation, gpointer user_data);
 			GDBusObject *mCharObject;
 			BluezGattCharacteristic1 *mInterface;
 			GattLocalDescriptorsMap mDescriptors;
@@ -189,7 +194,6 @@ private:
 			GDBusObject *mServiceObject;
 			GattLocalCharacteristicsMap mCharacteristics;
 			BluezGattService1 *mServiceInterface;
-			uint16_t serviceId;
 	};
 
 	class BluezGattLocalApplication
@@ -204,6 +208,7 @@ private:
 	void removeLocalServices(Bluez5GattLocalService *service);
 	void removeLocalCharacteristics(Bluez5GattLocalService *service);
 	void removeLocalDescriptors(Bluez5GattLocalCharacteristic *characteristic);
+	void notifyCharacteristicValueChanged(uint16_t serverId, uint16_t serviceId, BluetoothGattCharacteristic characteristic, uint16_t charId);
 	GattLocalDescriptorsMap* getLocalDescriptorList(uint16_t appId, uint16_t serviceId, uint16_t charId);
 	void updatePropertyFlags(const BluetoothGattCharacteristic &characteristic, const char **propertyflags);
 	void updatePermissionFlags(const BluetoothGattDescriptor &descriptor, const char **permissionflags);

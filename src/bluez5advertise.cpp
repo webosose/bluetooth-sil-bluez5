@@ -188,9 +188,6 @@ void Bluez5Advertise::advertiseManufacturerData(std::vector<uint8_t> data)
 	arguments = g_variant_builder_end(builder);
 	g_variant_builder_unref(builder);
 
-	g_print(g_variant_print(arguments,TRUE));
-	g_print(g_variant_get_type_string(arguments));
-
 	bluez_leadvertisement1_set_manufacturer_data(mInterface, arguments);
 }
 

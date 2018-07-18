@@ -59,17 +59,39 @@ std::vector<unsigned char>convertArrayByteGVariantToVector(GVariant *iter)
 	return value;
 }
 
-GVariant* convertVectorToArrayByteGVariant(const std::vector<unsigned char> &vectorValue)
+std::vector<std::string>convertArrayStringGVariantToVector(GVariant *iter)
 {
-	gsize size;
-	guint i;
-	unsigned int vectorSize = vectorValue.size();
-	guchar const *vectorData = vectorValue.data();
+	GVariantIter *valueIter;
+	char *valueByte;
+	std::vector<std::string> value;
+
+	g_variant_get (iter,
+                   "as",
+                   &valueIter);
+
+	if (valueIter == nullptr)
+	{
+		return value;
+	}
+
+	while (g_variant_iter_loop(valueIter, "s", &valueByte)) {
+		std::string s(valueByte);
+		value.push_back(s);
+	}
+
+	g_variant_iter_free(valueIter);
+	return value;
+}
+
+GVariant* convertVectorToArrayByteGVariant(const std::vector<unsigned char> &v)
+{
+	unsigned int vectorSize = v.size();
+	guchar const *vectorData = v.data();
 
 	GVariantBuilder *builder = g_variant_builder_new (G_VARIANT_TYPE ("ay"));
 	if (vectorData != NULL)
 	{
-		for (i = 0; i < vectorSize; i++)
+		for (unsigned int i = 0; i < vectorSize; i++)
 			g_variant_builder_add(builder, "y", vectorData[i]);
 	}
 	GVariant *variantValue = g_variant_builder_end(builder);

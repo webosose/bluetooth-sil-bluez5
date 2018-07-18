@@ -26,14 +26,14 @@
 
 const std::string BLUETOOTH_PROFILE_GATT_UUID = "00001801-0000-1000-8000-00805f9b34fb";
 
-const std::map <BluetoothGattCharacteristic::Property, std::string> characteristicPropertyMap = {
-	{ BluetoothGattCharacteristic::PROPERTY_BROADCAST, "broadcast"},
-	{ BluetoothGattCharacteristic::PROPERTY_READ, "read"},
-	{ BluetoothGattCharacteristic::PROPERTY_WRITE_WITHOUT_RESPONSE, "write-without-response"},
-	{ BluetoothGattCharacteristic::PROPERTY_WRITE, "write"},
-	{ BluetoothGattCharacteristic::PROPERTY_NOTIFY, "notify"},
-	{ BluetoothGattCharacteristic::PROPERTY_INDICATE, "indicate"},
-	{ BluetoothGattCharacteristic::PROPERTY_AUTHENTICATED_SIGNED_WRITES, "authenticated-signed-writes"}
+const std::map <std::string, BluetoothGattCharacteristic::Property> characteristicPropertyMap = {
+	{ "read", BluetoothGattCharacteristic::PROPERTY_READ},
+	{ "broadcast", BluetoothGattCharacteristic::PROPERTY_BROADCAST},
+	{ "write-without-response", BluetoothGattCharacteristic::PROPERTY_WRITE_WITHOUT_RESPONSE},
+	{ "write", BluetoothGattCharacteristic::PROPERTY_WRITE},
+	{ "notify", BluetoothGattCharacteristic::PROPERTY_NOTIFY},
+	{ "indicate", BluetoothGattCharacteristic::PROPERTY_INDICATE},
+	{ "authenticated-signed-writes", BluetoothGattCharacteristic::PROPERTY_AUTHENTICATED_SIGNED_WRITES}
 };
 
 const std::map <BluetoothGattPermission, std::string> descriptorPermissionMap = {
@@ -242,34 +242,6 @@ void Bluez5ProfileGatt::createRemoteGattCharacteristic(const std::string &charac
 		gattCharacteristic.setUuid(BluetoothUuid(uuid));
 
 
-	const char *const * characteristicFlags = bluez_gatt_characteristic1_get_flags(interface);
-	if (characteristicFlags) {
-		BluetoothGattCharacteristicProperties properties = 0;
-		int len = sizeof(characteristicFlags)/sizeof(char*);
-		for (int n = 0; n < len; n++) {
-			if (!strcmp(characteristicFlags[n], "broadcast"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_BROADCAST;
-			else if (!strcmp(characteristicFlags[n], "read"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_READ;
-			else if (!strcmp(characteristicFlags[n], "write-without-response"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_WRITE_WITHOUT_RESPONSE;
-			else if (!strcmp(characteristicFlags[n], "write"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_WRITE;
-			else if (!strcmp(characteristicFlags[n], "notify"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_NOTIFY;
-			else if (!strcmp(characteristicFlags[n], "indicate"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_INDICATE;
-			else if (!strcmp(characteristicFlags[n], "authenticated-signed-writes"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_AUTHENTICATED_SIGNED_WRITES;
-			else if (!strcmp(characteristicFlags[n], "indicate"))
-				properties |= BluetoothGattCharacteristic::Property::PROPERTY_EXTENDED_PROPERTIES;
-		}
-		gattCharacteristic.setProperties(properties);
-	}
-
-	bool notifying = bluez_gatt_characteristic1_get_notifying(interface);
-	bool writeAcquired = bluez_gatt_characteristic1_get_write_acquired(interface);
-	bool notifyAcquired = bluez_gatt_characteristic1_get_notify_acquired(interface);
 
 	GattRemoteCharacteristic* gattRemoteCharacteristic = new (std::nothrow) GattRemoteCharacteristic(interface, this);
 	if (!gattRemoteCharacteristic)
@@ -281,6 +253,7 @@ void Bluez5ProfileGatt::createRemoteGattCharacteristic(const std::string &charac
 	if (gattServiceObjectPath)
 		gattRemoteCharacteristic->parentObjectPath = gattServiceObjectPath;
 
+	gattCharacteristic.setProperties(gattRemoteCharacteristic->readProperties());
 	gattRemoteCharacteristic->characteristic = gattCharacteristic;
 
 	if (gattRemoteCharacteristic->characteristic.isPropertySet(BluetoothGattCharacteristic::Property::PROPERTY_READ))
@@ -935,6 +908,7 @@ void Bluez5ProfileGatt::readCharacteristic(const uint16_t &connId, const Bluetoo
 	GattRemoteCharacteristic* remoteChar = findCharacteristic(remoteService, characteristics);
 	if (remoteChar && remoteChar->characteristic.isPropertySet(BluetoothGattCharacteristic::Property::PROPERTY_READ))
 	{
+		readCharacteristicValue.setProperties(remoteChar->readProperties());
 		BluetoothGattValue charValue = remoteChar->characteristicReadValue();
 		readCharacteristicValue.setUuid(characteristics);
 		readCharacteristicValue.setValue(charValue);
@@ -1110,6 +1084,7 @@ void Bluez5ProfileGatt::readCharacteristic(const std::string &address, const Blu
 	GattRemoteCharacteristic* remoteChar = findCharacteristic(remoteService, characteristic);
 	if (remoteChar && remoteChar->characteristic.isPropertySet(BluetoothGattCharacteristic::Property::PROPERTY_READ))
 	{
+		readCharacteristicValue.setProperties(remoteChar->readProperties());
 		BluetoothGattValue charValue = remoteChar->characteristicReadValue();
 		readCharacteristicValue.setUuid(characteristic);
 		readCharacteristicValue.setValue(charValue);
@@ -1313,7 +1288,6 @@ void Bluez5ProfileGatt::addService(uint16_t appId, const BluetoothGattService &s
 
 			std::unique_ptr <Bluez5GattLocalService> service(new Bluez5GattLocalService(G_DBUS_OBJECT(object)));
 			service->mServiceInterface = skeletonGattService;
-			service->serviceId = serviceId;
 			auto &services = ((appIt->second).get())->mGattLocalServices;
 			services.insert(make_pair(serviceId, std::move(service)));
 			callback(BLUETOOTH_ERROR_NONE, serviceId);
@@ -1480,9 +1454,49 @@ void Bluez5ProfileGatt::addCharacteristic(uint16_t appId, uint16_t serviceId, co
 	g_variant_builder_unref(dataBuilder);
 
 	bluez_gatt_characteristic1_set_value(skeletonGattChar, dataValue);
-	bluez_gatt_characteristic1_set_flags(skeletonGattChar, flags);
+
+	GVariantBuilder *builder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+	if (!builder)
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Memory allocation failed %d", __LINE__);
+		if (object) g_object_unref(object);
+		if (skeletonGattChar) g_object_unref(skeletonGattChar);
+		callback(BLUETOOTH_ERROR_NOMEM, -1);
+		return;
+	}
+
+	for (int i = 0; flags[i] != NULL; i++)
+	{
+		g_variant_builder_add(builder, "s", flags[i]);
+	}
+
+	GVariant *flagsVariant = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+
+	bluez_gatt_characteristic1_set_flags(skeletonGattChar, flagsVariant);
 
 	bluez_object_skeleton_set_gatt_characteristic1(object, skeletonGattChar);
+
+	g_signal_connect(skeletonGattChar,
+		"handle_read_value",
+		G_CALLBACK (Bluez5GattLocalCharacteristic::onHandleReadValue),
+		NULL);
+
+	g_signal_connect(skeletonGattChar,
+		"handle_write_value",
+		G_CALLBACK (Bluez5GattLocalCharacteristic::onHandleWriteValue),
+		NULL);
+
+	g_signal_connect(skeletonGattChar,
+		"handle_start_notify",
+		G_CALLBACK (Bluez5GattLocalCharacteristic::onHandleStartNotify),
+		NULL);
+
+	g_signal_connect(skeletonGattChar,
+		"handle_stop_notify",
+		G_CALLBACK (Bluez5GattLocalCharacteristic::onHandleStopNotify),
+		NULL);
+
 	g_dbus_object_manager_server_export(mObjectManagerGattServer, G_DBUS_OBJECT_SKELETON (object));
 	g_dbus_object_manager_server_set_connection (mObjectManagerGattServer, mConn);
 
@@ -1597,7 +1611,26 @@ void Bluez5ProfileGatt::addDescriptor(uint16_t appId, uint16_t serviceId, const 
 
 	bluez_gatt_descriptor1_set_characteristic(skeletonGattDesc, charObjPath.c_str());
 	bluez_gatt_descriptor1_set_uuid(skeletonGattDesc, descriptor.getUuid().toString().c_str());
-	bluez_gatt_descriptor1_set_flags(skeletonGattDesc, flags);
+
+	GVariantBuilder *builder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+	if (!builder)
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Memory allocation failed %d", __LINE__);
+		if (object) g_object_unref(object);
+		if (skeletonGattDesc) g_object_unref(skeletonGattDesc);
+		callback(BLUETOOTH_ERROR_NOMEM, -1);
+		return;
+	}
+
+	for (int i = 0; flags[i] != NULL; i++)
+	{
+		g_variant_builder_add(builder, "s", flags[i]);
+	}
+
+	GVariant *flagsVariant = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+
+	bluez_gatt_descriptor1_set_flags(skeletonGattDesc, flagsVariant);
 
 	bluez_object_skeleton_set_gatt_descriptor1(object, skeletonGattDesc);
 	g_dbus_object_manager_server_export(mObjectManagerGattServer, G_DBUS_OBJECT_SKELETON (object));
@@ -1656,6 +1689,42 @@ void Bluez5ProfileGatt::removeLocalDescriptors(Bluez5GattLocalCharacteristic *ch
 	descs.clear();
 }
 
+void Bluez5ProfileGatt::notifyCharacteristicValueChanged(uint16_t appId, uint16_t serviceId, BluetoothGattCharacteristic characteristic, uint16_t charId)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	auto appIt = mGattLocalApplications.find(appId);
+	if (appIt == mGattLocalApplications.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Application not present for notifyCharacteristicValueChanged");
+		return;
+	}
+
+	auto &services = appIt->second->mGattLocalServices;
+
+	auto srvIt = services.find(serviceId);
+
+	if (srvIt == services.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Service is not present list for notifyCharacteristicValueChanged");
+		return;
+	}
+
+	auto &chars = srvIt->second->mCharacteristics;
+
+	auto charIt = chars.find(charId);
+
+	if (charIt == chars.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Characteristic is not present list for notifyCharacteristicValueChanged");
+		return;
+	}
+
+	GVariant *characteristicVariant= convertVectorToArrayByteGVariant(characteristic.getValue());
+	bluez_gatt_characteristic1_set_value(charIt->second->mInterface, characteristicVariant);
+	return;
+}
+
 void Bluez5ProfileGatt::startService(uint16_t serviceId, BluetoothGattTransportMode mode, BluetoothResultCallback callback)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
@@ -1708,9 +1777,9 @@ void Bluez5ProfileGatt::updatePropertyFlags(const BluetoothGattCharacteristic &c
 
 	for (auto &propIt : characteristicPropertyMap)
 	{
-		if(characteristic.isPropertySet(propIt.first))
+		if(characteristic.isPropertySet(propIt.second))
 		{
-			propertyflags[index++] = propIt.second.c_str();
+			propertyflags[index++] = propIt.first.c_str();
 		}
 	}
 
@@ -1874,6 +1943,23 @@ bool GattRemoteCharacteristic::characteristicWriteValue(const std::vector<unsign
 	return result;
 }
 
+BluetoothGattCharacteristicProperties GattRemoteCharacteristic::readProperties()
+{
+	BluetoothGattCharacteristicProperties properties = 0;
+	GVariant* flagVariant = bluez_gatt_characteristic1_get_flags(mInterface);
+	if (flagVariant) {
+		std::vector <std::string> characteristicFlags = convertArrayStringGVariantToVector(flagVariant);
+
+		for (auto it = characteristicFlags.begin(); it != characteristicFlags.end(); it++)
+		{
+			auto property = characteristicPropertyMap.find(*it);
+			if (property != characteristicPropertyMap.end())
+				properties |= property->second;
+		}
+	}
+	return 	properties;
+}
+
 std::vector<unsigned char> GattRemoteDescriptor::descriptorReadValue(uint16_t offset)
 {
 	GError *error = NULL;
@@ -1927,4 +2013,44 @@ bool GattRemoteDescriptor::descriptorWriteValue(const std::vector<unsigned char>
 	}
 
 	return result;
+}
+
+gboolean Bluez5ProfileGatt::Bluez5GattLocalCharacteristic::onHandleReadValue(BluezGattCharacteristic1* interface,
+																			 GDBusMethodInvocation *invocation,
+																			 GVariant *arg_options,
+																			 gpointer user_data)
+{
+	GVariant *value = bluez_gatt_characteristic1_get_value(interface);
+	GVariant *tuple = g_variant_new_tuple(&value, 1);
+	g_dbus_method_invocation_return_value(invocation, tuple);
+	return true;
+}
+
+gboolean Bluez5ProfileGatt::Bluez5GattLocalCharacteristic::onHandleWriteValue(BluezGattCharacteristic1* interface,
+																			  GDBusMethodInvocation *invocation,
+																			  GVariant *arg_value,
+																			  GVariant *arg_options,
+																			  gpointer user_data)
+{
+	bluez_gatt_characteristic1_set_value(interface, arg_value);
+	g_dbus_method_invocation_return_value(invocation, NULL);
+	return true;
+}
+
+gboolean Bluez5ProfileGatt::Bluez5GattLocalCharacteristic::onHandleStartNotify(BluezGattCharacteristic1 *object,
+																			   GDBusMethodInvocation *invocation,
+																			   gpointer user_data)
+{
+	bluez_gatt_characteristic1_set_notifying(object, true);
+	g_dbus_method_invocation_return_value(invocation, NULL);
+	return true;
+}
+
+gboolean Bluez5ProfileGatt::Bluez5GattLocalCharacteristic::onHandleStopNotify(BluezGattCharacteristic1 *object,
+																			  GDBusMethodInvocation *invocation,
+																			  gpointer user_data)
+{
+	bluez_gatt_characteristic1_set_notifying(object, false);
+	g_dbus_method_invocation_return_value(invocation, NULL);
+	return true;
 }

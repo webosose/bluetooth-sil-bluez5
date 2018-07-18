@@ -156,6 +156,7 @@ private:
 	std::string mAlias;
 	BluetoothResultCallback mCancelDiscCallback;
 	bool mAdvertising;
+	std::vector <std::string> mUuids;
 };
 
 #endif // BLUEZ5ADAPTER_H

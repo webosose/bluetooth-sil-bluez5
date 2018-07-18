@@ -261,6 +261,7 @@ void Bluez5Adapter::getAdapterProperties(BluetoothPropertiesResultCallback callb
 
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::DISCOVERY_TIMEOUT, mDiscoveryTimeout));
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::STACK_NAME, std::string("bluez5")));
+		properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
 
 		callback(BLUETOOTH_ERROR_NONE, properties);
 	};
@@ -662,7 +663,7 @@ BluetoothError Bluez5Adapter::startLeDiscovery(uint32_t scanId, BluetoothBleDisc
 		for (auto availableDeviceIter : mDevices)
 		{
 			Bluez5Device *device = availableDeviceIter.second;
-			if (device->getType() == BLUETOOTH_DEVICE_TYPE_BLE && (uuids.size() == 0 || anyMatch(device->getUuids(), uuids)))
+			if (device->getType() == BLUETOOTH_DEVICE_TYPE_BLE && (uuids.size() == 0 || anyMatch(device->getUuids(), uuids)) && device->getConnected() == false)
 			{
 				auto devicesIter = mLeDevicesByScanId.find(scanId);
 				if (devicesIter == mLeDevicesByScanId.end())
@@ -735,13 +736,17 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 	}
 	else if (profileId == BLUETOOTH_PROFILE_ID_GATT)
 	{
-		profile = new Bluez5ProfileGatt(this);
+		Bluez5ProfileGatt *gattProfile = new Bluez5ProfileGatt(this);
+		profile = gattProfile;
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_GATT, profile));
+		mUuids.push_back(gattProfile->getProfileUuid());
 	}
 	else if (profileId == BLUETOOTH_PROFILE_ID_SPP)
 	{
-		profile = new Bluez5ProfileSpp(this);
+		Bluez5ProfileSpp *sppProfile = new Bluez5ProfileSpp(this);
+		profile = sppProfile;
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_SPP, profile));
+		mUuids.push_back(sppProfile->getProfileUuid());
 	}
 
 	return profile;
