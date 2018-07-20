@@ -111,6 +111,8 @@ public:
 	                                    BluetoothResultCallback callback, uint8_t TxPower, BluetoothUuid solicitedService128);
 
 	virtual void startAdvertising(BluetoothResultCallback callback);
+	virtual void startAdvertising(uint8_t advertiserId, const AdvertiseSettings &settings,
+					const AdvertiseData &advertiseData, const AdvertiseData &scanResponse, AdvertiserStatusCallback callback);
 
 	virtual void stopAdvertising(BluetoothResultCallback callback);
 
@@ -120,6 +122,9 @@ public:
 			bool isShared);
 
 	virtual BluetoothError resetModule(const std::string &deviceName, bool isShared);
+	virtual void registerAdvertiser(AdvertiserIdStatusCallback callback);
+	virtual void unregisterAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
+	virtual void disableAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);

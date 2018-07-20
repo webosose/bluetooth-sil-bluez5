@@ -41,6 +41,7 @@ public:
 	void disconnect(const std::string &uuid, BluetoothResultCallback callback);
 	void connect(BluetoothResultCallback callback);
 	void disconnect(BluetoothResultCallback callback);
+	void connectGatt(BluetoothResultCallback callback);
 
 	std::string getObjectPath() const;
 

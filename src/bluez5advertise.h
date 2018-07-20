@@ -37,29 +37,53 @@ class Bluez5Advertise
 public:
 	Bluez5Advertise(BluezLEAdvertisingManager1 *advManager, Bluez5SIL *sil);
 	~Bluez5Advertise();
-	void registerAdvertisement(BluetoothResultCallback callback);
-	void unRegisterAdvertisement();
-	void advertiseServiceUuids(std::unordered_map<std::string, std::vector<uint8_t> > serviceList);
-	void advertiseServiceData(const char* uuid, std::vector<uint8_t> serviceData);
-	void advertiseManufacturerData(std::vector<uint8_t> data);
-	void advertiseTxPower(bool value);
-	void advertiseLocalName(const char *name);
-	void advertiseAppearance(guint16 value);
-	void advertiseIncludes(bool isTxPowerInclude, bool isLocalNameInclude, bool isAppearanceInclude);
-	void advertiseDuration(uint16_t value);
-	void advertiseTimeout(uint16_t value);
-	void setAdRole(std::string role);
-	void clearAllProperties();
+	void createAdvertisementId(AdvertiserIdStatusCallback callback);
+	void registerAdvertisement(uint8_t advId, AdvertiserStatusCallback callback);
+	gboolean unRegisterAdvertisement(uint8_t advId);
+	void advertiseServiceUuids(uint8_t advId, std::unordered_map<std::string, std::vector<uint8_t> > serviceList);
+	void advertiseServiceData(uint8_t advId, const char* uuid, std::vector<uint8_t> serviceData);
+	void advertiseManufacturerData(uint8_t advId, std::vector<uint8_t> data);
+	void advertiseTxPower(uint8_t advId, bool value);
+	void advertiseLocalName(uint8_t advId, const char *name);
+	void advertiseAppearance(uint8_t advId, guint16 value);
+	void advertiseIncludes(uint8_t advId, bool isTxPowerInclude, bool isLocalNameInclude, bool isAppearanceInclude);
+	void advertiseDuration(uint8_t advId, uint16_t value);
+	void advertiseTimeout(uint8_t advId, uint16_t value);
+	void setAdRole(uint8_t advId, std::string role);
+	void clearAllProperties(uint8_t advId);
+	BluezLEAdvertisement1 *getInteface(uint8_t advId);
+	std::string getPath(uint8_t advId);
+	void removeAdvertise(uint8_t advId);
 	static void handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data);
 	static gboolean handleRelease(BluezLEAdvertisement1 *proxy, GDBusMethodInvocation *invocation, gpointer user_data);
 
+	class AdvertiseObject
+	{
+	public:
+		AdvertiseObject(BluezLEAdvertisement1 *interface, std::string path):
+		mInterface(interface),
+		mPath(path)
+		{
+		}
+
+		~AdvertiseObject()
+		{
+			if (mInterface)
+				g_object_unref(mInterface);
+		}
+		BluezLEAdvertisement1 *mInterface;
+		std::string mPath;
+	};
+
 private:
-	void createInterface(GDBusConnection *connection);
+	void setConnection(GDBusConnection *connection) { mConn = connection; }
+	std::string createInterface(uint8_t advId);
+	uint8_t nextAdvId();
 	guint mBusId;
 	bool mTxPower;
-	BluezLEAdvertisement1 *mInterface;
 	BluezLEAdvertisingManager1 *mAdvManager;
-	std::string mPath;
 	Bluez5SIL *mSIL;
+	GDBusConnection *mConn;
+	std::unordered_map <uint8_t, std::unique_ptr <AdvertiseObject> > mAdvertiserMap;
 };
 #endif

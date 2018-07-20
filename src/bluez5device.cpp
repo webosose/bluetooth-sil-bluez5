@@ -471,6 +471,27 @@ void Bluez5Device::disconnect(BluetoothResultCallback callback)
 	                                      glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(disconnectCallback));
 }
 
+void Bluez5Device::connectGatt(BluetoothResultCallback callback)
+{
+	auto connectCallback = [this, callback](GAsyncResult *result) {
+		GError *error = 0;
+		gboolean ret;
+
+		ret = bluez_device1_call_connect_finish(mDeviceProxy, result, &error);
+		if (error)
+		{
+			g_error_free(error);
+			callback(BLUETOOTH_ERROR_FAIL);
+			return;
+		}
+
+		callback(BLUETOOTH_ERROR_NONE);
+	};
+
+	bluez_device1_call_connect_gatt(mDeviceProxy, NULL,
+	                                   glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(connectCallback));
+}
+
 BluetoothPropertiesList Bluez5Device::buildPropertiesList() const
 {
 	BluetoothPropertiesList properties;

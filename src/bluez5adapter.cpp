@@ -1141,90 +1141,88 @@ void Bluez5Adapter::configureAdvertisement(bool connectable, bool includeTxPower
                                            ProprietaryDataList dataList,
                                            BluetoothResultCallback callback, uint8_t TxPower, BluetoothUuid solicitedService128)
 {
-	if (isScanResponse)
-	{
-		callback(BLUETOOTH_ERROR_UNSUPPORTED);
-	}
-
-	mAdvertise->clearAllProperties();
-
-	if (connectable)
-	{
-		std::string adRole("peripheral");
-		mAdvertise->setAdRole(adRole);
-
-	}
-	else
-	{
-		std::string adRole("broadcast");
-		mAdvertise->setAdRole(adRole);
-	}
-
-	if (mAdvertising)
-	{
-		DEBUG("Failed to configure advertisements, already advertising");
-		callback(BLUETOOTH_ERROR_FAIL);
-		return;
-	}
-
-	if (includeName || includeTxPower)
-	{
-		mAdvertise->advertiseIncludes(includeTxPower, includeName, false);
-	}
-
-	if (manufacturerData.size() > 1)
-	{
-		if (manufacturerData.size() > 31)
-		{
-			DEBUG("Failed to configure advertisements, too much manufacturer data");
-			callback(BLUETOOTH_ERROR_PARAM_INVALID);
-			return;
-		}
-		mAdvertise->advertiseManufacturerData(manufacturerData);
-	}
-
-	if (services.size() > 0)
-	{
-		mAdvertise->advertiseServiceUuids(services);
-		for (auto it = services.begin(); it != services.end(); it++)
-		{
-			if ((it->second).size())
-				mAdvertise->advertiseServiceData((it->first).c_str(), it->second);
-		}
-	}
-
-	callback(BLUETOOTH_ERROR_NONE);
+	callback(BLUETOOTH_ERROR_UNSUPPORTED);
 	return;
 }
 
 void Bluez5Adapter::startAdvertising(BluetoothResultCallback callback)
 {
-	if (mAdvertising)
+	callback(BLUETOOTH_ERROR_UNSUPPORTED);
+	return;
+}
+
+void Bluez5Adapter::startAdvertising(uint8_t advertiserId, const AdvertiseSettings &settings,
+					const AdvertiseData &advertiseData, const AdvertiseData &scanResponse, AdvertiserStatusCallback callback)
+{
+	if (settings.connectable)
 	{
-		DEBUG("Already advertising");
-		callback(BLUETOOTH_ERROR_NONE);
-		return;
+		std::string adRole("peripheral");
+		mAdvertise->setAdRole(advertiserId, adRole);
+	}
+	else
+	{
+		std::string adRole("broadcast");
+		mAdvertise->setAdRole(advertiserId, adRole);
 	}
 
-	mAdvertise->registerAdvertisement(callback);
-	mAdvertising = true;
-	return;
+
+	if (settings.timeout > 0)
+	{
+		mAdvertise->advertiseTimeout(advertiserId, settings.timeout);
+	}
+
+	if (scanResponse.includeName || advertiseData.includeTxPower)
+	{
+		mAdvertise->advertiseIncludes(advertiserId, advertiseData.includeTxPower, scanResponse.includeName, false);
+	}
+
+	if (advertiseData.manufacturerData.size() > 1)
+	{
+		if (advertiseData.manufacturerData.size() > 31)
+		{
+			DEBUG("Failed to configure advertisements, too much manufacturer data");
+			callback(BLUETOOTH_ERROR_PARAM_INVALID);
+			return;
+		}
+		mAdvertise->advertiseManufacturerData(advertiserId, advertiseData.manufacturerData);
+	}
+
+	if (advertiseData.services.size() > 0)
+	{
+		mAdvertise->advertiseServiceUuids(advertiserId, advertiseData.services);
+		for (auto it = advertiseData.services.begin(); it != advertiseData.services.end(); it++)
+		{
+			if ((it->second).size())
+				mAdvertise->advertiseServiceData(advertiserId, (it->first).c_str(), it->second);
+		}
+	}
+
+	mAdvertise->registerAdvertisement(advertiserId, callback);
 }
 
 void Bluez5Adapter::stopAdvertising(BluetoothResultCallback callback)
 {
-	if (mAdvertising)
-	{
-		mAdvertise->unRegisterAdvertisement();
-		mAdvertising = false;
-	}
-	else
-	{
-		DEBUG("Already advertising stopped");
-	}
-
-	callback(BLUETOOTH_ERROR_NONE);
+	callback(BLUETOOTH_ERROR_UNSUPPORTED);
 	return;
+}
+
+void Bluez5Adapter::registerAdvertiser(AdvertiserIdStatusCallback callback)
+{
+	mAdvertise->createAdvertisementId(callback);
+}
+
+void Bluez5Adapter::unregisterAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback)
+{
+	gboolean ret = mAdvertise->unRegisterAdvertisement(advertiserId);
+	if (ret)
+		callback(BLUETOOTH_ERROR_NONE);
+	else
+		callback(BLUETOOTH_ERROR_FAIL);
+}
+
+void Bluez5Adapter::disableAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback)
+{
+	callback(BLUETOOTH_ERROR_NONE);
 }
 
 BluetoothError Bluez5Adapter::updateFirmware(const std::string &deviceName,

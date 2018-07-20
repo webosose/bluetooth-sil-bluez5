@@ -143,6 +143,7 @@ public:
 	void startService(uint16_t serviceId, BluetoothGattTransportMode mode, BluetoothResultCallback callback);
 	void startService(uint16_t appId, uint16_t serviceId, BluetoothGattTransportMode mode, BluetoothResultCallback callback);
 	void onCharacteristicPropertiesChanged(GattRemoteCharacteristic* characteristic, GVariant *changed_properties);
+	void onHandleWriteValue(BluezGattCharacteristic1* interface, GVariant * charValue);
 
 	static gboolean handleRelease(BluezGattProfile1 *proxy, GDBusMethodInvocation *invocation, gpointer user_data);
 	static void handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data);

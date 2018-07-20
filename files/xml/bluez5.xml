@@ -11,6 +11,7 @@
     <interface name="org.bluez.Device1">
             <method name="Disconnect"/>
             <method name="Connect"/>
+            <method name="ConnectGatt"/>
             <method name="ConnectProfile">
                     <arg name="UUID" type="s" direction="in"/>
             </method>
