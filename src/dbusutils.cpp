@@ -34,8 +34,6 @@ void checkBus(GBusType busType, StatusCallback callback)
 
 		GDBusConnection *conn = g_bus_get_finish(result, &error);
 		if (error) {
-			DEBUG("DBus not available yet: %s",
-			        error->message);
 			g_error_free(error);
 		}
 

@@ -30,56 +30,9 @@ extern "C" {
 }
 
 class Bluez5Adapter;
-class GattRemoteDescriptor
-{
-public:
-	GattRemoteDescriptor(BluezGattDescriptor1 *interface)
-		: mInterface(interface) {
-	}
-	std::vector<unsigned char> descriptorReadValue(uint16_t offset = 0);
-	bool descriptorWriteValue(const std::vector<unsigned char> &descriptorValue, uint16_t offset = 0);
-	std::string parentObjectPath;
-	std::string objectPath;
-	BluetoothGattDescriptor descriptor;
-	BluezGattDescriptor1 *mInterface;
-};
-
-class Bluez5ProfileGatt;
-class GattRemoteCharacteristic
-{
-public:
-	static void onCharacteristicPropertiesChanged(GDBusProxy *proxy, GVariant *changed_properties,
-                                                  GStrv invalidated_properties, gpointer userdata);
-	GattRemoteCharacteristic(BluezGattCharacteristic1 *interface, Bluez5ProfileGatt *gattProfile)
-		: mInterface(interface), mGattProfile(gattProfile) {
-		g_signal_connect(G_DBUS_PROXY(interface), "g-properties-changed",
-						 G_CALLBACK(GattRemoteCharacteristic::onCharacteristicPropertiesChanged), this);
-	}
-	bool startNotify();
-	bool stopNotify();
-	std::vector<unsigned char> characteristicReadValue(uint16_t offset = 0);
-	bool characteristicWriteValue(const std::vector<unsigned char> &characteristicValue, uint16_t offset = 0);
-	BluetoothGattCharacteristicProperties readProperties();
-	std::string parentObjectPath;
-	std::string objectPath;
-	BluetoothGattCharacteristic characteristic;
-	BluezGattCharacteristic1 *mInterface;
-	Bluez5ProfileGatt *mGattProfile;
-	std::vector<GattRemoteDescriptor*> gattRemoteDescriptors;
-};
-
-class GattRemoteService
-{
-public:
-	GattRemoteService(BluezGattService1 *interface)
-		: mInterface(interface) {
-	}
-	std::string parentObjectPath;
-	std::string objectPath;
-	BluetoothGattService service;
-	BluezGattService1 *mInterface;
-	std::vector<GattRemoteCharacteristic*> gattRemoteCharacteristics;
-};
+class GattRemoteDescriptor;
+class GattRemoteService;
+class GattRemoteCharacteristic;
 
 class Bluez5ProfileGatt : public Bluez5ProfileBase,
 	                         public BluetoothGattProfile
@@ -100,8 +53,6 @@ public:
 
 	void discoverServices(BluetoothResultCallback callback);
 	void discoverServices(const std::string &address, BluetoothResultCallback callback);
-	void readDescriptors(const std::string &address, const BluetoothUuid& service, const BluetoothUuid &characteristic,
-	                             const BluetoothUuidList &descriptors, BluetoothGattReadDescriptorsCallback callback);
 	void writeDescriptor(const std::string &address, const BluetoothUuid &service, const BluetoothUuid &characteristic,
 	                             const BluetoothGattDescriptor &descriptor, BluetoothResultCallback callback);
 	BluetoothGattService getService(const std::string &address, const BluetoothUuid &uuid);
@@ -109,11 +60,16 @@ public:
 	void readCharacteristic(const uint16_t &connId, const BluetoothUuid& service,
 									 const BluetoothUuid &characteristics,
 									 BluetoothGattReadCharacteristicCallback callback);
+	void readCharacteristics(const uint16_t &connId, const BluetoothUuid& service,
+									 const BluetoothUuidList &characteristics,
+									 BluetoothGattReadCharacteristicsCallback callback);
 	void writeCharacteristic(const uint16_t &connId, const BluetoothUuid& service,
 									 const BluetoothGattCharacteristic &characteristic,
 									 BluetoothResultCallback callback);
 	void readDescriptor(const uint16_t &connId, const BluetoothUuid& service, const BluetoothUuid &characteristic,
 								 const BluetoothUuid &descriptor, BluetoothGattReadDescriptorCallback callback);
+	void readDescriptors(const uint16_t &connId, const BluetoothUuid& service, const BluetoothUuid &characteristic,
+								 const BluetoothUuidList &descriptors, BluetoothGattReadDescriptorsCallback callback);
 	void writeDescriptor(const uint16_t &connId, const BluetoothUuid &service, const BluetoothUuid &characteristic,
 								 const BluetoothGattDescriptor &descriptor, BluetoothResultCallback callback);
 	void changeCharacteristicWatchStatus(const std::string &address, const BluetoothUuid &service,
@@ -130,11 +86,23 @@ public:
 	                                 BluetoothResultCallback callback);
 	void readDescriptor(const std::string &address, const BluetoothUuid& service, const BluetoothUuid &characteristic,
 								 const BluetoothUuid &descriptor, BluetoothGattReadDescriptorCallback callback);
+	void readDescriptors(const std::string &address, const BluetoothUuid& service, const BluetoothUuid &characteristic,
+	                             const BluetoothUuidList &descriptors, BluetoothGattReadDescriptorsCallback callback);
 	uint16_t getConnectId(const std::string &address);
 	std::string getAddress(const uint16_t &connId);
+	BluetoothGattCharacteristic readCharacteristic(const std::string &address, const BluetoothUuid& service,
+									 const BluetoothUuid &characteristic);
+	BluetoothGattCharacteristicList readCharacteristics(const std::string &address, const BluetoothUuid& service,
+									const BluetoothUuidList &characteristics, bool &found);
+	BluetoothGattDescriptorList readDescriptors(const std::string &address, const BluetoothUuid& service, const BluetoothUuid &characteristic,
+						const BluetoothUuidList &descriptors, bool &found);
+	BluetoothGattDescriptor readDescriptor(const std::string &address, const BluetoothUuid& service, const BluetoothUuid &characteristic,
+								 const BluetoothUuid &descriptor);
 	GattRemoteService* findService(const std::string &address, const BluetoothUuid& service);
 	GattRemoteCharacteristic* findCharacteristic(GattRemoteService* service, const BluetoothUuid &characteristic);
 	GattRemoteDescriptor* findDescriptor(GattRemoteCharacteristic* characteristic, const BluetoothUuid &descriptor);
+	BluetoothGattDescriptor readDescValue(GattRemoteCharacteristic* remoteCharacteristic, GattRemoteDescriptor* remoteDescriptor, const BluetoothUuid &descriptor);
+	BluetoothGattCharacteristic readCharValue(GattRemoteService* remoteService, GattRemoteCharacteristic* remoteCharacteristic, const BluetoothUuid &characteristic);
 	void addService(uint16_t appId, const BluetoothGattService &service, BluetoothGattAddCallback callback);
 	void removeService(uint16_t appId, uint16_t serviceId, BluetoothResultCallback callback);
 

@@ -100,6 +100,7 @@ file(GLOB SOURCES
      src/utils.cpp
      src/bluez5profilegatt.cpp
      src/bluez5profilespp.cpp
+     src/bluez5gattremoteattribute.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})
