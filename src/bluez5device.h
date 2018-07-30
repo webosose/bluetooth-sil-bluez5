@@ -76,12 +76,15 @@ private:
 	uint32_t mClassOfDevice;
 	BluetoothDeviceType mType;
 	std::vector<std::string> mUuids;
+	std::vector <std::uint8_t> mManufacturerData;
 	bool mPaired;
 	BluezDevice1 *mDeviceProxy;
 	FreeDesktopDBusProperties *mPropertiesProxy;
 	bool mConnected;
 	bool mTrusted;
 	bool mBlocked;
+	int mTxPower;
+	int mRSSI;
 };
 
 #endif // BLUEZ5DEVICE_H

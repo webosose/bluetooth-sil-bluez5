@@ -29,6 +29,8 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	mConnected(false),
 	mTrusted(false),
 	mBlocked(false),
+	mTxPower(0),
+	mRSSI(0),
 	mDeviceProxy(0),
 	mPropertiesProxy(0)
 {
@@ -189,6 +191,54 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 	{
 		mBlocked = g_variant_get_boolean(valueVar);
 		DEBUG("Got blocked as %d for address %s", mBlocked, mAddress.c_str());
+		changed = true;
+	}
+	else if (key == "ManufacturerData")
+	{
+		unsigned int i = 1;
+		bool isLittleEndian = false;
+		char *c = (char*)&i;
+		if (*c)
+			isLittleEndian = true;
+
+		GVariantIter *iter;
+		g_variant_get (valueVar, "a{qv}", &iter);
+
+		GVariant *array;
+		uint16_t key;
+		uint8_t val;
+
+		while (g_variant_iter_loop(iter, "{qv}", &key, &array))
+		{
+			if (isLittleEndian)
+			{
+				mManufacturerData.push_back((key & 0xFF00) >> 8);
+				mManufacturerData.push_back(key & 0x00FF);
+			}
+			else
+			{
+				mManufacturerData.push_back(key & 0x00FF);
+				mManufacturerData.push_back((key & 0xFF00) >> 8);
+			}
+			GVariantIter it_array;
+			g_variant_iter_init(&it_array, array);
+			while(g_variant_iter_loop(&it_array, "y", &val))
+			{
+				mManufacturerData.push_back(val);
+			}
+			break;
+		}
+		g_variant_iter_free(iter);
+		changed = true;
+	}
+	else if (key == "TxPower")
+	{
+		mTxPower = g_variant_get_int16(valueVar);
+		changed = true;
+	}
+	else if (key == "RSSI")
+	{
+		mRSSI = g_variant_get_int16(valueVar);
 		changed = true;
 	}
 
@@ -505,7 +555,9 @@ BluetoothPropertiesList Bluez5Device::buildPropertiesList() const
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, mConnected));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TRUSTED, mTrusted));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::BLOCKED, mBlocked));
-
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::MANUFACTURER_DATA, mManufacturerData));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TXPOWER, mTxPower));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::RSSI, mRSSI));
 	return properties;
 }
 
