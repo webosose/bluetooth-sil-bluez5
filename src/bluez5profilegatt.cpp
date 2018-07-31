@@ -1772,6 +1772,17 @@ void Bluez5ProfileGatt::addDescriptor(uint16_t appId, uint16_t serviceId, const 
 	bluez_gatt_descriptor1_set_flags(skeletonGattDesc, flagsVariant);
 
 	bluez_object_skeleton_set_gatt_descriptor1(object, skeletonGattDesc);
+
+	g_signal_connect(skeletonGattDesc,
+		"handle_read_value",
+		G_CALLBACK (Bluez5GattLocalDescriptor::onHandleReadValue),
+		this);
+
+	g_signal_connect(skeletonGattDesc,
+		"handle_write_value",
+		G_CALLBACK (Bluez5GattLocalDescriptor::onHandleWriteValue),
+		this);
+
 	g_dbus_object_manager_server_export(mObjectManagerGattServer, G_DBUS_OBJECT_SKELETON (object));
 	g_dbus_object_manager_server_set_connection (mObjectManagerGattServer, mConn);
 
@@ -2100,6 +2111,27 @@ gboolean Bluez5ProfileGatt::Bluez5GattLocalCharacteristic::onHandleStopNotify(Bl
 																			  gpointer user_data)
 {
 	bluez_gatt_characteristic1_set_notifying(object, false);
+	g_dbus_method_invocation_return_value(invocation, NULL);
+	return true;
+}
+
+gboolean Bluez5ProfileGatt::Bluez5GattLocalDescriptor::onHandleReadValue(BluezGattDescriptor1* interface,
+																		 GDBusMethodInvocation *invocation,
+																		 GVariant *arg_options,
+																		 gpointer user_data)
+{
+	GVariant *value = bluez_gatt_descriptor1_get_value(interface);
+	GVariant *tuple = g_variant_new_tuple(&value, 1);
+	g_dbus_method_invocation_return_value(invocation, tuple);
+	return true;
+}
+gboolean Bluez5ProfileGatt::Bluez5GattLocalDescriptor::onHandleWriteValue(BluezGattDescriptor1* interface,
+																		  GDBusMethodInvocation *invocation,
+																		  GVariant *arg_value,
+																		  GVariant *arg_options,
+																		  gpointer user_data)
+{
+	bluez_gatt_descriptor1_set_value(interface, arg_value);
 	g_dbus_method_invocation_return_value(invocation, NULL);
 	return true;
 }

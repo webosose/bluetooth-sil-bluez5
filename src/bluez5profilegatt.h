@@ -133,6 +133,8 @@ private:
 			mDescObject(object)
 			{
 			}
+			static gboolean onHandleReadValue(BluezGattDescriptor1* obj, GDBusMethodInvocation *invocation, GVariant *arg_options, gpointer user_data);
+			static gboolean onHandleWriteValue(BluezGattDescriptor1* interface, GDBusMethodInvocation *invocation, GVariant *arg_value, GVariant *arg_options, gpointer user_data);
 			GDBusObject *mDescObject;
 			BluezGattDescriptor1 *mInterface;
 	};
