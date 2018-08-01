@@ -659,6 +659,22 @@ BluetoothError Bluez5Adapter::startLeDiscovery(uint32_t scanId, BluetoothBleDisc
 {
 	if (mLeScans.find(scanId) == mLeScans.end())
 	{
+		for(int i = 0; i < uuids.size(); i++)
+		{
+			const BluetoothUuid uUiditem = BluetoothUuid(uuids[i]);
+			if (uUiditem.getType() == BluetoothUuid::UNKNOWN)
+				return BLUETOOTH_ERROR_PARAM_INVALID;
+			else if (uUiditem.getType() == BluetoothUuid::UUID16)
+			{
+				std::string uuid16 = uuids[i].substr (0,4);
+				uuids[i] = "0000"+uuid16+"-0000-1000-8000-00805f9b34fb";
+			}
+			else if (uUiditem.getType() == BluetoothUuid::UUID32)
+			{
+				std::string uuid32 = uuids[i].substr (0,8);
+				uuids[i] = uuid32+"-0000-1000-8000-00805f9b34fb";
+			}
+		}
 		mLeScans.insert(std::pair<uint32_t, BluetoothBleDiscoveryUuidFilterList>(scanId, uuids));
 		for (auto availableDeviceIter : mDevices)
 		{
