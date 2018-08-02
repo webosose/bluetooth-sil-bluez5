@@ -110,8 +110,9 @@ public:
 	void addCharacteristic(uint16_t appId, uint16_t serviceId, const BluetoothGattCharacteristic &characteristic, BluetoothGattAddCallback callback);
 	void startService(uint16_t serviceId, BluetoothGattTransportMode mode, BluetoothResultCallback callback);
 	void startService(uint16_t appId, uint16_t serviceId, BluetoothGattTransportMode mode, BluetoothResultCallback callback);
-	void onCharacteristicPropertiesChanged(GattRemoteCharacteristic* characteristic, GVariant *changed_properties);
-	void onHandleWriteValue(BluezGattCharacteristic1* interface, GVariant * charValue);
+	void onCharacteristicPropertiesChanged(GattRemoteCharacteristic* characteristic, GVariant* changed_properties);
+	void onHandleCharacteriscticWriteValue(BluezGattCharacteristic1* interface, GVariant* charValue);
+	void onHandleDescrptorWriteValue(BluezGattDescriptor1* interface, GVariant* descValue);
 
 	static gboolean handleRelease(BluezGattProfile1 *proxy, GDBusMethodInvocation *invocation, gpointer user_data);
 	static void handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data);
@@ -180,6 +181,7 @@ private:
 	void removeLocalCharacteristics(Bluez5GattLocalService *service);
 	void removeLocalDescriptors(Bluez5GattLocalCharacteristic *characteristic);
 	void notifyCharacteristicValueChanged(uint16_t serverId, uint16_t serviceId, BluetoothGattCharacteristic characteristic, uint16_t charId);
+	void notifyDescriptorValueChanged(uint16_t appId, uint16_t serviceId, uint16_t descId, BluetoothGattDescriptor descriptor, uint16_t charId);
 	GattLocalDescriptorsMap* getLocalDescriptorList(uint16_t appId, uint16_t serviceId, uint16_t charId);
 	void updatePropertyFlags(const BluetoothGattCharacteristic &characteristic, const char **propertyflags);
 	void updatePermissionFlags(const BluetoothGattDescriptor &descriptor, const char **permissionflags);

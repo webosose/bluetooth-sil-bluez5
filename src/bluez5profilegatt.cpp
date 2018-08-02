@@ -1875,6 +1875,52 @@ void Bluez5ProfileGatt::notifyCharacteristicValueChanged(uint16_t appId, uint16_
 	return;
 }
 
+void Bluez5ProfileGatt::notifyDescriptorValueChanged(uint16_t appId, uint16_t serviceId, uint16_t descId, BluetoothGattDescriptor descriptor, uint16_t charId)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	auto appIt = mGattLocalApplications.find(appId);
+	if (appIt == mGattLocalApplications.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Application not present for notifyDescriptorValueChanged");
+		return;
+	}
+
+	auto &services = appIt->second->mGattLocalServices;
+
+	auto srvIt = services.find(serviceId);
+
+	if (srvIt == services.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Service is not present list for notifyDescriptorValueChanged");
+		return;
+	}
+
+	auto &chars = srvIt->second->mCharacteristics;
+
+	auto charIt = chars.find(charId);
+
+	if (charIt == chars.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Characteristic is not present list for notifyDescriptorValueChanged");
+		return;
+	}
+
+	auto &descs = charIt->second->mDescriptors;
+
+	auto descIt = descs.find(descId);
+
+	if (descIt == descs.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Descriptor is not present list for notifyDescriptorValueChanged");
+		return;
+	}
+
+	GVariant *descVariant = convertVectorToArrayByteGVariant(descriptor.getValue());
+	bluez_gatt_descriptor1_set_value(descIt->second->mInterface, descVariant);
+	return;
+}
+
 void Bluez5ProfileGatt::startService(uint16_t serviceId, BluetoothGattTransportMode mode, BluetoothResultCallback callback)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
@@ -2025,11 +2071,11 @@ gboolean Bluez5ProfileGatt::Bluez5GattLocalCharacteristic::onHandleWriteValue(Bl
 	bluez_gatt_characteristic1_set_value(interface, arg_value);
 	g_dbus_method_invocation_return_value(invocation, NULL);
 	Bluez5ProfileGatt *pThis = static_cast<Bluez5ProfileGatt *> (user_data);
-	pThis->onHandleWriteValue(interface, arg_value);
+	pThis->onHandleCharacteriscticWriteValue(interface, arg_value);
 	return true;
 }
 
-void Bluez5ProfileGatt::onHandleWriteValue(BluezGattCharacteristic1* charInterface, GVariant * charValue)
+void Bluez5ProfileGatt::onHandleCharacteriscticWriteValue(BluezGattCharacteristic1* charInterface, GVariant * charValue)
 {
 	BluetoothGattCharacteristic characteristic;
 
@@ -2133,5 +2179,64 @@ gboolean Bluez5ProfileGatt::Bluez5GattLocalDescriptor::onHandleWriteValue(BluezG
 {
 	bluez_gatt_descriptor1_set_value(interface, arg_value);
 	g_dbus_method_invocation_return_value(invocation, NULL);
+	Bluez5ProfileGatt *pThis = static_cast<Bluez5ProfileGatt *> (user_data);
+	pThis->onHandleDescrptorWriteValue(interface, arg_value);
 	return true;
+}
+
+void Bluez5ProfileGatt::onHandleDescrptorWriteValue(BluezGattDescriptor1* interface, GVariant * descValue)
+{
+	const char* descUuid = bluez_gatt_descriptor1_get_uuid(interface);
+
+	std::string charPath(bluez_gatt_descriptor1_get_characteristic(interface));
+	int charId = std::stoi(charPath.substr(charPath.size() - 1, charPath.size()));
+
+	std::string servicePath = charPath.substr(0, charPath.find_last_of("\\/"));
+	int serviceId = std::stoi(servicePath.substr(servicePath.size() - 1, servicePath.size()));
+
+	std::string appPath = servicePath.substr(0, servicePath.find_last_of("\\/"));
+	int appId = std::stoi(appPath.substr(appPath.size() - 1, appPath.size()));
+	auto appIt = mGattLocalApplications.find(appId);
+
+	if (appIt == mGattLocalApplications.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "application not present for onHandleDescrptorWriteValue");
+		return;
+	}
+
+	auto &services = appIt->second->mGattLocalServices;
+
+	auto srvIt = services.find(serviceId);
+
+	if (srvIt == services.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Service is not present list for onHandleDescrptorWriteValue");
+		return;
+	}
+
+	const char* serviceUuid = bluez_gatt_service1_get_uuid(srvIt->second->mServiceInterface);
+	if (!serviceUuid)
+	{
+		ERROR(MSGID_GATT_PROFILE_ERROR, 0, "Failed to get Gatt Service uuid on %s",
+			  servicePath);
+		return;
+	}
+
+	auto &chars = srvIt->second->mCharacteristics;
+
+	auto charIt = chars.find(charId);
+
+	if (charIt == chars.end())
+	{
+		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "char is not present list for onHandleDescrptorWriteValue");
+		return;
+	}
+
+	const char* charUuid = bluez_gatt_characteristic1_get_uuid(charIt->second->mInterface);
+
+	BluetoothGattDescriptor desc;
+	desc.setUuid(BluetoothUuid(descUuid));
+	BluetoothGattValue result = convertArrayByteGVariantToVector(descValue);
+	desc.setValue(result);
+	getGattObserver()->descriptorValueChanged(BluetoothUuid(serviceUuid), BluetoothUuid(charUuid), desc);
 }
