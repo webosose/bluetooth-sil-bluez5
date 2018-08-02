@@ -125,6 +125,7 @@ public:
 	virtual void registerAdvertiser(AdvertiserIdStatusCallback callback);
 	virtual void unregisterAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
 	virtual void disableAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
+	BluezAdapter1* getAdapterProxy() { return mAdapterProxy; }
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);

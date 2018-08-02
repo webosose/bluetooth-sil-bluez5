@@ -437,7 +437,7 @@ void Bluez5ProfileGatt::removeRemoteGattService(const std::string &serviceObject
 void Bluez5ProfileGatt::handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject *object,
 											void *user_data)
 {
-	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	DEBUG("%s::%s %s",__FILE__,__FUNCTION__,g_dbus_object_get_object_path(object));
 	UNUSED(objectManager);
 
 	Bluez5ProfileGatt *pThis = static_cast<Bluez5ProfileGatt*>(user_data);
@@ -471,7 +471,7 @@ void Bluez5ProfileGatt::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 void Bluez5ProfileGatt::handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObject *object,
 											void *user_data)
 {
-	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	DEBUG("%s::%s objectpath %s",__FILE__,__FUNCTION__, g_dbus_object_get_object_path(object));
 	UNUSED(objectManager);
 
 	Bluez5ProfileGatt *pThis = static_cast<Bluez5ProfileGatt*>(user_data);
@@ -571,7 +571,7 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 		return;
 	}
 
-	auto isDisconnectCallback = [this, deviceInfo, callback](BluetoothError error)
+	auto isDisconnectCallback = [this, deviceInfo, device, callback](BluetoothError error)
 	{
 		if (error != BLUETOOTH_ERROR_NONE)
 		{
@@ -579,6 +579,13 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 			return;
 		}
 		mConnectedDevices.erase(deviceInfo);
+		GError *err = nullptr;
+		bluez_adapter1_call_remove_device_sync(mAdapter->getAdapterProxy(), device->getObjectPath().c_str(), NULL, &err);
+		if (err)
+		{
+			g_error_free(err);
+		}
+
 		callback(BLUETOOTH_ERROR_NONE);
 	};
 
