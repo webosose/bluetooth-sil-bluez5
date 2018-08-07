@@ -366,7 +366,7 @@ void Bluez5ProfileGatt::removeRemoteGattDescriptor(const std::string &descriptor
 	GattRemoteService* service = getRemoteGattService(serviceObjectPath);
 	if (service)
 	{
-		auto characteristicList = service->gattRemoteCharacteristics;
+		auto &characteristicList = service->gattRemoteCharacteristics;
 
 		auto characteristicIter = std::find_if (characteristicList.begin(), characteristicList.end(),
 												[characteristicObjectPath](GattRemoteCharacteristic* characteristic)
@@ -376,7 +376,7 @@ void Bluez5ProfileGatt::removeRemoteGattDescriptor(const std::string &descriptor
 
 		if (characteristicIter != characteristicList.end())
 		{
-			auto descriptorsList = (*characteristicIter)->gattRemoteDescriptors;
+			auto &descriptorsList = (*characteristicIter)->gattRemoteDescriptors;
 			auto descriptorsIter = std::find_if (descriptorsList.begin(), descriptorsList.end(),
 												 [descriptorObjectPath]( GattRemoteDescriptor* descriptor)
 			{
@@ -385,7 +385,11 @@ void Bluez5ProfileGatt::removeRemoteGattDescriptor(const std::string &descriptor
 
 			if (descriptorsIter != descriptorsList.end())
 			{
-				g_object_unref((*descriptorsIter)->mInterface);
+				if ((*descriptorsIter)->mInterface)
+				{
+					g_object_unref((*descriptorsIter)->mInterface);
+					(*descriptorsIter)->mInterface = nullptr;
+				}
 				delete (*descriptorsIter);
 				descriptorsList.erase(descriptorsIter);
 			}
@@ -571,7 +575,7 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 		return;
 	}
 
-	auto isDisconnectCallback = [this, deviceInfo, device, callback](BluetoothError error)
+	auto isDisconnectCallback = [this, deviceInfo, deviceAddress, callback](BluetoothError error)
 	{
 		if (error != BLUETOOTH_ERROR_NONE)
 		{
@@ -579,11 +583,16 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 			return;
 		}
 		mConnectedDevices.erase(deviceInfo);
+
 		GError *err = nullptr;
-		bluez_adapter1_call_remove_device_sync(mAdapter->getAdapterProxy(), device->getObjectPath().c_str(), NULL, &err);
-		if (err)
+		Bluez5Device *device = mAdapter->findDevice(deviceAddress);
+		if (device)
 		{
-			g_error_free(err);
+			bluez_adapter1_call_remove_device_sync(mAdapter->getAdapterProxy(), device->getObjectPath().c_str(), NULL, &err);
+			if (err)
+			{
+				g_error_free(err);
+			}
 		}
 
 		callback(BLUETOOTH_ERROR_NONE);
