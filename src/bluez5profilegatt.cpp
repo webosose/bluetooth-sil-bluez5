@@ -838,6 +838,10 @@ void Bluez5ProfileGatt::writeDescriptor(const std::string &address, const Blueto
 		if (remoteDesc && remoteDesc->writeValue(descriptor.getValue()))
 		{
 			remoteChar->characteristic.updateDescriptorValue(descriptor.getUuid(), descriptor.getValue());
+			remoteService->service.updateDescriptorValue(remoteChar->characteristic.getUuid(),
+														 descriptor.getUuid(),
+														 descriptor.getValue());
+			updateRemoteDeviceServices();
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -945,6 +949,7 @@ void Bluez5ProfileGatt::writeCharacteristic(const uint16_t &connId, const Blueto
 		if (remoteChar->writeValue(characteristic.getValue()))
 		{
 			remoteService->service.updateCharacteristicValue(characteristic.getUuid(), characteristic.getValue());
+			updateRemoteDeviceServices();
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -1018,6 +1023,10 @@ void Bluez5ProfileGatt::writeDescriptor(const uint16_t &connId, const BluetoothU
 		if (remoteDesc && remoteDesc->writeValue(descriptor.getValue()))
 		{
 			remoteChar->characteristic.updateDescriptorValue(descriptor.getUuid(), descriptor.getValue());
+			remoteService->service.updateDescriptorValue(remoteChar->characteristic.getUuid(),
+														 descriptor.getUuid(),
+														 descriptor.getValue());
+			updateRemoteDeviceServices();
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -1115,6 +1124,7 @@ void Bluez5ProfileGatt::writeCharacteristic(const std::string &address, const Bl
 		if (remoteChar->writeValue(characteristic.getValue()))
 		{
 			remoteService->service.updateCharacteristicValue(characteristic.getUuid(), characteristic.getValue());
+			updateRemoteDeviceServices();
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -1263,7 +1273,7 @@ BluetoothGattDescriptor Bluez5ProfileGatt::readDescriptor(const std::string &add
 			ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Descriptor not found");
 			return readDescriptorValue;
 		}
-		readDescriptorValue = readDescValue(remoteChar, remoteDesc, descriptor);
+		readDescriptorValue = readDescValue(remoteService, remoteChar, remoteDesc, descriptor);
 	}
 	else
 		ERROR("MSGID_GATT_PROFILE_ERROR", 0, "Read property not available");
@@ -1300,7 +1310,7 @@ BluetoothGattDescriptorList Bluez5ProfileGatt::readDescriptors(const std::string
 					if (remoteDesc)
 					{
 						BluetoothGattDescriptor readDescriptorValue;
-						readDescriptorValue = readDescValue(remoteChar, remoteDesc, currentDescriptor);
+						readDescriptorValue = readDescValue(remoteService, remoteChar, remoteDesc, currentDescriptor);
 						result.push_back(readDescriptorValue);
 						found = true;
 					}
@@ -1370,7 +1380,7 @@ GattRemoteDescriptor* Bluez5ProfileGatt::findDescriptor(GattRemoteCharacteristic
 	return NULL;
 }
 
-BluetoothGattDescriptor Bluez5ProfileGatt::readDescValue(GattRemoteCharacteristic* remoteCharacteristic, GattRemoteDescriptor* remoteDescriptor, const BluetoothUuid &descriptor)
+BluetoothGattDescriptor Bluez5ProfileGatt::readDescValue(GattRemoteService *remoteService, GattRemoteCharacteristic* remoteCharacteristic, GattRemoteDescriptor* remoteDescriptor, const BluetoothUuid &descriptor)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
 	BluetoothGattDescriptor readDescriptorValue;
@@ -1378,6 +1388,10 @@ BluetoothGattDescriptor Bluez5ProfileGatt::readDescValue(GattRemoteCharacteristi
 	readDescriptorValue.setUuid(descriptor);
 	readDescriptorValue.setValue(descValue);
 	remoteCharacteristic->characteristic.updateDescriptorValue(descriptor, descValue);
+	remoteService->service.updateDescriptorValue(remoteCharacteristic->characteristic.getUuid(),
+												 descriptor,
+												 descValue);
+	updateRemoteDeviceServices();
 	return readDescriptorValue;
 }
 
@@ -1390,6 +1404,7 @@ BluetoothGattCharacteristic Bluez5ProfileGatt::readCharValue(GattRemoteService* 
 	readCharacteristicValue.setUuid(characteristic);
 	readCharacteristicValue.setValue(charValue);
 	remoteService->service.updateCharacteristicValue(characteristic, charValue);
+	updateRemoteDeviceServices();
 	return readCharacteristicValue;
 }
 

@@ -101,7 +101,7 @@ public:
 	GattRemoteService* findService(const std::string &address, const BluetoothUuid& service);
 	GattRemoteCharacteristic* findCharacteristic(GattRemoteService* service, const BluetoothUuid &characteristic);
 	GattRemoteDescriptor* findDescriptor(GattRemoteCharacteristic* characteristic, const BluetoothUuid &descriptor);
-	BluetoothGattDescriptor readDescValue(GattRemoteCharacteristic* remoteCharacteristic, GattRemoteDescriptor* remoteDescriptor, const BluetoothUuid &descriptor);
+	BluetoothGattDescriptor readDescValue(GattRemoteService *service, GattRemoteCharacteristic* remoteCharacteristic, GattRemoteDescriptor* remoteDescriptor, const BluetoothUuid &descriptor);
 	BluetoothGattCharacteristic readCharValue(GattRemoteService* remoteService, GattRemoteCharacteristic* remoteCharacteristic, const BluetoothUuid &characteristic);
 	void addService(uint16_t appId, const BluetoothGattService &service, BluetoothGattAddCallback callback);
 	void removeService(uint16_t appId, uint16_t serviceId, BluetoothResultCallback callback);
