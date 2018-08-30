@@ -24,6 +24,7 @@
 #include "utils.h"
 #include "bluez5profilegatt.h"
 #include "bluez5profilespp.h"
+#include "bluez5profileopp.h"
 
 Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -743,27 +744,31 @@ BluetoothError Bluez5Adapter::cancelLeDiscovery(uint32_t scanId)
 }
 BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 {
-	BluetoothProfile *profile = 0;
+	Bluez5ProfileBase *profile = nullptr;
 
 	if (profileId == BLUETOOTH_PROFILE_ID_FTP)
 	{
 		profile = new Bluez5ProfileFtp(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_FTP, profile));
 	}
+	else if (profileId == BLUETOOTH_PROFILE_ID_OPP)
+	{
+		profile = new Bluez5ProfileOpp(this);
+		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_OPP, profile));
+	}
 	else if (profileId == BLUETOOTH_PROFILE_ID_GATT)
 	{
-		Bluez5ProfileGatt *gattProfile = new Bluez5ProfileGatt(this);
-		profile = gattProfile;
+		profile = new Bluez5ProfileGatt(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_GATT, profile));
-		mUuids.push_back(gattProfile->getProfileUuid());
 	}
 	else if (profileId == BLUETOOTH_PROFILE_ID_SPP)
 	{
-		Bluez5ProfileSpp *sppProfile = new Bluez5ProfileSpp(this);
-		profile = sppProfile;
+		profile = new Bluez5ProfileSpp(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_SPP, profile));
-		mUuids.push_back(sppProfile->getProfileUuid());
 	}
+
+	if (profile)
+		mUuids.push_back(profile->getProfileUuid());
 
 	return profile;
 }
