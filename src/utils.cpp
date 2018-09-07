@@ -35,6 +35,20 @@ std::string convertAddressToUpperCase(const std::string &input)
 	return output;
 }
 
+std::string convertToLowerCase(const std::string &input)
+{
+	std::string output;
+	output = convertAddressToLowerCase(input);
+	return output;
+}
+
+std::string convertToUpperCase(const std::string &input)
+{
+	std::string output;
+	output = convertAddressToUpperCase(input);
+	return output;
+}
+
 std::vector<unsigned char>convertArrayByteGVariantToVector(GVariant *iter)
 {
 	GVariantIter *valueIter;

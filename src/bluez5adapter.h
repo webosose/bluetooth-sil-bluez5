@@ -52,8 +52,11 @@ public:
 	BluetoothError disable();
 	BluetoothError startDiscovery();
 	void cancelDiscovery(BluetoothResultCallback callback);
-	BluetoothError startLeDiscovery(uint32_t scanId, BluetoothBleDiscoveryUuidFilterList uuids);
-	BluetoothError cancelLeDiscovery(uint32_t scanId);
+	int32_t addLeDiscoveryFilter(const BluetoothLeDiscoveryFilter &filter);
+	BluetoothError removeLeDiscoveryFilter(uint32_t scanId);
+	void matchLeDiscoveryFilterDevices(const BluetoothLeDiscoveryFilter &filter, uint32_t scanId);
+	BluetoothError startLeDiscovery();
+	BluetoothError cancelLeDiscovery();
 	BluetoothProfile* getProfile(const std::string& name);
 
 	void pair(const std::string &address, BluetoothResultCallback callback);
@@ -67,7 +70,10 @@ public:
 	void removeDevice(const std::string &objectPath);
 	Bluez5Device* findDeviceByObjectPath(const std::string &objectPath);
 	Bluez5Device* findDevice(const std::string &address);
-	bool anyMatch(BluetoothBleDiscoveryUuidFilterList deviceUuids, BluetoothBleDiscoveryUuidFilterList requestUuids);
+	bool filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
+	bool checkServiceUuid(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
+	bool checkServiceData(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
+	bool checkManufacturerData(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
 
 	void assignAgent(Bluez5Agent *agent);
 	Bluez5Agent *getAgent();
@@ -137,6 +143,7 @@ private:
 	void resetDiscoveryTimeout();
 	void startDiscoveryTimeout();
 	bool isDiscoveryTimeoutRunning();
+	uint32_t nextScanId();
 
 private:
 	std::string mObjectPath;
@@ -146,7 +153,7 @@ private:
 	bool mPowered;
 	bool mDiscovering;
 	std::unordered_map<std::string, Bluez5Device*> mDevices;
-	std::unordered_map<uint32_t, BluetoothBleDiscoveryUuidFilterList> mLeScans;
+	std::unordered_map<uint32_t, BluetoothLeDiscoveryFilter> mLeScanFilters;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, Bluez5Device*>> mLeDevicesByScanId;
 	uint32_t mDiscoveryTimeout;
 	guint mDiscoveryTimeoutSource;

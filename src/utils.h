@@ -28,6 +28,8 @@
 
 std::string convertAddressToLowerCase(const std::string &input);
 std::string convertAddressToUpperCase(const std::string &input);
+std::string convertToLowerCase(const std::string &input);
+std::string convertToUpperCase(const std::string &input);
 std::vector<unsigned char>convertArrayByteGVariantToVector(GVariant *iter);
 std::vector<std::string>convertArrayStringGVariantToVector(GVariant *iter);
 GVariant* convertVectorToArrayByteGVariant(const std::vector<unsigned char> &v);
