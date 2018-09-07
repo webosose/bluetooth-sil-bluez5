@@ -52,6 +52,9 @@ public:
 	std::vector<std::string> getUuids() const;
 	bool getConnected() const;
 	Bluez5Adapter* getAdapter() const;
+	std::vector<uint8_t> getScanRecord() const;
+	std::string getServiceDataUuid() const;
+	std::vector<uint8_t> getManufactureData() const;
 
 	BluetoothPropertiesList buildPropertiesList() const;
 
@@ -77,6 +80,13 @@ private:
 	BluetoothDeviceType mType;
 	std::vector<std::string> mUuids;
 	std::vector <std::uint8_t> mManufacturerData;
+	struct ServiceData
+	{
+		std::string mServiceDataUuid;
+		std::vector <std::uint8_t> mScanRecord;
+	} ;
+
+	ServiceData mServiceData;
 	bool mPaired;
 	BluezDevice1 *mDeviceProxy;
 	FreeDesktopDBusProperties *mPropertiesProxy;

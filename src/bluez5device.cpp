@@ -231,6 +231,29 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 		g_variant_iter_free(iter);
 		changed = true;
 	}
+	else if (key == "ServiceData")
+	{
+		GVariantIter *iter;
+		g_variant_get (valueVar, "a{sv}", &iter);
+
+		GVariant *array;
+		const gchar *key;
+		uint8_t val;
+
+		while (g_variant_iter_loop(iter, "{&sv}", &key, &array))
+		{
+			mServiceData.mServiceDataUuid = key;
+			GVariantIter it_array;
+			g_variant_iter_init(&it_array, array);
+			while(g_variant_iter_loop(&it_array, "y", &val))
+			{
+				mServiceData.mScanRecord.push_back(val);
+			}
+			break;
+		}
+		g_variant_iter_free(iter);
+		changed = true;
+	}
 	else if (key == "TxPower")
 	{
 		mTxPower = g_variant_get_int16(valueVar);
@@ -556,6 +579,7 @@ BluetoothPropertiesList Bluez5Device::buildPropertiesList() const
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TRUSTED, mTrusted));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::BLOCKED, mBlocked));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::MANUFACTURER_DATA, mManufacturerData));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::SCAN_RECORD, mServiceData.mScanRecord));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TXPOWER, mTxPower));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::RSSI, mRSSI));
 	return properties;
@@ -601,3 +625,17 @@ Bluez5Adapter* Bluez5Device::getAdapter() const
 	return mAdapter;
 }
 
+std::vector<uint8_t> Bluez5Device::getScanRecord() const
+{
+	return mServiceData.mScanRecord;
+}
+
+std::string Bluez5Device::getServiceDataUuid() const
+{
+	return mServiceData.mServiceDataUuid;
+}
+
+std::vector<uint8_t> Bluez5Device::getManufactureData() const
+{
+	return mManufacturerData;
+}
