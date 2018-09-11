@@ -36,7 +36,7 @@ public:
 	~Bluez5ProfileOpp();
 
 	BluetoothOppTransferId pushFile(const std::string &address, const std::string &sourcePath, BluetoothOppTransferResultCallback callback);
-	void cancelTransfer(BluetoothOppTransferId id, BluetoothResultCallback callback) {}
+	void cancelTransfer(BluetoothOppTransferId id, BluetoothResultCallback callback);
 	void supplyTransferConfirmation(BluetoothOppTransferId transferId, bool accept, BluetoothResultCallback callback){}
 	inline uint64_t nextTransferId() { return ++mTranfserIdCounter; }
 

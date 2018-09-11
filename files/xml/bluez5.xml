@@ -119,6 +119,24 @@
             <arg name="file" type="s" direction="in"/>
         </method>
     </interface>
+    <interface name="org.bluez.obex.ObjectPush1">
+        <method name="SendFile">
+            <arg name="sourcefile" type="s" direction="in"/>
+            <arg name="transfer" type="o" direction="out"/>
+            <arg name="properties" type="a{sv}" direction="out"/>
+        </method>
+        <method name="PullBusinessCard">
+            <arg name="targetfile" type="s" direction="in"/>
+            <arg name="transfer" type="o" direction="out"/>
+            <arg name="properties" type="a{sv}" direction="out"/>
+        </method>
+        <method name="ExchangeBusinessCards">
+            <arg name="clientfile" type="s" direction="in"/>
+            <arg name="targetfile" type="s" direction="in"/>
+            <arg name="transfer" type="o" direction="out"/>
+            <arg name="properties" type="a{sv}" direction="out"/>
+        </method>
+    </interface>
     <interface name="org.bluez.LEAdvertisingManager1">
         <method name="RegisterAdvertisement">
             <arg name="advertisement" type="o" direction="in"/>

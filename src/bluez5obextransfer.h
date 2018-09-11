@@ -55,6 +55,7 @@ public:
 
 	uint64_t getBytesTransferred() const { return mBytesTransferred; }
 	State getState() const { return mState; }
+	uint64_t getFileSize() const { return mFileSize; }
 
 public:
 	static void handlePropertiesChanged(BluezObexTransfer1 *, gchar *interface,  GVariant *changedProperties,

@@ -55,6 +55,8 @@ public:
 
 	BluezObexFileTransfer1* getFileTransferProxy() const { return mFileTransferProxy; }
 
+	BluezObexObjectPush1* getObjectPushProxy() const { return mObjectPushProxy; }
+
 	void watch(Bluez5ObexSessionStatusCallback callback);
 
 private:
@@ -64,6 +66,7 @@ private:
 	std::string mDeviceAddress;
 	BluezObexSession1 *mSessionProxy;
 	BluezObexFileTransfer1 *mFileTransferProxy;
+	BluezObexObjectPush1 *mObjectPushProxy;
 	bool mLostRemote;
 	DBusUtils::ObjectWatch *mObjectWatch;
 	Bluez5ObexSessionStatusCallback mStatusCallback;

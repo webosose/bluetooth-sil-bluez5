@@ -51,6 +51,10 @@ protected:
 	void handleFailedToCreateSession(const std::string &address, BluetoothResultCallback callback);
 	void notifySessionStatus(const std::string &address, bool createdOrRemoved);
 	void handleObexSessionStatus(const std::string &address, bool lost);
+	void startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback);
+	void updateActiveTransfer(BluetoothFtpTransferId id, Bluez5ObexTransfer *transfer, BluetoothOppTransferResultCallback callback);
+	void removeTransfer(BluetoothFtpTransferId id);
+	Bluez5ObexTransfer* findTransfer(BluetoothFtpTransferId id);
 };
 
 #endif

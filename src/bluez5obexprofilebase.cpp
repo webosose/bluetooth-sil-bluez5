@@ -82,10 +82,10 @@ void Bluez5ObexProfileBase::removeSession(const std::string &address)
 
 	mSessions.erase(sessionIter);
 
+	notifySessionStatus(address, false);
+
 	// This will unregister the session with the obex daemon
 	delete session;
-
-	notifySessionStatus(address, false);
 }
 
 void Bluez5ObexProfileBase::createSession(const std::string &address, Bluez5ObexSession::Type type, BluetoothResultCallback callback)
@@ -184,4 +184,61 @@ const Bluez5ObexSession* Bluez5ObexProfileBase::findSession(const std::string &a
 		return nullptr;
 
 	return sessionIter->second;
+}
+
+void Bluez5ObexProfileBase::startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback)
+{
+	// NOTE: ownership of the transfer object is passed to updateActiveTransfer which
+	// will delete it once there is nothing to left to do with it
+	Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath));
+	mTransfers.insert(std::pair<BluetoothFtpTransferId, Bluez5ObexTransfer*>(id, transfer));
+	transfer->watch(std::bind(&Bluez5ObexProfileBase::updateActiveTransfer, this, id, transfer, callback));
+}
+
+void Bluez5ObexProfileBase::updateActiveTransfer(BluetoothFtpTransferId id, Bluez5ObexTransfer *transfer, BluetoothOppTransferResultCallback callback)
+{
+	bool cleanup = false;
+
+	if (transfer->getState() == Bluez5ObexTransfer::State::ACTIVE)
+	{
+		callback(BLUETOOTH_ERROR_NONE, transfer->getBytesTransferred(), transfer->getFileSize(), false);
+	}
+	else if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE)
+	{
+		callback(BLUETOOTH_ERROR_NONE, transfer->getBytesTransferred(), transfer->getFileSize(), true);
+		cleanup = true;
+	}
+	else if (transfer->getState() == Bluez5ObexTransfer::State::ERROR)
+	{
+		DEBUG("File transfer failed");
+		callback(BLUETOOTH_ERROR_FAIL, transfer->getBytesTransferred(), transfer->getFileSize(), false);
+		cleanup = true;
+	}
+
+	if (cleanup)
+		removeTransfer(id);
+}
+
+void Bluez5ObexProfileBase::removeTransfer(BluetoothFtpTransferId id)
+{
+	auto transferIter = mTransfers.find(id);
+	if (transferIter == mTransfers.end())
+		return;
+
+	Bluez5ObexTransfer *transfer = transferIter->second;
+
+	mTransfers.erase(transferIter);
+
+	delete transfer;
+}
+
+Bluez5ObexTransfer* Bluez5ObexProfileBase::findTransfer(BluetoothFtpTransferId id)
+{
+	auto transferIter = mTransfers.find(id);
+	if (transferIter == mTransfers.end())
+		return 0;
+
+	Bluez5ObexTransfer *transfer = transferIter->second;
+
+	return transfer;
 }

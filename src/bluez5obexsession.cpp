@@ -54,6 +54,18 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 		return;
 	}
 
+	mObjectPushProxy = bluez_obex_object_push1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+																		"org.bluez.obex", mObjectPath.c_str(), NULL, &error);
+
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_OBEX_PUSH_PROXY, 0,
+			  "Failed to create dbus proxy for obex push on path %s",
+			  mObjectPath.c_str());
+		g_error_free(error);
+		return;
+	}
+
 	mObjectWatch->watchInterfaceRemoved([this](const std::string &name) {
 		if (name != "org.bluez.obex.Session1" && name != "all")
 			return;
