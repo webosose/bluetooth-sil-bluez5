@@ -103,6 +103,7 @@ file(GLOB SOURCES
      src/bluez5gattremoteattribute.cpp
      src/bluez5obexprofilebase.cpp
      src/bluez5profileopp.cpp
+     src/bluez5obexagent.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})

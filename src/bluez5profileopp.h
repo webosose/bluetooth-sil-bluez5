@@ -37,11 +37,16 @@ public:
 
 	BluetoothOppTransferId pushFile(const std::string &address, const std::string &sourcePath, BluetoothOppTransferResultCallback callback);
 	void cancelTransfer(BluetoothOppTransferId id, BluetoothResultCallback callback);
-	void supplyTransferConfirmation(BluetoothOppTransferId transferId, bool accept, BluetoothResultCallback callback){}
+	void supplyTransferConfirmation(BluetoothOppTransferId transferId, bool accept, BluetoothResultCallback callback);
+	void agentTransferConfirmationRequested(BluezObexAgent1 *interface, GDBusMethodInvocation *invocation, const gchar *arg_path);
 	inline uint64_t nextTransferId() { return ++mTranfserIdCounter; }
 
 private:
 	uint64_t mTranfserIdCounter;
+	BluezObexAgent1 *mInterface;
+	GDBusMethodInvocation *mInvocation;
+	std::string mTransferObjPath;
+	std::string mFileName;
 };
 
 #endif

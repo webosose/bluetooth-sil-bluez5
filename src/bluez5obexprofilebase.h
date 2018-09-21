@@ -38,6 +38,7 @@ public:
 
 	void connect(const std::string &address, BluetoothResultCallback callback);
 	void disconnect(const std::string& address, BluetoothResultCallback callback);
+	void handleObexSessionStatus(const std::string &address, bool lost);
 
 private:
 	std::map<std::string, Bluez5ObexSession*> mSessions;
@@ -50,7 +51,6 @@ protected:
 	const Bluez5ObexSession* findSession(const std::string &address) const;
 	void handleFailedToCreateSession(const std::string &address, BluetoothResultCallback callback);
 	void notifySessionStatus(const std::string &address, bool createdOrRemoved);
-	void handleObexSessionStatus(const std::string &address, bool lost);
 	void startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback);
 	void updateActiveTransfer(BluetoothFtpTransferId id, Bluez5ObexTransfer *transfer, BluetoothOppTransferResultCallback callback);
 	void removeTransfer(BluetoothFtpTransferId id);

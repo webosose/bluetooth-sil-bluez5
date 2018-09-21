@@ -137,6 +137,11 @@ void Bluez5Advertise::registerAdvertisement(uint8_t advId, AdvertiserStatusCallb
 gboolean Bluez5Advertise::unRegisterAdvertisement(uint8_t advId)
 {
 	std::string path = getPath(advId);
+	if (path.empty())
+	{
+		DEBUG("Already unregistered");
+		return true;
+	}
 	removeAdvertise(advId);
 	return bluez_leadvertising_manager1_call_unregister_advertisement_sync(mAdvManager, path.c_str(), NULL, NULL);
 }
@@ -205,7 +210,7 @@ void Bluez5Advertise::advertiseManufacturerData(uint8_t advId, std::vector<uint8
 	if (*c)
 		isLittleEndian = true;
 
-	if (data.size() > 2)
+	if (data.size() >= 2)
 	{
 		if (isLittleEndian)
 		{
@@ -368,7 +373,7 @@ std::string Bluez5Advertise::getPath(uint8_t advId)
 	auto it = mAdvertiserMap.find(advId);
 	if (it == mAdvertiserMap.end())
 	{
-		return nullptr;
+		return std::string();
 	}
 
 	AdvertiseObject *obj = (it->second).get();

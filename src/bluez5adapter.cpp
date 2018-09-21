@@ -20,6 +20,7 @@
 #include "bluez5device.h"
 #include "bluez5agent.h"
 #include "bluez5obexclient.h"
+#include "bluez5obexagent.h"
 #include "bluez5profileftp.h"
 #include "utils.h"
 #include "bluez5profilegatt.h"
@@ -74,6 +75,7 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handleAdapterPropertiesChanged), this);
 
 	mObexClient = new Bluez5ObexClient;
+	mObexAgent = new Bluez5ObexAgent(this);
 }
 
 Bluez5Adapter::~Bluez5Adapter()

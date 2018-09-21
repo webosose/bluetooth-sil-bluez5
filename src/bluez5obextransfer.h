@@ -56,6 +56,8 @@ public:
 	uint64_t getBytesTransferred() const { return mBytesTransferred; }
 	State getState() const { return mState; }
 	uint64_t getFileSize() const { return mFileSize; }
+	const std::string& getFileName() const { return mFileName; }
+	const std::string& getFilePath() const { return mFilePath; }
 
 public:
 	static void handlePropertiesChanged(BluezObexTransfer1 *, gchar *interface,  GVariant *changedProperties,
@@ -69,6 +71,8 @@ private:
 	uint64_t mBytesTransferred;
 	uint64_t mFileSize;
 	State mState;
+	std::string mFileName;
+	std::string mFilePath;
 
 	void updateFromProperties(GVariant *properties);
 	bool parsePropertyFromVariant(const std::string &key, GVariant *valueVar);

@@ -34,6 +34,7 @@ extern "C" {
 
 class Bluez5Agent;
 class Bluez5ObexClient;
+class Bluez5ObexAgent;
 
 class Bluez5Adapter : public BluetoothAdapter
 {
@@ -165,6 +166,7 @@ private:
 	BluetoothResultCallback mCurrentPairingCallback;
 	std::map<std::string, BluetoothProfile*> mProfiles;
 	Bluez5ObexClient *mObexClient;
+	Bluez5ObexAgent *mObexAgent;
 	std::string mName;
 	std::string mAlias;
 	BluetoothResultCallback mCancelDiscCallback;

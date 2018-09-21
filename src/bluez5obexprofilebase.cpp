@@ -37,7 +37,8 @@ void Bluez5ObexProfileBase::notifySessionStatus(const std::string &address, bool
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, createdOrRemoved));
 
-	getObserver()->propertiesChanged(address, properties);
+	std::string lowerAddress = convertAddressToLowerCase(address);
+	getObserver()->propertiesChanged(lowerAddress, properties);
 }
 
 void Bluez5ObexProfileBase::handleFailedToCreateSession(const std::string &address, BluetoothResultCallback callback)

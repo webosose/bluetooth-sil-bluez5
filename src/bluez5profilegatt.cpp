@@ -2165,7 +2165,7 @@ void Bluez5ProfileGatt::onHandleCharacteriscticWriteValue(BluezGattCharacteristi
 	if (!uuid)
 	{
 		ERROR(MSGID_GATT_PROFILE_ERROR, 0, "Failed to get Gatt Service uuid on %s",
-			  servicePath);
+			  servicePath.c_str());
 		return;
 	}
 	BluetoothUuid service(uuid);
@@ -2249,7 +2249,7 @@ void Bluez5ProfileGatt::onHandleDescrptorWriteValue(BluezGattDescriptor1* interf
 	if (!serviceUuid)
 	{
 		ERROR(MSGID_GATT_PROFILE_ERROR, 0, "Failed to get Gatt Service uuid on %s",
-			  servicePath);
+			  servicePath.c_str());
 		return;
 	}
 

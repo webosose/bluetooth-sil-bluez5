@@ -27,7 +27,8 @@ Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath) :
 	mPropertiesProxy(0),
 	mBytesTransferred(0),
 	mFileSize(0),
-	mState(INACTIVE)
+	mState(INACTIVE),
+	mWatchCallback(nullptr)
 {
 	GError *error = 0;
 
@@ -73,6 +74,7 @@ Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath) :
 
 	free_desktop_dbus_properties_call_get_all(mPropertiesProxy, "org.bluez.obex.Transfer1", NULL,
 											  glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(fetchPropertiesCallback));
+
 }
 
 Bluez5ObexTransfer::~Bluez5ObexTransfer()
@@ -82,7 +84,8 @@ Bluez5ObexTransfer::~Bluez5ObexTransfer()
 	if (mState != COMPLETE && mState != ERROR)
 	{
 		mState = ERROR;
-		mWatchCallback();
+		if (mWatchCallback)
+			mWatchCallback();
 	}
 
 	g_object_unref(mTransferProxy);
@@ -96,7 +99,8 @@ void Bluez5ObexTransfer::watch(Bluez5ObexTransferWatchCallback callback)
 
 void Bluez5ObexTransfer::notifyWatcherAboutChangedProperties()
 {
-	mWatchCallback();
+	if (mWatchCallback)
+		mWatchCallback();
 }
 
 bool Bluez5ObexTransfer::parsePropertyFromVariant(const std::string &key, GVariant *valueVar)
@@ -128,6 +132,14 @@ bool Bluez5ObexTransfer::parsePropertyFromVariant(const std::string &key, GVaria
 			mState = ERROR;
 
 		changed = true;
+	}
+	else if (key == "Name")
+	{
+		mFileName = g_variant_get_string(valueVar, NULL);
+	}
+	else if(key == "Filename")
+	{
+		mFilePath = g_variant_get_string(valueVar, NULL);
 	}
 
 	if (mState == COMPLETE)
