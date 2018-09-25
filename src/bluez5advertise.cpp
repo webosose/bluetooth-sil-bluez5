@@ -220,6 +220,11 @@ void Bluez5Advertise::advertiseManufacturerData(uint8_t advId, std::vector<uint8
 			manufacturerId = msb | lsb;
 		}
 	}
+	else
+	{
+		DEBUG("Manufacturer data is less than 2 bytes, manufacturer data is ignored");
+		return;
+	}
 
 	for (int i = 2; i < data.size(); i++)
 	{

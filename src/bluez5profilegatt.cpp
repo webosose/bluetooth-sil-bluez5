@@ -1039,7 +1039,7 @@ void Bluez5ProfileGatt::changeCharacteristicWatchStatus(const std::string &addre
 										BluetoothResultCallback callback)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-	bool result;
+	bool result = false;
 	auto deviceServicesIter = mDeviceServicesMap.find(address);
 
 	if (deviceServicesIter == mDeviceServicesMap.end())
