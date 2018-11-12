@@ -289,4 +289,7 @@
             <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
         </property>
     </interface>
+    <interface name="org.bluez.MediaTransport1">
+        <property name="Device" type="o" access="read"></property>
+    </interface>
 </node>

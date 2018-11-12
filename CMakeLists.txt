@@ -110,6 +110,7 @@ file(GLOB SOURCES
      src/bluez5obexprofilebase.cpp
      src/bluez5profileopp.cpp
      src/bluez5obexagent.cpp
+     src/bluez5profilea2dp.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})
