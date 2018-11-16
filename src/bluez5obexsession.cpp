@@ -19,6 +19,7 @@
 #include "dbusutils.h"
 #include "asyncutils.h"
 #include "logging.h"
+#include "bluez5busconfig.h"
 
 Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const std::string &objectPath, const std::string &deviceAddress) :
 	mClient(client),
@@ -28,11 +29,11 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 	mSessionProxy(0),
 	mFileTransferProxy(0),
     mLostRemote(false),
-    mObjectWatch(new DBusUtils::ObjectWatch(G_BUS_TYPE_SESSION, "org.bluez.obex", objectPath))
+    mObjectWatch(new DBusUtils::ObjectWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex", objectPath))
 {
 	GError *error = 0;
 
-	mSessionProxy = bluez_obex_session1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	mSessionProxy = bluez_obex_session1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 	                                                           "org.bluez.obex", mObjectPath.c_str(), NULL, &error);
 	if (error)
 	{
@@ -43,7 +44,7 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 		return;
 	}
 
-	mFileTransferProxy = bluez_obex_file_transfer1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	mFileTransferProxy = bluez_obex_file_transfer1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 																		"org.bluez.obex", mObjectPath.c_str(), NULL, &error);
 	if (error)
 	{
@@ -54,7 +55,7 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 		return;
 	}
 
-	mObjectPushProxy = bluez_obex_object_push1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	mObjectPushProxy = bluez_obex_object_push1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 																		"org.bluez.obex", mObjectPath.c_str(), NULL, &error);
 
 	if (error)

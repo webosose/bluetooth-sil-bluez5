@@ -18,6 +18,7 @@
 #define BLUEZ5PROFILEOPP_H
 
 #include <string>
+#include <map>
 
 #include <bluetooth-sil-api.h>
 #include <bluez5obexprofilebase.h>
@@ -47,6 +48,7 @@ private:
 	GDBusMethodInvocation *mInvocation;
 	std::string mTransferObjPath;
 	std::string mFileName;
+	std::map <BluetoothOppTransferId, uint64_t> mTransfersMap;
 };
 
 #endif

@@ -20,16 +20,17 @@
 #include "logging.h"
 #include "bluez5adapter.h"
 #include "bluez5profileopp.h"
+#include "bluez5busconfig.h"
 
 const std::string OBEX_AGENT_PATH = "/obex/agent";
 
 Bluez5ObexAgent::Bluez5ObexAgent(Bluez5Adapter *adapter) :
 	mAgentManagerProxy(nullptr),
 	mAgentInterface(nullptr),
-	mNameWatch(G_BUS_TYPE_SESSION, "org.bluez.obex"),
+	mNameWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex"),
 	mAdapter(adapter)
 {
-	DBusUtils::waitForBus(G_BUS_TYPE_SESSION, [this](bool available) {
+	DBusUtils::waitForBus(BLUEZ5_OBEX_DBUS_BUS_TYPE, [this](bool available) {
 		if (!available) {
 			// register an empty name watch handler
 			mNameWatch.watch([](bool available) { });
@@ -86,7 +87,7 @@ void Bluez5ObexAgent::createObexAgentManagerProxy()
 		registerAgent();
 	};
 
-	bluez_obex_agent_manager1_proxy_new_for_bus(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	bluez_obex_agent_manager1_proxy_new_for_bus(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 	                                     "org.bluez.obex", "/org/bluez/obex", NULL,
 	                                     glibAsyncMethodWrapper,
 	                                     new GlibAsyncFunctionWrapper(createProxyCallback));
@@ -140,7 +141,7 @@ void Bluez5ObexAgent::createAgentInterface(const std::string &objectPath)
 	DEBUG("creating interface OBEX agent");
 
 	GError *error = nullptr;
-	GDBusConnection *mConn = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &error);
+	GDBusConnection *mConn = g_bus_get_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, NULL, &error);
 	if (error)
 	{
 		ERROR(MSGID_FAILED_TO_CREATE_OBEX_AGENT_MGR_PROXY, 0, "Failed to create obex agent on path");

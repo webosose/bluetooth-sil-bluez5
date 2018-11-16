@@ -20,6 +20,7 @@
 #include "bluez5obexsession.h"
 #include "logging.h"
 #include "asyncutils.h"
+#include "bluez5busconfig.h"
 
 Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -32,7 +33,7 @@ Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath) :
 {
 	GError *error = 0;
 
-	mTransferProxy = bluez_obex_transfer1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	mTransferProxy = bluez_obex_transfer1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 														"org.bluez.obex", mObjectPath.c_str(), NULL, &error);
 	if (error)
 	{
@@ -43,7 +44,7 @@ Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath) :
 		return;
 	}
 
-	mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 																		   "org.bluez.obex", objectPath.c_str(), NULL, &error);
 	if (error)
 	{

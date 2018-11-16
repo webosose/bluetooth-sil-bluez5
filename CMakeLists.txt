@@ -22,6 +22,8 @@ include(webOS/webOS)
 webos_modules_init(1 0 0 QUALIFIER RC7)
 webos_component(0 1 0)
 
+option (USE_SYSTEM_BUS_FOR_OBEX    "Enable using system bus for obexd"   ON)
+
 # Enable C++11 support (still gcc 4.6 so can't use -std=c++11)
 _webos_manipulate_flags(APPEND CXX ALL -std=c++0x)
 
@@ -78,6 +80,10 @@ execute_process(COMMAND ${GDBUS_CODEGEN_EXECUTABLE}
         RESULT_VARIABLE codegen_failed)
 if (codegen_failed)
     message(FATAL_ERROR "Error in generating code for freedesktop dbus interface using gdbus-codegen")
+endif()
+
+if (USE_SYSTEM_BUS_FOR_OBEX)
+    webos_add_compiler_flags(ALL -DUSE_SYSTEM_BUS_FOR_OBEX)
 endif()
 
 include_directories(src ${GDBUS_IF_DIR})

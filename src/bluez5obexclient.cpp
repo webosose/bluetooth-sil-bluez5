@@ -19,12 +19,13 @@
 #include "dbusutils.h"
 #include "asyncutils.h"
 #include "logging.h"
+#include "bluez5busconfig.h"
 
 Bluez5ObexClient::Bluez5ObexClient() :
     mClientProxy(0),
-    mNameWatch(G_BUS_TYPE_SESSION, "org.bluez.obex")
+    mNameWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex")
 {
-	DBusUtils::waitForBus(G_BUS_TYPE_SESSION, [this](bool available) {
+	DBusUtils::waitForBus(BLUEZ5_OBEX_DBUS_BUS_TYPE, [this](bool available) {
 		if (!available) {
 			// register an empty name watch handler
 			mNameWatch.watch([](bool available) { });
@@ -79,7 +80,7 @@ void Bluez5ObexClient::createProxy()
 		DEBUG("Successfully created proxy for OBEX client");
 	};
 
-	bluez_obex_client1_proxy_new_for_bus(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	bluez_obex_client1_proxy_new_for_bus(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 	                                     "org.bluez.obex", "/org/bluez/obex", NULL,
 	                                     glibAsyncMethodWrapper,
 	                                     new GlibAsyncFunctionWrapper(createProxyCallback));

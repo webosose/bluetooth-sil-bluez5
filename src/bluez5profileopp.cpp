@@ -21,6 +21,7 @@
 #include "bluez5obextransfer.h"
 #include "bluez5obexsession.h"
 #include "bluez5obexclient.h"
+#include "bluez5busconfig.h"
 
 using namespace std::placeholders;
 
@@ -116,7 +117,7 @@ void Bluez5ProfileOpp::agentTransferConfirmationRequested(BluezObexAgent1 *inter
 	BluetoothOppTransferId transferId = nextTransferId();
 
 	GError *error = 0;
-	BluezObexTransfer1* mTransFerProxy = bluez_obex_transfer1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	BluezObexTransfer1* mTransFerProxy = bluez_obex_transfer1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 	                                                           "org.bluez.obex", arg_path, NULL, &error);
 	if (error)
 	{
@@ -139,7 +140,7 @@ void Bluez5ProfileOpp::agentTransferConfirmationRequested(BluezObexAgent1 *inter
 	mFileName = fileName;
 	guint64 size = bluez_obex_transfer1_get_size(mTransFerProxy);
 
-	BluezObexSession1* mSessionProxy = bluez_obex_session1_proxy_new_for_bus_sync(G_BUS_TYPE_SESSION, G_DBUS_PROXY_FLAGS_NONE,
+	BluezObexSession1* mSessionProxy = bluez_obex_session1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
 	                                                           "org.bluez.obex", sessionPath, NULL, &error);
 	if (error)
 	{
@@ -164,6 +165,7 @@ void Bluez5ProfileOpp::agentTransferConfirmationRequested(BluezObexAgent1 *inter
 		session->watch(std::bind(&Bluez5ObexProfileBase::handleObexSessionStatus, this, deviceAddress, _1));
 		storeSession(deviceAddress, session);
 		notifySessionStatus(deviceAddress, true);
+		mTransfersMap[transferId] = 0;
 		getOppObserver()->transferConfirmationRequested(transferId, deviceAddress, device->getName(), mFileName, size);
 	}
 
@@ -178,7 +180,15 @@ void Bluez5ProfileOpp::supplyTransferConfirmation(BluetoothOppTransferId transfe
 		auto resultCallBack = [this, transferId, callback](BluetoothError error, uint64_t bytesTransferred,
 														   uint64_t totalSize, bool finished)
 		{
-			getOppObserver()->transferStateChanged(transferId, bytesTransferred, finished);
+			if (mTransfersMap[transferId])
+				getOppObserver()->transferStateChanged(transferId, bytesTransferred - mTransfersMap[transferId], finished);
+			else
+				getOppObserver()->transferStateChanged(transferId, bytesTransferred, finished);
+
+			if (finished)
+				mTransfersMap[transferId] = 0;
+			else
+				mTransfersMap[transferId] = bytesTransferred;
 		};
 
 		startTransfer(transferId, mTransferObjPath, resultCallBack);
