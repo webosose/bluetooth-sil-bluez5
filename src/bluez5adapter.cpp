@@ -1062,8 +1062,8 @@ Bluez5Device* Bluez5Adapter::findDevice(const std::string &address)
 
 bool Bluez5Adapter::filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device)
 {
-	bool address = false;
-	bool name = false;
+	bool addressFilter = false;
+	bool nameFilter = false;
 	bool serviceUuid = false;
 	bool serviceData = false;
 	bool manuData = false;
@@ -1074,10 +1074,10 @@ bool Bluez5Adapter::filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter
 		deviceAddress = convertToLowerCase(deviceAddress);
 		filterDevAddress = convertToLowerCase(filterDevAddress);
 		if (deviceAddress == filterDevAddress)
-			address = true;
+			addressFilter = true;
 	}
 	else
-		address = true;
+		addressFilter = true;
 	if (!filter.getName().empty())
 	{
 		std::string deviceName = device->getName();
@@ -1085,10 +1085,10 @@ bool Bluez5Adapter::filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter
 		deviceName = convertToLowerCase(deviceName);
 		filterDevName = convertToLowerCase(filterDevName);
 		if (deviceName == filterDevName)
-			name = true;
+			nameFilter = true;
 	}
 	else
-		name = true;
+		nameFilter = true;
 	if (!filter.getServiceUuid().getUuid().empty())
 	{
 		serviceUuid = checkServiceUuid(filter, device);
@@ -1108,7 +1108,7 @@ bool Bluez5Adapter::filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter
 	else
 		manuData = true;
 
-	if (address && name && serviceUuid && serviceData && manuData)
+	if (addressFilter && nameFilter && serviceUuid && serviceData && manuData)
 		return true;
 	else
 		return false;
