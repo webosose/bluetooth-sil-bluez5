@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 #include "bluez5profilespp.h"
 #include "bluez5profileopp.h"
 #include "bluez5profilea2dp.h"
+#include "bluez5profileavrcp.h"
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
 
@@ -881,6 +882,11 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 	{
 		profile = new Bluez5ProfileA2dp(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_A2DP, profile));
+	}
+	else if (profileId == BLUETOOTH_PROFILE_ID_AVRCP)
+	{
+		profile = new Bluez5ProfileAvcrp(this);
+		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_AVRCP, profile));
 	}
 
 	if (profile)
