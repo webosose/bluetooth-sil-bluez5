@@ -204,7 +204,7 @@ void Bluez5ObexProfileBase::updateActiveTransfer(BluetoothFtpTransferId id, Blue
 	{
 		callback(BLUETOOTH_ERROR_NONE, transfer->getBytesTransferred(), transfer->getFileSize(), false);
 	}
-	else if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE)
+	else if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE && transfer->getBytesTransferred())
 	{
 		callback(BLUETOOTH_ERROR_NONE, transfer->getBytesTransferred(), transfer->getFileSize(), true);
 		cleanup = true;

@@ -143,17 +143,6 @@ bool Bluez5ObexTransfer::parsePropertyFromVariant(const std::string &key, GVaria
 		mFilePath = g_variant_get_string(valueVar, NULL);
 	}
 
-	if (mState == COMPLETE)
-	{
-		// When we're done with the transfer and the OBEX daemon has sent the
-		// complete state property change signal it might happen for small files
-		// that there is not increase for the number of bytes transferred. For
-		// that case we set the number of bytes transferred here to the size of
-		// transferred file to do the right on our abstraction level.
-		if (mBytesTransferred != mFileSize)
-			mBytesTransferred = mFileSize;
-	}
-
 	return changed;
 }
 
