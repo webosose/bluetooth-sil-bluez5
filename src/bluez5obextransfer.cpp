@@ -22,14 +22,15 @@
 #include "asyncutils.h"
 #include "bluez5busconfig.h"
 
-Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath) :
+Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath, TransferType type) :
 	mObjectPath(objectPath),
 	mTransferProxy(0),
 	mPropertiesProxy(0),
 	mBytesTransferred(0),
 	mFileSize(0),
 	mState(INACTIVE),
-	mWatchCallback(nullptr)
+	mWatchCallback(nullptr),
+	mTransferType(type)
 {
 	GError *error = 0;
 
@@ -141,6 +142,20 @@ bool Bluez5ObexTransfer::parsePropertyFromVariant(const std::string &key, GVaria
 	else if(key == "Filename")
 	{
 		mFilePath = g_variant_get_string(valueVar, NULL);
+	}
+
+	if (mState == COMPLETE)
+	{
+		if (mTransferType == SENDING)
+		{
+		// When we're done with the transfer and the OBEX daemon has sent the
+		// complete state property change signal it might happen for small files
+		// that there is not increase for the number of bytes transferred. For
+		// that case we set the number of bytes transferred here to the size of
+		// transferred file to do the right on our abstraction level.
+			if (mBytesTransferred != mFileSize)
+				mBytesTransferred = mFileSize;
+		}
 	}
 
 	return changed;

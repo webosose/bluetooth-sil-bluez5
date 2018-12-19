@@ -23,6 +23,7 @@
 
 #include "bluez5profilebase.h"
 #include "bluez5obexsession.h"
+#include "bluez5obextransfer.h"
 
 class Bluez5Adapter;
 class Bluez5ObexTransfer;
@@ -51,7 +52,7 @@ protected:
 	const Bluez5ObexSession* findSession(const std::string &address) const;
 	void handleFailedToCreateSession(const std::string &address, BluetoothResultCallback callback);
 	void notifySessionStatus(const std::string &address, bool createdOrRemoved);
-	void startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback);
+	void startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback, Bluez5ObexTransfer::TransferType type);
 	void updateActiveTransfer(BluetoothFtpTransferId id, Bluez5ObexTransfer *transfer, BluetoothOppTransferResultCallback callback);
 	void removeTransfer(BluetoothFtpTransferId id);
 	Bluez5ObexTransfer* findTransfer(BluetoothFtpTransferId id);

@@ -187,11 +187,11 @@ const Bluez5ObexSession* Bluez5ObexProfileBase::findSession(const std::string &a
 	return sessionIter->second;
 }
 
-void Bluez5ObexProfileBase::startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback)
+void Bluez5ObexProfileBase::startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback, Bluez5ObexTransfer::TransferType type)
 {
 	// NOTE: ownership of the transfer object is passed to updateActiveTransfer which
 	// will delete it once there is nothing to left to do with it
-	Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath));
+	Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
 	mTransfers.insert(std::pair<BluetoothFtpTransferId, Bluez5ObexTransfer*>(id, transfer));
 	transfer->watch(std::bind(&Bluez5ObexProfileBase::updateActiveTransfer, this, id, transfer, callback));
 }

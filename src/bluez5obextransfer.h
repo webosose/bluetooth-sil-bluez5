@@ -44,7 +44,13 @@ public:
 		ERROR
 	};
 
-	Bluez5ObexTransfer(const std::string &objectPath);
+	enum TransferType
+	{
+		SENDING,
+		RECEIVING
+	};
+
+	Bluez5ObexTransfer(const std::string &objectPath, TransferType type = RECEIVING);
 	~Bluez5ObexTransfer();
 
 	void cancel(BluetoothResultCallback callback);
@@ -71,9 +77,9 @@ private:
 	uint64_t mBytesTransferred;
 	uint64_t mFileSize;
 	State mState;
+	TransferType mTransferType;
 	std::string mFileName;
 	std::string mFilePath;
-
 	void updateFromProperties(GVariant *properties);
 	bool parsePropertyFromVariant(const std::string &key, GVariant *valueVar);
 	void notifyWatcherAboutChangedProperties();

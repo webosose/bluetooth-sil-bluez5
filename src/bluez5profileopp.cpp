@@ -75,7 +75,7 @@ BluetoothOppTransferId Bluez5ProfileOpp::pushFile(const std::string &address,
 			return;
 		}
 
-		startTransfer(transferId, std::string(objectPath), callback);
+		startTransfer(transferId, std::string(objectPath), callback, Bluez5ObexTransfer::TransferType::SENDING);
 	};
 
 	bluez_obex_object_push1_call_send_file(objectPushProxy, sourcePath.c_str(),
@@ -191,7 +191,7 @@ void Bluez5ProfileOpp::supplyTransferConfirmation(BluetoothOppTransferId transfe
 				mTransfersMap[transferId] = bytesTransferred;
 		};
 
-		startTransfer(transferId, mTransferObjPath, resultCallBack);
+		startTransfer(transferId, mTransferObjPath, resultCallBack, Bluez5ObexTransfer::TransferType::RECEIVING);
 
 		if (mInvocation)
 		{
