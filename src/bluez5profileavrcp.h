@@ -31,9 +31,8 @@ class Bluez5Adapter;
 class Bluez5ProfileAvcrp : public Bluez5ProfileBase,
                       public BluetoothAvrcpProfile
 {
-
-
 public:
+	static const std::map <std::string, BluetoothAvrcpPassThroughKeyCode> mKeyMap;
 	Bluez5ProfileAvcrp(Bluez5Adapter* adapter);
 	~Bluez5ProfileAvcrp();
 	void connect(const std::string& address, BluetoothResultCallback callback) override;
@@ -44,6 +43,8 @@ public:
 	void getProperty(const std::string &address, BluetoothProperty::Type type, BluetoothPropertyResultCallback callback) override;
 	void supplyMediaMetaData(BluetoothAvrcpRequestId requestId, const BluetoothMediaMetaData &metaData, BluetoothResultCallback callback) override;
 	void supplyMediaPlayStatus(BluetoothAvrcpRequestId requestId, const BluetoothMediaPlayStatus &playStatus, BluetoothResultCallback callback) override;
+	void updateConnectionStatus(const std::string &address, bool status);
+	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 };
 
 #endif

@@ -1557,3 +1557,23 @@ BluetoothError Bluez5Adapter::resetModule(const std::string &deviceName, bool is
 {
 	return BLUETOOTH_ERROR_UNSUPPORTED;
 }
+
+void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected)
+{
+	if (PROFILE_ID == BLUETOOTH_PROFILE_ID_AVRCP)
+	{
+		Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+		if (avrcp) avrcp->updateConnectionStatus(address, isConnected);
+	}
+	else if (PROFILE_ID == BLUETOOTH_PROFILE_ID_A2DP)
+	{
+		Bluez5ProfileA2dp *a2dp = dynamic_cast<Bluez5ProfileA2dp*> (getProfile(BLUETOOTH_PROFILE_ID_A2DP));
+		if (a2dp) a2dp->updateConnectionStatus(address, isConnected);
+	}
+}
+
+void Bluez5Adapter::recievePassThroughCommand(std::string address, std::string key, std::string state)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (avrcp) avrcp->recievePassThroughCommand(address, key, state);
+}

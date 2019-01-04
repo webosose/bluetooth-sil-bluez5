@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ public:
 	uint32_t getClassOfDevice() const;
 	BluetoothDeviceType getType() const;
 	std::vector<std::string> getUuids() const;
+	bool isUUIDConnected(const std::string &uuid) const;
 	bool getConnected() const;
 	Bluez5Adapter* getAdapter() const;
 	std::vector<uint8_t> getScanRecord() const;
@@ -79,6 +80,7 @@ private:
 	uint32_t mClassOfDevice;
 	BluetoothDeviceType mType;
 	std::vector<std::string> mUuids;
+	std::vector <std::string> mConnectedUuids;
 	std::vector <std::uint8_t> mManufacturerData;
 	struct ServiceData
 	{

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ extern PmLogContext bluez5LogContext;
 #define MSGID_PAIRING_IO_CAPABILITY_STRING_ERROR       "PAIRING_IO_CAPABILITY_STRING_ERROR"
 #define MSGID_PROFILE_MANAGER_ERROR                    "PROFILE_MANAGER_ERROR"
 #define MSGID_GATT_PROFILE_ERROR                       "GATT_PROFILE_ERROR"
-#define MSGID_BLE_ADVERTIMENT_ERROR                     "BLE_ADVERTIMENT_ERROR"
+#define MSGID_BLE_ADVERTIMENT_ERROR                    "BLE_ADVERTIMENT_ERROR"
+#define MSGID_MEDIA_CONTROL_ERROR                      "MEDIA_CONTROL_ERROR"
 
 #endif // LOGGING_H

@@ -292,4 +292,7 @@
     <interface name="org.bluez.MediaTransport1">
         <property name="Device" type="o" access="read"></property>
     </interface>
+    <interface name="org.bluez.MediaControl1">
+        <property name="Connected" type="b" access="read"></property>
+    </interface>
 </node>

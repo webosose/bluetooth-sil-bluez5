@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,14 +47,19 @@ void Bluez5ProfileA2dp::getProperty(const std::string &address, BluetoothPropert
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
 	BluetoothProperty prop(type);
+	bool isConnected = false;
 	Bluez5Device *device = mAdapter->findDevice(address);
+
 	if (!device)
 	{
 		callback(BLUETOOTH_ERROR_PARAM_INVALID, prop);
 		return;
 	}
-	bool adapterConnectionStatus = device->getConnected();
-	prop.setValue<bool>(adapterConnectionStatus);
+
+	isConnected = device->isUUIDConnected(BLUETOOTH_PROFILE_A2DP_UUID);
+	DEBUG("A2DP isConnected %d", isConnected);
+	
+	prop.setValue<bool>(isConnected);
 	callback(BLUETOOTH_ERROR_NONE, prop);
 }
 
@@ -103,7 +108,7 @@ void Bluez5ProfileA2dp::updateConnectionStatus(const std::string &address, bool 
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
 
-	getObserver()->propertiesChanged(address, properties);
+	getObserver()->propertiesChanged(convertAddressToLowerCase(address), properties);
 }
 
 void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject *object, void *userData)
@@ -135,20 +140,10 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 		}
 
 		g_signal_connect(G_OBJECT(a2dp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
-
 		const char* deviceObjectPath = bluez_media_transport1_get_device(interface);
 
 		a2dp->mConnectedDevice = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
-		if (!a2dp->mConnectedDevice)
-		{
-			DEBUG("A2DP device null");
-			return;
-		}
 
-		BluetoothPropertiesList properties;
-		properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, true));
-		a2dp->getObserver()->propertiesChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), properties);
-		DEBUG("A2DP connected %s", a2dp->mConnectedDevice->getAddress().c_str());
 		g_object_unref(interface);
 		g_object_unref(mediaTransportInterface);
 	}
@@ -177,13 +172,9 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		if (a2dp->mState == PLAYING)
 		{
 			a2dp->mState = NOT_PLAYING;
-			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), a2dp->mState);
+			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
 		}
 
-		BluetoothPropertiesList properties;
-		properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, false));
-		a2dp->getObserver()->propertiesChanged(convertAddressToLowerCase(device->getAddress()), properties);
-		DEBUG("A2DP disconnected %s", device->getAddress().c_str());
 		g_object_unref(mediaTransportInterface);
 	}
 }
@@ -192,6 +183,7 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 												   GVariant *invalidatedProperties, gpointer userData)
 {
 	Bluez5ProfileA2dp *a2dp = static_cast<Bluez5ProfileA2dp*>(userData);
+	DEBUG("properties changed for interface %s", interface);
 
 	for (int n = 0; n < g_variant_n_children(changedProperties); n++)
 	{
@@ -215,7 +207,8 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 				a2dp->mState = NOT_PLAYING;
 			}
 
-			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), a2dp->mState);
+			if (a2dp->mConnectedDevice)
+				a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), a2dp->mState);
 		}
 
 		g_variant_unref(valueVar);
@@ -259,19 +252,14 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 				return;
 			}
 
-			g_signal_connect(G_OBJECT(propertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
-
 			a2dp->mConnectedDevice = a2dp->mAdapter->findDeviceByObjectPath(bluez_media_transport1_get_device(interface));
 			if (!a2dp->mConnectedDevice)
 			{
 				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "A2DP device null");
 				return;
 			}
+			g_signal_connect(G_OBJECT(propertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 
-			BluetoothPropertiesList properties;
-			properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, true));
-			a2dp->getObserver()->propertiesChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), properties);
-			DEBUG("A2DP already connected %s", a2dp->mConnectedDevice->getAddress().c_str());
 			g_object_unref(mediaTransportInterface);
 		}
 	}
