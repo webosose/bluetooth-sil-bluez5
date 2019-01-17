@@ -47,6 +47,7 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mCurrentPairingDevice(0),
 	mCurrentPairingCallback(0),
 	mObexClient(0),
+	mObexAgent(0),
 	mCancelDiscCallback(0),
 	mAdvertising(false)
 {

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -182,7 +182,8 @@ gboolean Bluez5ObexAgent::handleAuthorizePush(BluezObexAgent1 *object, GDBusMeth
 	                                      const gchar *arg_path)
 {
 	Bluez5ProfileOpp *oppProfile = dynamic_cast<Bluez5ProfileOpp*> (mAdapter->getProfile(BLUETOOTH_PROFILE_ID_OPP));
-	oppProfile->agentTransferConfirmationRequested(object, invocation, arg_path);
+	if (oppProfile)
+		oppProfile->agentTransferConfirmationRequested(object, invocation, arg_path);
 	return TRUE;
 }
 

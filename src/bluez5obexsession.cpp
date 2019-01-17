@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 	mDeviceAddress(deviceAddress),
 	mSessionProxy(0),
 	mFileTransferProxy(0),
+	mObjectPushProxy(0),
     mLostRemote(false),
     mObjectWatch(new DBusUtils::ObjectWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex", objectPath))
 {

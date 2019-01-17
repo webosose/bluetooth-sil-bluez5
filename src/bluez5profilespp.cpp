@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ int Bluez5ProfileSpp::registerProfile(spDeviceInfo &deviceInfo, std::string objP
 	g_variant_builder_close(&profileBuilder);
 	profileVariant = g_variant_builder_end(&profileBuilder);
 
-	g_dbus_proxy_call_sync (G_DBUS_PROXY(proxy),
+	GVariant *ret = g_dbus_proxy_call_sync (G_DBUS_PROXY(proxy),
 				"RegisterProfile",
 				profileVariant,
 				G_DBUS_CALL_FLAGS_NONE,
@@ -127,6 +127,7 @@ int Bluez5ProfileSpp::registerProfile(spDeviceInfo &deviceInfo, std::string objP
 		return BLUETOOTH_ERROR_FAIL;
 	}
 
+	if (ret) g_variant_unref(ret);
 	return BLUETOOTH_ERROR_NONE;
 }
 

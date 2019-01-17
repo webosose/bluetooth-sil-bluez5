@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -202,7 +202,6 @@ void Bluez5Advertise::advertiseManufacturerData(uint8_t advId, std::vector<uint8
 
 	GVariantBuilder *dataBuilder = 0;
 	GVariant *dataValue = 0;
-	dataBuilder = g_variant_builder_new (G_VARIANT_TYPE ("ay"));
 
 	unsigned int i = 1;
 	bool isLittleEndian = false;
@@ -231,6 +230,7 @@ void Bluez5Advertise::advertiseManufacturerData(uint8_t advId, std::vector<uint8
 		return;
 	}
 
+	dataBuilder = g_variant_builder_new (G_VARIANT_TYPE ("ay"));
 	for (int i = 2; i < data.size(); i++)
 	{
 		g_variant_builder_add(dataBuilder, "y", data[i]);

@@ -196,7 +196,7 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 		if (key == "State")
 		{
 			std::string state = g_variant_get_string(g_variant_get_variant(valueVar), NULL);
-			DEBUG("A2DP State %s", state);
+			DEBUG("A2DP State %s", state.c_str());
 
 			if (state == "active")
 			{

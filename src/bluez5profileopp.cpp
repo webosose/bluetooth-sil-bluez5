@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ const std::string BLUETOOTH_PROFILE_OPP_UUID = "00001105-0000-1000-8000-00805f9b
 Bluez5ProfileOpp::Bluez5ProfileOpp(Bluez5Adapter *adapter) :
 	Bluez5ObexProfileBase(adapter, BLUETOOTH_PROFILE_OPP_UUID),
 	mTranfserIdCounter(0),
+	mInterface(0),
 	mInvocation(nullptr)
 {
 }
