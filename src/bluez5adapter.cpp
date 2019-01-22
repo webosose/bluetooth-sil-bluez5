@@ -1133,22 +1133,22 @@ bool Bluez5Adapter::checkServiceUuid(const BluetoothLeDiscoveryFilter &filter, B
 			std::string srvcUuidStr = filter.getServiceUuid().getUuid();
 			srvcUuidStr = convertToLowerCase(srvcUuidStr);
 			int srvcUuidSize = filter.getServiceUuid().getUuid().size();
-			for(int j=0; j < srvcUuidSize; j++)
+			bool isMatching = true;
+			for(int j=0; (j < srvcUuidSize) && isMatching; j++)
 			{
 				if (srvcUuidMasksStr[j] == '1')
 				{
-					if(srvcUuidStr[j]==uuids[i][j])
+					if(srvcUuidStr[j] != uuids[i][j])
 					{
-						continue;
-					}
-					else
-					{
-						return false;
+						isMatching = false;
 					}
 				}
+
+				if (j == srvcUuidSize-1)
+					return true;
 			}
-			return true;
 		}
+		return false;
 	}
 	else
 	{
