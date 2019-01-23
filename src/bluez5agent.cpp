@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -270,9 +270,8 @@ gboolean Bluez5Agent::handleAuthorizeService(BluezAgent1 *proxy, GDBusMethodInvo
                                          const gchar *address, const gchar *service, gpointer user_data)
 {
 	DEBUG("Agent authorize service method was called");
-	g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ5_AGENT_ERROR_NOT_IMPLEMENTED, "Not implemented yet");
-
-	return FALSE;
+	bluez_agent1_complete_authorize_service(proxy, invocation);
+	return TRUE;
 }
 
 gboolean Bluez5Agent::handleRequestAuthorization(BluezAgent1 *proxy, GDBusMethodInvocation *invocation,

@@ -35,6 +35,7 @@ extern "C" {
 class Bluez5Agent;
 class Bluez5ObexClient;
 class Bluez5ObexAgent;
+class Bluez5MprisPlayer;
 
 class Bluez5Adapter : public BluetoothAdapter
 {
@@ -88,6 +89,10 @@ public:
 	void assignProfileManager(BluezProfileManager1* proxy);
 	BluezProfileManager1 *getProfileManager();
 
+	void assingPlayer(Bluez5MprisPlayer* media);
+
+	Bluez5MprisPlayer* getPlayer();
+
 	bool isPairingFor(const std::string &address) const;
 	bool isPairing() const;
 
@@ -135,6 +140,8 @@ public:
 	BluezAdapter1* getAdapterProxy() { return mAdapterProxy; }
 	void updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
+	void mediaPlayStatusRequest(std::string address);
+	void mediaMetaDataRequest(std::string address);
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);
@@ -163,6 +170,7 @@ private:
 	Bluez5Agent *mAgent;
 	Bluez5Advertise *mAdvertise;
 	BluezProfileManager1 *mProfileManager;
+	Bluez5MprisPlayer *mPlayer;
 	bool mPairing;
 	Bluez5Device *mCurrentPairingDevice;
 	BluetoothResultCallback mCurrentPairingCallback;

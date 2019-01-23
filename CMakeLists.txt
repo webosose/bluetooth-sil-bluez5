@@ -113,6 +113,7 @@ file(GLOB SOURCES
      src/bluez5profilea2dp.cpp
      src/bluez5profileavrcp.cpp
      src/bluez5mediacontrol.cpp
+     src/bluez5mprisplayer.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})

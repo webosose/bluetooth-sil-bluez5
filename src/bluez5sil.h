@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ extern "C" {
 class Bluez5Adapter;
 class Bluez5Agent;
 class Bluez5Advertise;
+class Bluez5MprisPlayer;
 
 class Bluez5SIL : public BluetoothSIL
 {
@@ -70,6 +71,8 @@ private:
 	void createProfileManager(const std::string &objectPath);
 	void removeProfileManager(const std::string &objectPath);
 	void createGattManager(const std::string &objectPath);
+	void createMediaManager(const std::string &objectPath);
+	void removeMediaManager(const std::string &objectPath);
 
 private:
 	guint nameWatch;
@@ -80,8 +83,10 @@ private:
 	BluezLEAdvertisingManager1 *mBleAdvManager;
 	BluezProfileManager1 *mProfileManager;
 	BluezGattManager1 *mGattManager;
+	BluezMedia1 *mMediaManager;
 	Bluez5Agent *mAgent;
 	Bluez5Advertise *mBleAdvertise;
+	Bluez5MprisPlayer *mPlayer;
 	BluetoothPairingIOCapability mCapability;
 };
 

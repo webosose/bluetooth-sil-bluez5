@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@
 #include "logging.h"
 #include "asyncutils.h"
 #include "dbusutils.h"
-
-#include <iostream>
+#include "bluez5mprisplayer.h"
 
 PmLogContext bluez5LogContext;
 
@@ -41,7 +40,9 @@ Bluez5SIL::Bluez5SIL(BluetoothPairingIOCapability capability) :
 	mAgent(0),
 	mBleAdvertise(0),
 	mCapability(capability),
-	mGattManager(0)
+	mGattManager(0),
+	mMediaManager(0),
+	mPlayer(0)
 {
 }
 
@@ -109,6 +110,12 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 	if (profileManager)
 	{
 		sil->createProfileManager(std::string(g_dbus_object_get_object_path(profileManager)));
+	}
+
+	GDBusObject* mediaManager = findInterface(objects, "org.bluez.Media1");
+	if (mediaManager)
+	{
+		sil->createMediaManager(std::string(g_dbus_object_get_object_path(mediaManager)));
 	}
 
 	for (int n = 0; n < g_list_length(objects); n++)
@@ -450,6 +457,47 @@ void Bluez5SIL::createGattManager(const std::string &objectPath)
 
 	for (auto adapter : mAdapters)
 		adapter->assignGattManager(mGattManager);
+}
+
+void Bluez5SIL::createMediaManager(const std::string &objectPath)
+{
+	if (mMediaManager)
+	{
+		WARNING(MSGID_MULTIPLE_AGENT_MGR, 0, "Tried to create another media instance");
+		return;
+	}
+
+	GError *error = 0;
+	mMediaManager = bluez_media1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+                                                                "org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for media manager on path %s: %s",
+			  objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+
+	mPlayer = new Bluez5MprisPlayer(mMediaManager, this);
+
+	for (auto adapter : mAdapters)
+		adapter->assingPlayer(mPlayer);
+
+}
+
+void Bluez5SIL::removeMediaManager(const std::string &objectPath)
+{
+	if (!mMediaManager)
+		return;
+
+	g_object_unref(mMediaManager);
+	mMediaManager = 0;
+
+	for (auto adapter : mAdapters)
+		adapter->assingPlayer(0);
+
+	delete mPlayer;
+	mPlayer = 0;
 }
 
 void Bluez5SIL::connectWithBluez()

@@ -20,6 +20,10 @@
             </method>
             <method name="Pair"/>
             <method name="CancelPairing"/>
+            <signal name="MediaPlayRequest">
+            </signal>
+            <signal name="MediaMetaRequest">
+            </signal>
     </interface>
     <interface name="org.bluez.AgentManager1">
         <method name="RegisterAgent">
@@ -294,5 +298,26 @@
     </interface>
     <interface name="org.bluez.MediaControl1">
         <property name="Connected" type="b" access="read"></property>
+    </interface>
+    <interface name="org.mpris.MediaPlayer2">
+        <method name="Raise">
+        </method>
+    </interface>
+    <interface name="org.mpris.MediaPlayer2.Player">
+        <property type="s" name="PlaybackStatus" access="read"></property>
+        <property type="x" name="Position" access="read"></property>
+        <property type="a{sv}" name="Metadata" access="read"></property>
+    </interface>
+    <interface name="org.bluez.Media1">
+        <method name="RegisterEndpoint"><arg name="endpoint" type="o" direction="in"/>
+            <arg name="properties" type="a{sv}" direction="in"/>
+        </method>
+        <method name="UnregisterEndpoint"><arg name="endpoint" type="o" direction="in"/>
+        </method>
+        <method name="RegisterPlayer"><arg name="player" type="o" direction="in"/>
+            <arg name="properties" type="a{sv}" direction="in"/>
+        </method>
+        <method name="UnregisterPlayer"><arg name="player" type="o" direction="in"/>
+        </method>
     </interface>
 </node>

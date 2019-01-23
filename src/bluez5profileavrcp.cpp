@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@
 #include "logging.h"
 #include "utils.h"
 #include "bluez5mediacontrol.h"
+#include "bluez5mprisplayer.h"
 #include <string>
-#include <iostream>
+
 
 const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
@@ -40,7 +41,9 @@ const std::map <std::string, BluetoothAvrcpPassThroughKeyCode> Bluez5ProfileAvcr
 };
 
 Bluez5ProfileAvcrp::Bluez5ProfileAvcrp(Bluez5Adapter* adapter):
-Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID)
+Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID),
+mMetaDataRequestId(0),
+mMediaPlayStatusRequestId(0)
 {
 }
 
@@ -110,10 +113,29 @@ void Bluez5ProfileAvcrp::getProperty(const std::string &address, BluetoothProper
 
 void Bluez5ProfileAvcrp::supplyMediaMetaData(BluetoothAvrcpRequestId requestId, const BluetoothMediaMetaData &metaData, BluetoothResultCallback callback)
 {
+	mAdapter->getPlayer()->setMediaMetaData(metaData);
+	callback(BLUETOOTH_ERROR_NONE);
 }
 
 void Bluez5ProfileAvcrp::supplyMediaPlayStatus(BluetoothAvrcpRequestId requestId, const BluetoothMediaPlayStatus &playStatus, BluetoothResultCallback callback)
 {
+	mAdapter->getPlayer()->setMediaPlayStatus(playStatus);
+	if (playStatus.getStatus() == BluetoothMediaPlayStatus::MEDIA_PLAYSTATUS_STOPPED)
+		mAdapter->getPlayer()->setMediaPosition(0);
+	else
+		mAdapter->getPlayer()->setMediaPosition(playStatus.getPosition());
+	mAdapter->getPlayer()->setMediaDuration(playStatus.getDuration());
+	callback(BLUETOOTH_ERROR_NONE);
+}
+
+void Bluez5ProfileAvcrp::mediaPlayStatusRequested(const std::string &address)
+{
+	getAvrcpObserver()->mediaPlayStatusRequested(generateMediaPlayStatusRequestId(), address);
+}
+
+void Bluez5ProfileAvcrp::mediaMetaDataRequested(const std::string &address)
+{
+	getAvrcpObserver()->mediaMetaDataRequested(generateMetaDataRequestId(), address);
 }
 
 void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool status)

@@ -28,6 +28,7 @@
 #include "bluez5profileopp.h"
 #include "bluez5profilea2dp.h"
 #include "bluez5profileavrcp.h"
+#include "bluez5mprisplayer.h"
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
 
@@ -855,6 +856,7 @@ BluetoothError Bluez5Adapter::cancelLeDiscovery()
 
 	return BLUETOOTH_ERROR_NONE;
 }
+
 BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 {
 	Bluez5ProfileBase *profile = nullptr;
@@ -1038,6 +1040,16 @@ void Bluez5Adapter::assignBleAdvertise(Bluez5Advertise *advertise)
 void Bluez5Adapter::assignGattManager(BluezGattManager1 *gattManager)
 {
 	mGattManagerProxy = gattManager;
+}
+
+void Bluez5Adapter::assingPlayer(Bluez5MprisPlayer* player)
+{
+	mPlayer = player;
+}
+
+Bluez5MprisPlayer* Bluez5Adapter::getPlayer()
+{
+	return mPlayer;
 }
 
 BluezGattManager1* Bluez5Adapter::getGattManager()
@@ -1577,4 +1589,16 @@ void Bluez5Adapter::recievePassThroughCommand(std::string address, std::string k
 {
 	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
 	if (avrcp) avrcp->recievePassThroughCommand(address, key, state);
+}
+
+void Bluez5Adapter::mediaPlayStatusRequest(std::string address)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (avrcp) avrcp->mediaPlayStatusRequested(address);
+}
+
+void Bluez5Adapter::mediaMetaDataRequest(std::string address)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (avrcp) avrcp->mediaMetaDataRequested(address);
 }

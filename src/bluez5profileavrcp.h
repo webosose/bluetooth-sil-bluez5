@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,8 +43,18 @@ public:
 	void getProperty(const std::string &address, BluetoothProperty::Type type, BluetoothPropertyResultCallback callback) override;
 	void supplyMediaMetaData(BluetoothAvrcpRequestId requestId, const BluetoothMediaMetaData &metaData, BluetoothResultCallback callback) override;
 	void supplyMediaPlayStatus(BluetoothAvrcpRequestId requestId, const BluetoothMediaPlayStatus &playStatus, BluetoothResultCallback callback) override;
+	void mediaMetaDataRequested(const std::string &address);
+	void mediaPlayStatusRequested(const std::string &address);
 	void updateConnectionStatus(const std::string &address, bool status);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
+
+private:
+	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }
+	BluetoothAvrcpRequestId generateMediaPlayStatusRequestId() { return ++mMediaPlayStatusRequestId; }
+
+private:
+	BluetoothAvrcpRequestId mMetaDataRequestId;
+	BluetoothAvrcpRequestId mMediaPlayStatusRequestId;
 };
 
 #endif

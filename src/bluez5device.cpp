@@ -83,6 +83,10 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 			g_variant_unref(valueVar);
 		}
 	}
+
+	g_signal_connect(G_OBJECT(mDeviceProxy), "media-play-request", G_CALLBACK(handleMediaPlayRequest), this);
+
+	g_signal_connect(G_OBJECT(mDeviceProxy), "media-meta-request", G_CALLBACK(handleMediaMetaRequest), this);
 }
 
 Bluez5Device::~Bluez5Device()
@@ -94,6 +98,21 @@ Bluez5Device::~Bluez5Device()
 		g_object_unref(mPropertiesProxy);
 }
 
+void Bluez5Device::handleMediaPlayRequest(BluezDevice1 *, gpointer userData)
+{
+	DEBUG("handleMediaPlayRequest");
+	auto device = static_cast<Bluez5Device*>(userData);
+	if (device)
+		device->mAdapter->mediaPlayStatusRequest(device->getAddress());
+}
+
+void Bluez5Device::handleMediaMetaRequest(BluezDevice1 *, gpointer userData)
+{
+	DEBUG("handleMediaMetaRequest");
+	auto device = static_cast<Bluez5Device*>(userData);
+	if (device)
+		device->mAdapter->mediaMetaDataRequest(device->getAddress());
+}
 
 void Bluez5Device::handlePropertiesChanged(BluezDevice1 *, gchar *interface,  GVariant *changedProperties,
 												   GVariant *invalidatedProperties, gpointer userData)

@@ -26,7 +26,6 @@ Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 	mAdapter(adapter),
 	mObjectManager(0),
 	mPropertiesProxy(0),
-	mConnectedDevice(0),
 	mState(NOT_PLAYING)
 {
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
@@ -121,7 +120,7 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 	if (mediaTransportInterface)
 	{
 		GError *error = 0;
-		BluezMediaTransport1 *interface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+		a2dp->mInterface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 													"org.bluez", objectPath, NULL, &error);
 		if (error)
 		{
@@ -140,11 +139,7 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 		}
 
 		g_signal_connect(G_OBJECT(a2dp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
-		const char* deviceObjectPath = bluez_media_transport1_get_device(interface);
 
-		a2dp->mConnectedDevice = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
-
-		g_object_unref(interface);
 		g_object_unref(mediaTransportInterface);
 	}
 }
@@ -175,7 +170,9 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
 		}
 
+		g_object_unref(a2dp->mInterface);
 		g_object_unref(mediaTransportInterface);
+		a2dp->mInterface = 0;
 	}
 }
 
@@ -208,8 +205,12 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 				a2dp->mState = NOT_PLAYING;
 			}
 
-			if (a2dp->mConnectedDevice)
-				a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), a2dp->mState);
+			if (a2dp->mInterface)
+			{
+				const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
+				Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+				a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
+			}
 			g_variant_unref(tmpVar);
 		}
 
@@ -243,7 +244,7 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 		auto mediaTransportInterface = g_dbus_object_get_interface(object, "org.bluez.MediaTransport1");
 		if (mediaTransportInterface)
 		{
-			BluezMediaTransport1 *interface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+			a2dp->mInterface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 																							"org.bluez", objectPath, NULL, &error);
 			FreeDesktopDBusProperties *propertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 																		   "org.bluez", objectPath, NULL, &error);
@@ -254,12 +255,6 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 				return;
 			}
 
-			a2dp->mConnectedDevice = a2dp->mAdapter->findDeviceByObjectPath(bluez_media_transport1_get_device(interface));
-			if (!a2dp->mConnectedDevice)
-			{
-				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "A2DP device null");
-				return;
-			}
 			g_signal_connect(G_OBJECT(propertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 
 			g_object_unref(mediaTransportInterface);

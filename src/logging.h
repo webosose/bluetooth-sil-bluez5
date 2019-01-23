@@ -60,6 +60,7 @@ extern PmLogContext bluez5LogContext;
 #define MSGID_PROFILE_MANAGER_ERROR                    "PROFILE_MANAGER_ERROR"
 #define MSGID_GATT_PROFILE_ERROR                       "GATT_PROFILE_ERROR"
 #define MSGID_BLE_ADVERTIMENT_ERROR                    "BLE_ADVERTIMENT_ERROR"
+#define MSGID_MEDIA_PLAYER_ERROR                    "MEDIA_PLAYER_ERROR"
 #define MSGID_MEDIA_CONTROL_ERROR                      "MEDIA_CONTROL_ERROR"
 
 #endif // LOGGING_H

@@ -66,6 +66,9 @@ public:
 	bool setDevicePropertySync(const BluetoothProperty& property);
 	void setDevicePropertyAsync(const BluetoothProperty& property, BluetoothResultCallback callback);
 
+	static void handleMediaPlayRequest(BluezDevice1 *, gpointer user_data);
+	static void handleMediaMetaRequest(BluezDevice1 *, gpointer user_data);
+
 private:
 	bool parsePropertyFromVariant(const std::string &key, GVariant *valueVar);
 	GVariant* devPropertyValueToVariant(const BluetoothProperty& property);
