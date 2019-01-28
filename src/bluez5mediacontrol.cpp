@@ -132,9 +132,11 @@ void Bluez5MediaControl::handlePropertiesChanged(BluezMediaControl1 *controlInte
 
 			if (key == "Connected")
 			{
-				bool isConnected = g_variant_get_boolean(g_variant_get_variant(valueVar));
+				GVariant *tmpVar = g_variant_get_variant(valueVar);
+				bool isConnected = g_variant_get_boolean(tmpVar);
 				DEBUG("AVCRP State %d", isConnected);
 				std::cout << "Media Control" << interface << ":" << isConnected <<std::endl;
+				g_variant_unref(tmpVar);
 				g_variant_unref(valueVar);
 				g_variant_unref(keyVar);
 				g_variant_unref(propertyVar);

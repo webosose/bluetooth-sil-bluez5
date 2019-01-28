@@ -126,7 +126,7 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 
 void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::string key, std::string state)
 {
-	DEBUG("Bluez5ProfileAvcrp::recievePassThroughCommand %s %s", key, state);
+	DEBUG("Bluez5ProfileAvcrp::recievePassThroughCommand %s %s", key.c_str(), state.c_str());
 	BluetoothAvrcpPassThroughKeyStatus keyStatus = KEY_STATUS_UNKNOWN;
 	BluetoothAvrcpPassThroughKeyCode keyCode = KEY_CODE_UNKNOWN;
 

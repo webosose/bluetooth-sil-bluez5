@@ -195,7 +195,8 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 
 		if (key == "State")
 		{
-			std::string state = g_variant_get_string(g_variant_get_variant(valueVar), NULL);
+			GVariant *tmpVar = g_variant_get_variant(valueVar);
+			std::string state = g_variant_get_string(tmpVar, NULL);
 			DEBUG("A2DP State %s", state.c_str());
 
 			if (state == "active")
@@ -209,6 +210,7 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 
 			if (a2dp->mConnectedDevice)
 				a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mConnectedDevice->getAddress()), a2dp->mState);
+			g_variant_unref(tmpVar);
 		}
 
 		g_variant_unref(valueVar);

@@ -347,7 +347,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 			break;
 		}
 		g_variant_iter_free(iter);
-		DEBUG("key[%s] and state[%s]", key_code, state);
+		DEBUG("key[%s] and state[%s]", key_code.c_str(), state.c_str());
 		mAdapter->recievePassThroughCommand(getAddress(), key, state);
 	}
 
