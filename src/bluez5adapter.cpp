@@ -31,6 +31,8 @@
 #include "bluez5mprisplayer.h"
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
 
 Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -893,7 +895,14 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 	}
 
 	if (profile)
-		mUuids.push_back(profile->getProfileUuid());
+	{
+		std::string uuid = profile->getProfileUuid();
+		// Profile is initialized with remote uuid which its connecting
+		if (uuid == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID)
+			mUuids.push_back(BLUETOOTH_PROFILE_AVRCP_TARGET_UUID);
+		else
+			mUuids.push_back(uuid);
+	}
 
 	return profile;
 }

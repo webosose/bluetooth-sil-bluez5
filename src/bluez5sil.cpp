@@ -53,12 +53,16 @@ Bluez5SIL::~Bluez5SIL()
 
 	if (mBleAdvertise)
 		delete mBleAdvertise;
+
+	if (mPlayer)
+		delete mPlayer;
 }
 
 void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *name,
 											  const gchar *nameOwner, gpointer user_data)
 {
 	Bluez5SIL *sil = static_cast<Bluez5SIL*>(user_data);
+	gulong handlerId;
 
 	DEBUG("bluez is now available");
 	if(!sil)
@@ -74,8 +78,11 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 		return;
 	}
 
-	g_signal_connect(sil->mObjectManager, "object-added", G_CALLBACK(handleObjectAdded), sil);
-	g_signal_connect(sil->mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), sil);
+	handlerId = g_signal_connect(sil->mObjectManager, "object-added", G_CALLBACK(handleObjectAdded), sil);
+	g_signal_handler_disconnect (sil->mObjectManager, handlerId);
+	handlerId = g_signal_connect(sil->mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), sil);
+	g_signal_handler_disconnect (sil->mObjectManager, handlerId);
+
 
 	GList *objects = g_dbus_object_manager_get_objects(sil->mObjectManager);
 

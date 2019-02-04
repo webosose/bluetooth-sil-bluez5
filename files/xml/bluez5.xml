@@ -24,6 +24,8 @@
             </signal>
             <signal name="MediaMetaRequest">
             </signal>
+            <property name="AvrcpCTFeatures" type="y" access="read"></property>
+            <property name="AvrcpTGFeatures" type="y" access="read"></property>
     </interface>
     <interface name="org.bluez.AgentManager1">
         <method name="RegisterAgent">

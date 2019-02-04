@@ -69,6 +69,9 @@ public:
 	static void handleMediaPlayRequest(BluezDevice1 *, gpointer user_data);
 	static void handleMediaMetaRequest(BluezDevice1 *, gpointer user_data);
 
+	uint8_t getRemoteTargetFeatures() { return bluez_device1_get_avrcp_tgfeatures(mDeviceProxy); }
+	uint8_t getRemoteControllerFeatures() { return bluez_device1_get_avrcp_ctfeatures(mDeviceProxy); }
+
 private:
 	bool parsePropertyFromVariant(const std::string &key, GVariant *valueVar);
 	GVariant* devPropertyValueToVariant(const BluetoothProperty& property);

@@ -26,6 +26,11 @@ extern "C" {
 #include "bluez-interface.h"
 }
 
+#define REMOTE_DEVICE_AVRCP_FEATURE_NONE			0x00
+#define REMOTE_DEVICE_AVRCP_FEATURE_METADATA		0x01
+#define REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME	0x02
+#define REMOTE_DEVICE_AVRCP_FEATURE_BROWSE		0x04
+
 class Bluez5Adapter;
 
 class Bluez5ProfileAvcrp : public Bluez5ProfileBase,

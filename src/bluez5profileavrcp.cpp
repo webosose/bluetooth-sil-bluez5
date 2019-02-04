@@ -84,10 +84,12 @@ void Bluez5ProfileAvcrp::disconnect(const std::string& address, BluetoothResultC
 
 void Bluez5ProfileAvcrp::enable(const std::string &uuid, BluetoothResultCallback callback)
 {
+	callback(BLUETOOTH_ERROR_UNSUPPORTED);
 }
 
 void Bluez5ProfileAvcrp::disable(const std::string &uuid, BluetoothResultCallback callback)
 {
+	callback(BLUETOOTH_ERROR_UNSUPPORTED);
 }
 
 void Bluez5ProfileAvcrp::getProperties(const std::string &address, BluetoothPropertiesResultCallback  callback)
@@ -144,6 +146,46 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
 	getObserver()->propertiesChanged(convertAddressToLowerCase(address), properties);
+
+	if (status)
+	{
+		Bluez5Device *device = mAdapter->findDevice(address);
+		if (!device)
+		{
+			return;
+		}
+
+		BluetoothAvrcpRemoteFeatures controllerFeatures = FEATURE_NONE;
+		uint8_t ctFeatures =  device->getRemoteControllerFeatures();
+		BluetoothAvrcpRemoteFeatures targetFeatures = FEATURE_NONE;
+		uint8_t tgFeatures =  device->getRemoteTargetFeatures();
+
+		DEBUG("AVRCP ctFeatures %d tgFeatures %d", ctFeatures, tgFeatures);
+
+		if (ctFeatures)
+		{
+			if( ctFeatures & REMOTE_DEVICE_AVRCP_FEATURE_BROWSE)
+				controllerFeatures = FEATURE_BROWSE;
+			else if( ctFeatures & REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME)
+				controllerFeatures = FEATURE_ABSOLUTE_VOLUME;
+			else if( ctFeatures & REMOTE_DEVICE_AVRCP_FEATURE_METADATA)
+				controllerFeatures = FEATURE_METADATA;
+
+			getAvrcpObserver()->remoteFeaturesReceived(controllerFeatures, convertAddressToLowerCase(address), "CT");
+		}
+
+		if (tgFeatures)
+		{
+			if(tgFeatures & REMOTE_DEVICE_AVRCP_FEATURE_BROWSE)
+				targetFeatures = FEATURE_BROWSE;
+			else if(tgFeatures & REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME)
+				targetFeatures = FEATURE_ABSOLUTE_VOLUME;
+			else if(tgFeatures & REMOTE_DEVICE_AVRCP_FEATURE_METADATA)
+				targetFeatures = FEATURE_METADATA;
+
+			getAvrcpObserver()->remoteFeaturesReceived(targetFeatures, convertAddressToLowerCase(address), "TG");
+		}
+	}
 }
 
 void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::string key, std::string state)

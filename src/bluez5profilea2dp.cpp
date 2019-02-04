@@ -259,7 +259,9 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 
 			g_object_unref(mediaTransportInterface);
 		}
+		g_object_unref(object);
 	}
+	g_list_free(objects);
 
 	g_signal_connect(a2dp->mObjectManager, "object-added", G_CALLBACK(handleObjectAdded), a2dp);
 	g_signal_connect(a2dp->mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), a2dp);
