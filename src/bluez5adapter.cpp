@@ -46,6 +46,7 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mAgent(0),
 	mAdvertise(0),
 	mProfileManager(0),
+	mPlayer(nullptr),
 	mPairing(false),
 	mCurrentPairingDevice(0),
 	mCurrentPairingCallback(0),

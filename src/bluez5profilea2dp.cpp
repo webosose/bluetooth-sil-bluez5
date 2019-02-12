@@ -26,6 +26,7 @@ Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 	mAdapter(adapter),
 	mObjectManager(0),
 	mPropertiesProxy(0),
+	mInterface(nullptr),
 	mState(NOT_PLAYING)
 {
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
@@ -208,8 +209,14 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 			if (a2dp->mInterface)
 			{
 				const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
-				Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
-				a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
+				if (deviceObjectPath)
+				{
+					Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+					if (device)
+					{
+						a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
+					}
+				}
 			}
 			g_variant_unref(tmpVar);
 		}

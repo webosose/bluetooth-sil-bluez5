@@ -38,6 +38,7 @@ std::map <BluetoothMediaPlayStatus::MediaPlayStatus, std::string> mediaPlayStatu
 
 Bluez5MprisPlayer::Bluez5MprisPlayer(BluezMedia1 *media, Bluez5SIL *sil):
 mBusId(0),
+mConn(nullptr),
 mSIL(sil),
 mMediaProxy(media),
 mPlayerInterface(0),
@@ -140,6 +141,7 @@ bool Bluez5MprisPlayer::setMediaMetaData(const BluetoothMediaMetaData &metaData)
 	setTrackNumber(metaData.getTrackNumber());
 	setDuration(metaData.getDuration());
 	setMediaMetaDataOnMprisInterface();
+	return true;
 }
 
 bool Bluez5MprisPlayer::setMediaMetaDataOnMprisInterface()
