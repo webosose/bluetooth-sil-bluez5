@@ -193,6 +193,7 @@
         <property name="Appearance" type="q" access="read"/>
         <property name="Duration" type="q" access="read"/>
         <property name="Timeout" type="q" access="read"/>
+        <property name="Discoverable" type="b" access="read"/>
     </interface>
     <interface name="org.bluez.ProfileManager1">
     <method name="RegisterProfile">

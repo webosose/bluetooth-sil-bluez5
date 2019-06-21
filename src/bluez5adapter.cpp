@@ -1501,6 +1501,8 @@ void Bluez5Adapter::startAdvertising(uint8_t advertiserId, const AdvertiseSettin
 	{
 		std::string adRole("peripheral");
 		mAdvertise->setAdRole(advertiserId, adRole);
+		//Set discoverable by default
+		mAdvertise->advertiseDiscoverable(advertiserId, true);
 	}
 	else
 	{

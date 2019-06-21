@@ -319,6 +319,15 @@ void Bluez5Advertise::advertiseTimeout(uint8_t advId, uint16_t value)
 	bluez_leadvertisement1_set_timeout(interface, value);
 }
 
+void Bluez5Advertise::advertiseDiscoverable(uint8_t advId, bool discoverable)
+{
+	BluezLEAdvertisement1 * interface = getInteface(advId);
+	if (!interface)
+		return;
+
+	bluez_leadvertisement1_set_discoverable(interface, discoverable);
+}
+
 void Bluez5Advertise::setAdRole(uint8_t advId, std::string role)
 {
 	BluezLEAdvertisement1 * interface = getInteface(advId);

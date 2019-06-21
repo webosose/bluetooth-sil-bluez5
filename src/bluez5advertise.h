@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ public:
 	void advertiseIncludes(uint8_t advId, bool isTxPowerInclude, bool isLocalNameInclude, bool isAppearanceInclude);
 	void advertiseDuration(uint8_t advId, uint16_t value);
 	void advertiseTimeout(uint8_t advId, uint16_t value);
+	void advertiseDiscoverable(uint8_t advId, bool discoverable);
 	void setAdRole(uint8_t advId, std::string role);
 	void clearAllProperties(uint8_t advId);
 	BluezLEAdvertisement1 *getInteface(uint8_t advId);
