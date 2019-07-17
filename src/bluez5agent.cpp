@@ -99,10 +99,12 @@ Bluez5Agent::~Bluez5Agent()
 
 std::string Bluez5Agent::convertPairingIOCapability(BluetoothPairingIOCapability capability)
 {
-	if (pairingIOCapability.find(capability) == pairingIOCapability.end())
+	if (pairingIOCapability.find(capability) == pairingIOCapability.end()) {
 		WARNING(MSGID_PAIRING_IO_CAPABILITY_STRING_ERROR, 0, "Failed to get pairing IO capability string for capability %d", capability);
-	else
-		return pairingIOCapability[capability];
+		return std::string();
+	}
+
+	return pairingIOCapability[capability];
 }
 
 void Bluez5Agent::handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
