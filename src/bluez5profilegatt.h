@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ public:
 								 const BluetoothUuid &descriptor, BluetoothGattReadDescriptorCallback callback);
 	void readDescriptors(const std::string &address, const BluetoothUuid& service, const BluetoothUuid &characteristic,
 	                             const BluetoothUuidList &descriptors, BluetoothGattReadDescriptorsCallback callback);
+	void updateDeviceProperties(std::string deviceAddress);
 	uint16_t getConnectId(const std::string &address);
 	std::string getAddress(const uint16_t &connId);
 	BluetoothGattCharacteristic readCharacteristic(const std::string &address, const BluetoothUuid& service,

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -503,6 +503,23 @@ void Bluez5ProfileGatt::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		pThis->removeRemoteGattDescriptor(std::string(objectPath));
 		g_object_unref(descriptorInterface);
 	}
+}
+
+void Bluez5ProfileGatt::updateDeviceProperties(std::string deviceAddress)
+{
+	std::string lowerCaseAddress = convertAddressToLowerCase(deviceAddress);
+	int connectId = getConnectId(lowerCaseAddress);
+	if (mConnectedDevices.find(connectId) != mConnectedDevices.end())
+		mConnectedDevices.erase(connectId);
+	auto deviceServicesIter = mDeviceServicesMap.find(lowerCaseAddress);
+	if (deviceServicesIter != mDeviceServicesMap.end())
+		mDeviceServicesMap.erase(deviceServicesIter);
+	auto deviceRemoteServicesIter = mRemoteDeviceServicesMap.find(lowerCaseAddress);
+	if (deviceRemoteServicesIter != mRemoteDeviceServicesMap.end())
+		mRemoteDeviceServicesMap.erase(deviceRemoteServicesIter);
+	BluetoothPropertiesList properties;
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, false));
+	getObserver()->propertiesChanged(lowerCaseAddress, properties);
 }
 
 void Bluez5ProfileGatt::registerSignalHandlers()

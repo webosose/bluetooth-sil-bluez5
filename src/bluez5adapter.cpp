@@ -959,7 +959,7 @@ void Bluez5Adapter::addDevice(const std::string &objectPath)
 
 void Bluez5Adapter::removeDevice(const std::string &objectPath)
 {
-	std::string address;
+	std::string leaddress, address;
 
 	for ( auto it = mLeScanFilters.begin(); it != mLeScanFilters.end(); ++it)
 	{
@@ -970,18 +970,19 @@ void Bluez5Adapter::removeDevice(const std::string &objectPath)
 		{
 			for (auto iter = devicesIter->second.begin(); iter != devicesIter->second.end(); ++iter)
 			{
-				Bluez5Device *device = (*iter).second;
-				if (device->getObjectPath() == objectPath)
+				if ((*iter).second->getObjectPath() == objectPath)
 				{
-					address = device->getAddress();
+					leaddress = (*iter).second->getAddress();
+					BluetoothPropertiesList properties;
+					properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, false));
+					observer->leDevicePropertiesChangedByScanId(scanId, leaddress, properties);
 					devicesIter->second.erase(iter);
-					delete device;
 					break;
 				}
 			}
-			std::string lowerCaseAddress = convertAddressToLowerCase(address);
-			if (lowerCaseAddress.length() > 0 && observer)
-				observer->leDeviceRemovedByScanId(scanId, lowerCaseAddress);
+			std::string lelowerCaseAddress = convertAddressToLowerCase(leaddress);
+			if (lelowerCaseAddress.length() > 0 && observer)
+				observer->leDeviceRemovedByScanId(scanId, lelowerCaseAddress);
 		}
 	}
 	for (auto iter = mDevices.begin(); iter != mDevices.end(); ++iter)
@@ -990,6 +991,9 @@ void Bluez5Adapter::removeDevice(const std::string &objectPath)
 		if (device->getObjectPath() == objectPath)
 		{
 			address = device->getAddress();
+			Bluez5ProfileGatt *gattprofile = dynamic_cast<Bluez5ProfileGatt*> (getProfile(BLUETOOTH_PROFILE_ID_GATT));
+			if (gattprofile)
+				gattprofile->updateDeviceProperties(address);
 			mDevices.erase(iter);
 			delete device;
 			break;
