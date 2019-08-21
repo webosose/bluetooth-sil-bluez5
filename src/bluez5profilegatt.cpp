@@ -967,6 +967,7 @@ void Bluez5ProfileGatt::writeCharacteristic(const uint16_t &connId, const Blueto
 		{
 			remoteService->service.updateCharacteristicValue(characteristic.getUuid(), characteristic.getValue());
 			updateRemoteDeviceServices();
+			getGattObserver()->characteristicValueChanged(deviceAddress, service, characteristic);
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -1142,6 +1143,7 @@ void Bluez5ProfileGatt::writeCharacteristic(const std::string &address, const Bl
 		{
 			remoteService->service.updateCharacteristicValue(characteristic.getUuid(), characteristic.getValue());
 			updateRemoteDeviceServices();
+			getGattObserver()->characteristicValueChanged(address, service, characteristic);
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
