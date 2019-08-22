@@ -973,9 +973,6 @@ void Bluez5Adapter::removeDevice(const std::string &objectPath)
 				if ((*iter).second->getObjectPath() == objectPath)
 				{
 					leaddress = (*iter).second->getAddress();
-					BluetoothPropertiesList properties;
-					properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, false));
-					observer->leDevicePropertiesChangedByScanId(scanId, leaddress, properties);
 					devicesIter->second.erase(iter);
 					break;
 				}
@@ -991,9 +988,12 @@ void Bluez5Adapter::removeDevice(const std::string &objectPath)
 		if (device->getObjectPath() == objectPath)
 		{
 			address = device->getAddress();
-			Bluez5ProfileGatt *gattprofile = dynamic_cast<Bluez5ProfileGatt*> (getProfile(BLUETOOTH_PROFILE_ID_GATT));
-			if (gattprofile)
-				gattprofile->updateDeviceProperties(address);
+			if (!device->getConnected())
+			{
+				Bluez5ProfileGatt *gattprofile = dynamic_cast<Bluez5ProfileGatt*> (getProfile(BLUETOOTH_PROFILE_ID_GATT));
+				if (gattprofile)
+					gattprofile->updateDeviceProperties(address);
+			}
 			mDevices.erase(iter);
 			delete device;
 			break;
