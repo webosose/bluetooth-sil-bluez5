@@ -7,6 +7,9 @@
             <method name="RemoveDevice">
                     <arg name="device" type="o" direction="in"/>
             </method>
+            <method name="SetDiscoveryFilter">
+                    <arg name="properties" type="a{sv}" direction="in"/>
+            </method>
     </interface>
     <interface name="org.bluez.Device1">
             <method name="Disconnect"/>

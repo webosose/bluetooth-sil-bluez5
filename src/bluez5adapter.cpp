@@ -41,6 +41,9 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mPropertiesProxy(0),
 	mPowered(false),
 	mDiscovering(false),
+	mSILDiscovery(false),
+	mUseBluezFilter(false),
+	mLegacyScan(false),
 	mDiscoveryTimeout(0),
 	mDiscoveryTimeoutSource(0),
 	mAgent(0),
@@ -623,6 +626,14 @@ void Bluez5Adapter::startDiscoveryTimeout()
 
 BluetoothError Bluez5Adapter::startDiscovery()
 {
+	mLegacyScan = true;
+	if (mUseBluezFilter)
+	{
+		mUseBluezFilter = false;
+		BluetoothError err = prepareFilterForDiscovery();
+		if (err == BLUETOOTH_ERROR_FAIL)
+			return BLUETOOTH_ERROR_FAIL;
+	}
 	if (mDiscovering)
 		return BLUETOOTH_ERROR_NONE;
 
@@ -659,128 +670,210 @@ void Bluez5Adapter::cancelDiscovery(BluetoothResultCallback callback)
 		return;
 	}
 
-	resetDiscoveryTimeout();
-
-	GError *error = 0;
-	bluez_adapter1_call_stop_discovery_sync(mAdapterProxy, NULL, &error);
-	if (error)
+	mLegacyScan = false;
+	if (mLeScanFilters.size() == 0)
 	{
-		g_error_free(error);
-		callback(BLUETOOTH_ERROR_FAIL);
-		return;
-	}
+		mSILDiscovery = false;
+		resetDiscoveryTimeout();
 
-	mCancelDiscCallback = callback;
+		GError *error = 0;
+		bluez_adapter1_call_stop_discovery_sync(mAdapterProxy, NULL, &error);
+		if (error)
+		{
+			g_error_free(error);
+			callback(BLUETOOTH_ERROR_FAIL);
+			return;
+		}
+		if (mUseBluezFilter)
+		{
+			if (!clearPreviousFilter())
+			{
+				callback(BLUETOOTH_ERROR_FAIL);
+				return;
+			}
+			mUseBluezFilter = false;
+		}
+		mCancelDiscCallback = callback;
+	}
+	else
+		callback(BLUETOOTH_ERROR_NONE);
+}
+
+bool Bluez5Adapter::isServiceUuidValid(const BluetoothLeDiscoveryFilter &filter)
+{
+	const BluetoothUuid uUiditem = BluetoothUuid(filter.getServiceUuid().getUuid());
+	if (uUiditem.getType() == BluetoothUuid::UNKNOWN)
+		return false;
+	else if (uUiditem.getType() == BluetoothUuid::UUID16)
+	{
+		if (filter.getServiceUuid().getMask().empty())
+		{
+			std::string uuid16 = filter.getServiceUuid().getUuid().substr (0,4);
+			filter.getServiceUuid().setUuid("0000" + uuid16 + BASEUUID);
+		}
+		else if (filter.getServiceUuid().getUuid().size() == filter.getServiceUuid().getMask().size())
+		{
+			std::string uuidmask16 = filter.getServiceUuid().getMask().substr (0,4);
+			filter.getServiceUuid().setMask("0000" + uuidmask16 + "-0000-0000-0000-000000000000");
+		}
+		else if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_32_LENGTH)
+		{
+			std::string uuidmask32 = filter.getServiceUuid().getMask().substr (0,8);
+			filter.getServiceUuid().setMask(uuidmask32 + "-0000-0000-0000-000000000000");
+		}
+		else if (filter.getServiceUuid().getMask().size() != BLUETOOTH_UUID_128_LENGTH)
+			return false;
+	}
+	else if (uUiditem.getType() == BluetoothUuid::UUID32)
+	{
+		if (filter.getServiceUuid().getMask().empty())
+		{
+			std::string uuid32 = filter.getServiceUuid().getUuid().substr (0,8);
+			filter.getServiceUuid().setUuid(uuid32 + BASEUUID);
+		}
+		else if (filter.getServiceUuid().getUuid().size() == filter.getServiceUuid().getMask().size())
+		{
+			std::string uuidmask32 = filter.getServiceUuid().getMask().substr (0,8);
+			filter.getServiceUuid().setMask(uuidmask32 + "-0000-0000-0000-000000000000");
+		}
+		else if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_16_LENGTH)
+		{
+			std::string uuidmask16 = filter.getServiceUuid().getMask().substr (0,4);
+			filter.getServiceUuid().setMask("0000" + uuidmask16 + "-0000-0000-0000-000000000000");
+		}
+		else if (filter.getServiceUuid().getMask().size() != BLUETOOTH_UUID_128_LENGTH)
+			return false;
+	}
+	else if (uUiditem.getType() == BluetoothUuid::UUID128)
+	{
+		if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_16_LENGTH)
+		{
+			std::string uuidmask16 = filter.getServiceUuid().getMask().substr (0,4);
+			filter.getServiceUuid().setMask("0000" + uuidmask16 + "-0000-0000-0000-000000000000");
+		}
+		else if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_32_LENGTH)
+		{
+			std::string uuidmask32 = filter.getServiceUuid().getMask().substr (0,8);
+			filter.getServiceUuid().setMask(uuidmask32 + "-0000-0000-0000-000000000000");
+		}
+		else if ((!filter.getServiceUuid().getMask().empty() && filter.getServiceUuid().getMask().size() != BLUETOOTH_UUID_128_LENGTH))
+			return false;
+	}
+	return true;
+}
+
+bool Bluez5Adapter::isServiceDataValid(const BluetoothLeDiscoveryFilter &filter)
+{
+	if (filter.getServiceData().getMask().empty() || (filter.getServiceData().getData().size() == filter.getServiceData().getMask().size()))
+	{
+		const BluetoothUuid uUiditem = BluetoothUuid(filter.getServiceData().getUuid());
+		if (uUiditem.getType() == BluetoothUuid::UNKNOWN)
+			return false;
+		else if (uUiditem.getType() == BluetoothUuid::UUID16)
+		{
+			std::string uuid16 = filter.getServiceData().getUuid().substr (0,4);
+			filter.getServiceData().setUuid("0000" + uuid16 + BASEUUID);
+		}
+		else if (uUiditem.getType() == BluetoothUuid::UUID32)
+		{
+			std::string uuid32 = filter.getServiceData().getUuid().substr (0,8);
+			filter.getServiceData().setUuid(uuid32 + BASEUUID);
+		}
+		return true;
+	}
+	return false;
+}
+
+bool Bluez5Adapter::isFilterValid(const BluetoothLeDiscoveryFilter &filter)
+{
+	mFilterType = 0x00;
+
+	if (filter.isFilterEmpty())
+		mFilterType |= FILTER_NONE;
+	else
+	{
+		if (!filter.getServiceUuid().getUuid().empty())
+		{
+			if (!isServiceUuidValid(filter))
+				return false;
+			if (filter.getServiceUuid().getMask().empty())
+				mFilterType |= FILTER_SERVICEUUID;
+			else
+				mFilterType |= FILTER_SERVICEUUIDMASK;
+		}
+		else if (!filter.getServiceUuid().getMask().empty())
+			return false;
+
+		if (!filter.getServiceData().getUuid().empty() && filter.getServiceData().getData().size() > 0)
+		{
+			if (!isServiceDataValid(filter))
+				return false;
+			mFilterType |= FILTER_SERVICEDATA;
+		}
+		else if ((!filter.getServiceData().getUuid().empty() && filter.getServiceData().getData().size() < 1) ||
+				(filter.getServiceData().getUuid().empty() && filter.getServiceData().getData().size() > 0) ||
+				(!filter.getServiceData().getMask().empty()))
+				return false;
+
+		if (filter.getManufacturerData().getId() > 0 && filter.getManufacturerData().getData().size() > 0)
+		{
+			if (!filter.getManufacturerData().getMask().empty() && (filter.getManufacturerData().getData().size() != filter.getManufacturerData().getMask().size()))
+			{
+				return false;
+			}
+			mFilterType |= FILTER_MANUFACTURERDATA;
+		}
+		else if ((filter.getManufacturerData().getId() > 0 && filter.getManufacturerData().getData().size() < 1) ||
+				(filter.getManufacturerData().getId() < 1 && filter.getManufacturerData().getData().size() > 0) ||
+				(!filter.getManufacturerData().getMask().empty()))
+				return false;
+
+		if (!filter.getName().empty())
+			mFilterType |= FILTER_NAME;
+		if (!filter.getAddress().empty())
+			mFilterType |= FILTER_ADDRESS;
+	}
+	return true;
 }
 
 int32_t Bluez5Adapter::addLeDiscoveryFilter(const BluetoothLeDiscoveryFilter &filter)
 {
 	int32_t scanId = -1;
-	if (!filter.getServiceUuid().getUuid().empty())
-	{
-		const BluetoothUuid uUiditem = BluetoothUuid(filter.getServiceUuid().getUuid());
-		if (uUiditem.getType() == BluetoothUuid::UNKNOWN)
-			return scanId;
-		else if (uUiditem.getType() == BluetoothUuid::UUID16)
-		{
-			if (filter.getServiceUuid().getMask().empty())
-			{
-				std::string uuid16 = filter.getServiceUuid().getUuid().substr (0,4);
-				filter.getServiceUuid().setUuid("0000" + uuid16 + BASEUUID);
-			}
-			else if (filter.getServiceUuid().getUuid().size() == filter.getServiceUuid().getMask().size())
-			{
-				std::string uuidmask16 = filter.getServiceUuid().getMask().substr (0,4);
-				filter.getServiceUuid().setMask("0000" + uuidmask16 + "-0000-0000-0000-000000000000");
-			}
-			else if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_32_LENGTH)
-			{
-				std::string uuidmask32 = filter.getServiceUuid().getMask().substr (0,8);
-				filter.getServiceUuid().setMask(uuidmask32 + "-0000-0000-0000-000000000000");
-			}
-			else if (filter.getServiceUuid().getMask().size() != BLUETOOTH_UUID_128_LENGTH)
-				return scanId;
-		}
-		else if (uUiditem.getType() == BluetoothUuid::UUID32)
-		{
-			if (filter.getServiceUuid().getMask().empty())
-			{
-				std::string uuid32 = filter.getServiceUuid().getUuid().substr (0,8);
-				filter.getServiceUuid().setUuid(uuid32 + BASEUUID);
-			}
-			else if (filter.getServiceUuid().getUuid().size() == filter.getServiceUuid().getMask().size())
-			{
-				std::string uuidmask32 = filter.getServiceUuid().getMask().substr (0,8);
-				filter.getServiceUuid().setMask(uuidmask32 + "-0000-0000-0000-000000000000");
-			}
-			else if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_16_LENGTH)
-			{
-				std::string uuidmask16 = filter.getServiceUuid().getMask().substr (0,4);
-				filter.getServiceUuid().setMask("0000" + uuidmask16 + "-0000-0000-0000-000000000000");
-			}
-			else if (filter.getServiceUuid().getMask().size() != BLUETOOTH_UUID_128_LENGTH)
-				return scanId;
-		}
-		else if (uUiditem.getType() == BluetoothUuid::UUID128)
-		{
-			if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_16_LENGTH)
-			{
-				std::string uuidmask16 = filter.getServiceUuid().getMask().substr (0,4);
-				filter.getServiceUuid().setMask("0000" + uuidmask16 + "-0000-0000-0000-000000000000");
-			}
-			else if (filter.getServiceUuid().getMask().size() == BLUETOOTH_UUID_32_LENGTH)
-			{
-				std::string uuidmask32 = filter.getServiceUuid().getMask().substr (0,8);
-				filter.getServiceUuid().setMask(uuidmask32 + "-0000-0000-0000-000000000000");
-			}
-			else if ((!filter.getServiceUuid().getMask().empty() && filter.getServiceUuid().getMask().size() != BLUETOOTH_UUID_128_LENGTH))
-				return scanId;
-		}
-	}
-	else if (!filter.getServiceUuid().getMask().empty())
+	BluetoothError err = BLUETOOTH_ERROR_NONE;
+
+	if (!isFilterValid(filter))
 		return scanId;
 
-	if (!filter.getServiceData().getUuid().empty() && filter.getServiceData().getData().size() > 0)
+	if (mLegacyScan)
+		goto SUCCESS;
+
+	mUseBluezFilter = bluezFilterUsageCriteria(mFilterType);
+
+	if (mSILDiscovery)
+		err = prepareFilterForDiscovery();
+
+	if (err == BLUETOOTH_ERROR_NONE)
 	{
-		if (filter.getServiceData().getMask().empty() || (filter.getServiceData().getData().size() == filter.getServiceData().getMask().size()))
-		{
-			const BluetoothUuid uUiditem = BluetoothUuid(filter.getServiceData().getUuid());
-			if (uUiditem.getType() == BluetoothUuid::UNKNOWN)
-				return scanId;
-			else if (uUiditem.getType() == BluetoothUuid::UUID16)
-			{
-				std::string uuid16 = filter.getServiceData().getUuid().substr (0,4);
-				filter.getServiceData().setUuid("0000" + uuid16 + BASEUUID);
-			}
-			else if (uUiditem.getType() == BluetoothUuid::UUID32)
-			{
-				std::string uuid32 = filter.getServiceData().getUuid().substr (0,8);
-				filter.getServiceData().setUuid(uuid32 + BASEUUID);
-			}
-		}
-		else
+		if (!mUseBluezFilter)
+			goto SUCCESS;
+
+		if (!setBluezFilter(filter))
 			return scanId;
 	}
-	else if ((!filter.getServiceData().getUuid().empty() && filter.getServiceData().getData().size() < 1) ||
-			(filter.getServiceData().getUuid().empty() && filter.getServiceData().getData().size() > 0) ||
-			(!filter.getServiceData().getMask().empty()))
-			return scanId;
+	else
+		return scanId;
 
-	if (filter.getManufacturerData().getId() > 0 && filter.getManufacturerData().getData().size() > 0)
+	if (mSILDiscovery)
 	{
-		if (!filter.getManufacturerData().getMask().empty() && (filter.getManufacturerData().getData().size() != filter.getManufacturerData().getMask().size()))
-		{
-			return scanId;
-		}
+		if (!resumeLeDiscovery())
+			return -1;
 	}
-	else if ((filter.getManufacturerData().getId() > 0 && filter.getManufacturerData().getData().size() < 1) ||
-			(filter.getManufacturerData().getId() < 1 && filter.getManufacturerData().getData().size() > 0) ||
-			(!filter.getManufacturerData().getMask().empty()))
-			return scanId;
+	mSILDiscovery = true;
 
-			scanId = nextScanId();
+SUCCESS:
+	scanId = nextScanId();
 	mLeScanFilters.insert(std::pair<uint32_t, BluetoothLeDiscoveryFilter>(scanId, filter));
-
+	mLeScanFilterTypes.insert(std::pair<uint32_t, unsigned char>(scanId, mFilterType));
 	return scanId;
 }
 
@@ -795,9 +888,29 @@ BluetoothError Bluez5Adapter::removeLeDiscoveryFilter(uint32_t scanId)
 	}
 	else
 	{
+		removeFilterType(scanId);
 		mLeScanFilters.erase(scanIter);
 		return BLUETOOTH_ERROR_NONE;
 	}
+}
+
+void Bluez5Adapter::removeFilterType(uint32_t scanId)
+{
+	auto tmpIter = mLeScanFilterTypes.find(scanId);
+	mLeScanFilterTypes.erase(tmpIter);
+}
+
+BluetoothError Bluez5Adapter::prepareFilterForDiscovery()
+{
+	if (!stopLeDiscovery() || !clearPreviousFilter())
+		return BLUETOOTH_ERROR_FAIL;
+
+	if (!mUseBluezFilter)
+	{
+		if (!resumeLeDiscovery())
+			return BLUETOOTH_ERROR_FAIL;
+	}
+	return BLUETOOTH_ERROR_NONE;
 }
 
 void Bluez5Adapter::matchLeDiscoveryFilterDevices(const BluetoothLeDiscoveryFilter &filter, uint32_t scanId)
@@ -845,8 +958,9 @@ BluetoothError Bluez5Adapter::cancelLeDiscovery()
 	if (!mDiscovering)
 		return BLUETOOTH_ERROR_NONE;
 
-	if (mLeScanFilters.size() == 0)
+	if (mLeScanFilters.size() == 0  && mLegacyScan == false)
 	{
+		mSILDiscovery = false;
 		resetDiscoveryTimeout();
 		GError *error = 0;
 		bluez_adapter1_call_stop_discovery_sync(mAdapterProxy, NULL, &error);
@@ -854,6 +968,12 @@ BluetoothError Bluez5Adapter::cancelLeDiscovery()
 		{
 			g_error_free(error);
 			return BLUETOOTH_ERROR_FAIL;
+		}
+		if (mUseBluezFilter)
+		{
+			if (!clearPreviousFilter())
+				return BLUETOOTH_ERROR_FAIL;
+			mUseBluezFilter = false;
 		}
 	}
 
@@ -1145,6 +1265,104 @@ bool Bluez5Adapter::filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter
 		return true;
 	else
 		return false;
+}
+
+bool Bluez5Adapter::stopLeDiscovery()
+{
+	resetDiscoveryTimeout();
+
+	GError *error = 0;
+	bluez_adapter1_call_stop_discovery_sync(mAdapterProxy, NULL, &error);
+	if (error)
+	{
+		g_error_free(error);
+		return false;
+	}
+	return true;
+}
+
+bool Bluez5Adapter::resumeLeDiscovery()
+{
+	GError *error = 0;
+	bluez_adapter1_call_start_discovery_sync(mAdapterProxy, NULL, &error);
+	if (error)
+	{
+		g_error_free(error);
+		return false;
+	}
+
+	startDiscoveryTimeout();
+	return true;
+}
+
+bool Bluez5Adapter::setBluezFilter(const BluetoothLeDiscoveryFilter &filter)
+{
+	GError *error = 0;
+	GVariantBuilder *builder = 0;
+	GVariant *arguments = 0;
+
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	GVariantBuilder *uuidArrayVarBuilder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+	std::string srvcUuidStr = filter.getServiceUuid().getUuid();
+	srvcUuidStr = convertToLowerCase(srvcUuidStr);
+	g_variant_builder_add(uuidArrayVarBuilder, "s", &srvcUuidStr[0]);
+	for (auto it = mLeScanFilters.begin(); it != mLeScanFilters.end(); ++it)
+	{
+		srvcUuidStr = it->second.getServiceUuid().getUuid();
+		srvcUuidStr = convertToLowerCase(srvcUuidStr);
+		g_variant_builder_add(uuidArrayVarBuilder, "s", &srvcUuidStr[0]);
+	}
+	GVariant *uuids = g_variant_builder_end(uuidArrayVarBuilder);
+	g_variant_builder_unref (uuidArrayVarBuilder);
+
+	g_variant_builder_add (builder, "{sv}", "UUIDs", uuids);
+	g_variant_builder_add (builder, "{sv}", "Transport", g_variant_new_string ("le"));
+	arguments = g_variant_builder_end (builder);
+	g_variant_builder_unref(builder);
+
+	bluez_adapter1_call_set_discovery_filter_sync(mAdapterProxy, arguments, NULL, &error);
+	if (error)
+	{
+		g_error_free(error);
+		return false;
+	}
+	return true;
+}
+
+bool Bluez5Adapter::clearPreviousFilter()
+{
+	GVariantBuilder *builder = 0;
+	GVariant *arguments = 0;
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	GVariantBuilder *uuidArrayVarBuilder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+	GVariant *uuids = g_variant_builder_end(uuidArrayVarBuilder);
+	g_variant_builder_unref (uuidArrayVarBuilder);
+	g_variant_builder_add (builder, "{sv}", "UUIDs", uuids);
+	arguments = g_variant_builder_end (builder);
+	g_variant_builder_unref(builder);
+
+	GError *error = 0;
+	bluez_adapter1_call_set_discovery_filter_sync(mAdapterProxy, arguments, NULL, &error);
+	if (error)
+	{
+		g_error_free(error);
+		return false;
+	}
+
+	return true;
+}
+
+bool Bluez5Adapter::bluezFilterUsageCriteria(unsigned char mFilterType)
+{
+	unsigned char tmpFilterType = 0x00;
+	for (auto it = mLeScanFilterTypes.begin(); it != mLeScanFilterTypes.end(); ++it)
+		tmpFilterType |= it->second;
+
+	tmpFilterType |= mFilterType;
+
+	if (tmpFilterType == FILTER_SERVICEUUID)
+		return true;
+	return false;
 }
 
 bool Bluez5Adapter::checkServiceUuid(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device)

@@ -32,6 +32,16 @@ extern "C" {
 #include "bluez-interface.h"
 }
 
+enum FilterTypes{
+	FILTER_NAME = 0x01,
+	FILTER_ADDRESS = 0x02,
+	FILTER_SERVICEUUID = 0x04,
+	FILTER_SERVICEDATA = 0x08,
+	FILTER_MANUFACTURERDATA = 0x10,
+	FILTER_SERVICEUUIDMASK = 0x20,
+	FILTER_NONE = 0x40
+};
+
 class Bluez5Agent;
 class Bluez5ObexClient;
 class Bluez5ObexAgent;
@@ -54,8 +64,13 @@ public:
 	BluetoothError disable();
 	BluetoothError startDiscovery();
 	void cancelDiscovery(BluetoothResultCallback callback);
+	bool isServiceUuidValid(const BluetoothLeDiscoveryFilter &filter);
+	bool isServiceDataValid(const BluetoothLeDiscoveryFilter &filter);
+	bool isFilterValid(const BluetoothLeDiscoveryFilter &filter);
 	int32_t addLeDiscoveryFilter(const BluetoothLeDiscoveryFilter &filter);
 	BluetoothError removeLeDiscoveryFilter(uint32_t scanId);
+	void removeFilterType(uint32_t scanId);
+	BluetoothError prepareFilterForDiscovery();
 	void matchLeDiscoveryFilterDevices(const BluetoothLeDiscoveryFilter &filter, uint32_t scanId);
 	BluetoothError startLeDiscovery();
 	BluetoothError cancelLeDiscovery();
@@ -73,6 +88,11 @@ public:
 	Bluez5Device* findDeviceByObjectPath(const std::string &objectPath);
 	Bluez5Device* findDevice(const std::string &address);
 	bool filterMatchCriteria(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
+	bool stopLeDiscovery();
+	bool resumeLeDiscovery();
+	bool setBluezFilter(const BluetoothLeDiscoveryFilter &filter);
+	bool clearPreviousFilter();
+	bool bluezFilterUsageCriteria(unsigned char mFilterType);
 	bool checkServiceUuid(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
 	bool checkServiceData(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
 	bool checkManufacturerData(const BluetoothLeDiscoveryFilter &filter, Bluez5Device *device);
@@ -162,8 +182,13 @@ private:
 	FreeDesktopDBusProperties *mPropertiesProxy;
 	bool mPowered;
 	bool mDiscovering;
+	bool mSILDiscovery;
+	bool mUseBluezFilter;
+	bool mLegacyScan;
+	unsigned char mFilterType;
 	std::unordered_map<std::string, Bluez5Device*> mDevices;
 	std::unordered_map<uint32_t, BluetoothLeDiscoveryFilter> mLeScanFilters;
+	std::unordered_map<uint32_t, unsigned char> mLeScanFilterTypes;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, Bluez5Device*>> mLeDevicesByScanId;
 	uint32_t mDiscoveryTimeout;
 	guint mDiscoveryTimeoutSource;
