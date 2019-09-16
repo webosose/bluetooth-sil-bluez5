@@ -214,7 +214,10 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 		{
 			mPowered = powered;
 			if (observer)
+			{
+				mPowered = powered;
 				observer->adapterStateChanged(mPowered);
+			}
 		}
 	}
 	else if (key == "Discovering")
@@ -339,28 +342,27 @@ void Bluez5Adapter::getAdapterProperty(BluetoothProperty::Type type, BluetoothPr
 		return;
 	}
 
-	auto propertyGetCallback = [this, callback, type](GAsyncResult *result) {
-		GVariant *propVar, *realPropVar;
-		GError *error = 0;
-		gboolean ret;
+	GError *error = 0;
 
-		ret = free_desktop_dbus_properties_call_get_finish(mPropertiesProxy, &propVar, result, &error);
-		if (error)
-		{
-			g_error_free(error);
-			callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
-			return;
-		}
+	GVariant *propVar, *realPropVar;
+	free_desktop_dbus_properties_call_get_sync(mPropertiesProxy, "org.bluez.Adapter1", propertyName.c_str(), &propVar, NULL, &error);
 
-		realPropVar = g_variant_get_variant(propVar);
+	if (error)
+	{
+		g_error_free(error);
+		callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
+	}
 
-		BluetoothProperty property(type);
-		std::string strValue;
-		uint32_t uint32Value;
-		bool boolValue;
+	realPropVar = g_variant_get_variant(propVar);
 
-		switch (type)
-		{
+	BluetoothProperty property(type);
+	std::string strValue;
+	uint32_t uint32Value;
+	bool boolValue;
+
+
+	switch (type)
+	{
 		case BluetoothProperty::Type::NAME:
 			if (mAlias.empty())
 			{
@@ -402,14 +404,10 @@ void Bluez5Adapter::getAdapterProperty(BluetoothProperty::Type type, BluetoothPr
 			return;
 		}
 
-		g_variant_unref(realPropVar);
-		g_variant_unref(propVar);
+	g_variant_unref(realPropVar);
+	g_variant_unref(propVar);
 
-		callback(BLUETOOTH_ERROR_NONE, property);
-	};
-
-	free_desktop_dbus_properties_call_get(mPropertiesProxy, "org.bluez.Adapter1", propertyName.c_str(), NULL,
-						glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(propertyGetCallback));
+	callback(BLUETOOTH_ERROR_NONE, property);
 }
 
 GVariant* Bluez5Adapter::propertyValueToVariant(const BluetoothProperty& property)
@@ -1558,7 +1556,7 @@ BluetoothError Bluez5Adapter::supplyPairingConfirmation(const std::string &addre
 		return BLUETOOTH_ERROR_PARAM_INVALID;
 	}
 
-	if (mAgent->supplyPairingConfirmation(address, accept))
+	if (mAgent->supplyPairingConfirmation(this, address, accept))
 	{
 		return BLUETOOTH_ERROR_NONE;
 	}

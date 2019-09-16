@@ -86,11 +86,20 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 	/*Objects may come in any order, first device object then adapter so
 	 better to traverse all objects to adapter then other interfaces*/
 
-	GDBusObject* adapterObject = findInterface(objects, "org.bluez.Adapter1");
-	if (adapterObject)
+	for (int n = 0; n < g_list_length(objects); n++)
 	{
-		sil->createAdapter(std::string(g_dbus_object_get_object_path(adapterObject)));
+		auto object = static_cast<GDBusObject*>(g_list_nth(objects, n)->data);
+		auto objectPath = g_dbus_object_get_object_path(object);
+
+		auto adapterInterface = g_dbus_object_get_interface(object, "org.bluez.Adapter1");
+		if (adapterInterface)
+		{
+			sil->createAdapter(std::string(objectPath));
+		}
 	}
+
+	if (sil->observer && !sil->mAdapters.empty())
+		sil->observer->adaptersChanged();
 
 	GDBusObject* agentManagerObject = findInterface(objects, "org.bluez.AgentManager1");
 	if (agentManagerObject)
@@ -134,9 +143,6 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 			g_object_unref(deviceInterface);
 		}
 	}
-
-	if (sil->observer && !sil->mAdapters.empty())
-		sil->observer->adaptersChanged();
 
 	for (int n = 0; n < g_list_length(objects); n++)
 	{
@@ -530,6 +536,18 @@ std::vector<BluetoothAdapter*> Bluez5SIL::getAdapters()
 	// here.
 	std::vector<BluetoothAdapter*> adapters(mAdapters.begin(), mAdapters.end());
 	return adapters;
+}
+
+Bluez5Adapter * Bluez5SIL::getBluez5Adapter(std::string objectPath)
+{
+	for (auto adapter: mAdapters)
+	{
+		std::size_t found = objectPath.find(adapter->getObjectPath());
+		if (found != std::string::npos)
+			return adapter;
+	}
+
+	return nullptr;
 }
 
 void Bluez5SIL::checkDbusConnection()

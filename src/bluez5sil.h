@@ -44,6 +44,7 @@ public:
 
 	BluetoothAdapter* getDefaultAdapter();
 	std::vector<BluetoothAdapter*> getAdapters();
+	Bluez5Adapter *getBluez5Adapter(std::string objectPath);
 	Bluez5Adapter* getDefaultBluez5Adapter() { return mDefaultAdapter; }
 	BluetoothPairingIOCapability getCapability() { return mCapability; }
 
