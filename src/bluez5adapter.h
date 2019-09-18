@@ -161,6 +161,7 @@ public:
 	virtual void unregisterAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
 	virtual void disableAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
 	BluezAdapter1* getAdapterProxy() { return mAdapterProxy; }
+	std::string getAddress() { return bluez_adapter1_get_address(mAdapterProxy);}
 	void updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 	void mediaPlayStatusRequest(std::string address);

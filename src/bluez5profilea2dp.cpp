@@ -108,7 +108,7 @@ void Bluez5ProfileA2dp::updateConnectionStatus(const std::string &address, bool 
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
 
-	getObserver()->propertiesChanged(convertAddressToLowerCase(address), properties);
+	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address), properties);
 }
 
 void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject *object, void *userData)
@@ -168,7 +168,7 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		if (a2dp->mState == PLAYING)
 		{
 			a2dp->mState = NOT_PLAYING;
-			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
+			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mAdapter->getAddress()), convertAddressToLowerCase(device->getAddress()), a2dp->mState);
 		}
 
 		g_object_unref(a2dp->mInterface);
@@ -214,7 +214,7 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 					Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
 					if (device)
 					{
-						a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(device->getAddress()), a2dp->mState);
+						a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mAdapter->getAddress()), convertAddressToLowerCase(device->getAddress()), a2dp->mState);
 					}
 				}
 			}
