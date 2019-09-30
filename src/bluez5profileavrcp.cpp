@@ -145,7 +145,7 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 	DEBUG("AVRCP isConnected %d", status);
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
-	getObserver()->propertiesChanged(convertAddressToLowerCase(address), properties);
+	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address), properties);
 
 	if (status)
 	{
@@ -210,5 +210,5 @@ void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::str
 		return;
 	}
 	if (device->isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID))
-		getAvrcpObserver()->passThroughCommandReceived(keyCode, keyStatus, convertAddressToLowerCase(address));
+		getAvrcpObserver()->passThroughCommandReceived(keyCode, keyStatus, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
 }

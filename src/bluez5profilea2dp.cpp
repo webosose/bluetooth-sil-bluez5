@@ -23,7 +23,6 @@ const std::string BLUETOOTH_PROFILE_A2DP_UUID = "0000110b-0000-1000-8000-00805f9
 
 Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 	Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_A2DP_UUID),
-	mAdapter(adapter),
 	mObjectManager(0),
 	mPropertiesProxy(0),
 	mInterface(nullptr),
@@ -72,7 +71,6 @@ BluetoothError Bluez5ProfileA2dp::stopStreaming(const std::string &address)
 {
 	return BLUETOOTH_ERROR_NONE;
 }
-
 
 void Bluez5ProfileA2dp::connect(const std::string &address, BluetoothResultCallback callback)
 {
