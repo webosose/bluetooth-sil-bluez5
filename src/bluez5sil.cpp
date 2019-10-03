@@ -250,8 +250,13 @@ GDBusObject* Bluez5SIL::findInterface(GList* objects, const gchar *interfaceName
 
 void Bluez5SIL::assignNewDefaultAdapter()
 {
-	if (!mDefaultAdapter && !mAdapters.empty())
-		mDefaultAdapter = mAdapters.front();
+	for (auto it = mAdapters.begin(); it != mAdapters.end(); it++)
+	{
+		Bluez5Adapter *adapter = *it;
+		std::size_t found = adapter->getObjectPath().find("hci0");
+		if (found != std::string::npos)
+			mDefaultAdapter = adapter;
+	}
 }
 
 void Bluez5SIL::createAdapter(const std::string &objectPath)
