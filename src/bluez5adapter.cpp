@@ -44,6 +44,7 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mSILDiscovery(false),
 	mUseBluezFilter(false),
 	mLegacyScan(false),
+	mFilterType(0x00),
 	mDiscoveryTimeout(0),
 	mDiscoveryTimeoutSource(0),
 	mAgent(0),
