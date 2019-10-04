@@ -51,7 +51,9 @@ public:
 	void mediaMetaDataRequested(const std::string &address);
 	void mediaPlayStatusRequested(const std::string &address);
 	void updateConnectionStatus(const std::string &address, bool status);
+	void updateVolume(const std::string &address, int volume);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
+	BluetoothError setAbsoluteVolume(const std::string &address, int volume);
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }

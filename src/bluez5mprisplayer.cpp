@@ -24,7 +24,7 @@
 #include <map>
 
 #define BLUEZ5_MEDIA_PLAYER_BUS_NAME    "com.webos.service.bluezMprisPlayer"
-#define BLUEZ5_MEDIA_PLAYER_PATH        "/org/mpris/MediaPlayer2"
+#define BLUEZ5_MEDIA_PLAYER_PATH        "/mpris/MediaPlayer2"
 #define MEDIA_PLAYER_INTERFACE          "org.mpris.MediaPlayer2.Player"
 
 std::map <BluetoothMediaPlayStatus::MediaPlayStatus, std::string> mediaPlayStatusMap =
@@ -36,10 +36,10 @@ std::map <BluetoothMediaPlayStatus::MediaPlayStatus, std::string> mediaPlayStatu
 	{ BluetoothMediaPlayStatus::MEDIA_PLAYSTATUS_REV_SEEK, "reverse-seek"}
 };
 
-Bluez5MprisPlayer::Bluez5MprisPlayer(BluezMedia1 *media, Bluez5SIL *sil):
+Bluez5MprisPlayer::Bluez5MprisPlayer(BluezMedia1 *media, Bluez5Adapter *adapter):
 mBusId(0),
 mConn(nullptr),
-mSIL(sil),
+mAdapter(adapter),
 mMediaProxy(media),
 mPlayerInterface(0),
 mTrackNumber(0),
@@ -79,8 +79,9 @@ void Bluez5MprisPlayer::createInterface()
 	mPlayerInterface = bluez_org_mpris_media_player2_player_skeleton_new();
 	GError *error = 0;
 
+	std::string path = mAdapter->getObjectPath() + BLUEZ5_MEDIA_PLAYER_PATH;
 	if (!g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(mPlayerInterface), mConn,
-                                          BLUEZ5_MEDIA_PLAYER_PATH, &error))
+                                          path.c_str(), &error))
 	{
 		DEBUG("Failed to initialize agent on bus: %s",error->message);
 		g_error_free(error);

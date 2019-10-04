@@ -50,14 +50,15 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mAgent(0),
 	mAdvertise(0),
 	mProfileManager(0),
-	mPlayer(nullptr),
 	mPairing(false),
 	mCurrentPairingDevice(0),
 	mCurrentPairingCallback(0),
 	mObexClient(0),
 	mObexAgent(0),
 	mCancelDiscCallback(0),
-	mAdvertising(false)
+	mAdvertising(false),
+	mMediaManager(nullptr),
+	mPlayer(nullptr)
 {
 	GError *error = 0;
 
@@ -97,8 +98,42 @@ Bluez5Adapter::~Bluez5Adapter()
 	if (mPropertiesProxy)
 		g_object_unref(mPropertiesProxy);
 
+	if (mMediaManager)
+		g_object_unref(mMediaManager);
+
+	if (mPlayer)
+		delete mPlayer;
+
 	if (mObexClient)
 		delete mObexClient;
+}
+
+void Bluez5Adapter::addMediaManager(std::string objectPath)
+{
+	GError *error = 0;
+	mMediaManager = bluez_media1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+                                                                "org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for media manager on path %s: %s",
+			  objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+
+	mPlayer = new Bluez5MprisPlayer(mMediaManager, this);
+}
+
+void Bluez5Adapter::removeMediaManager(const std::string &objectPath)
+{
+	if (!mMediaManager)
+		return;
+	g_object_unref(mMediaManager);
+	mMediaManager = nullptr;
+
+	delete mPlayer;
+	mPlayer = nullptr;
+
 }
 
 bool Bluez5Adapter::isDiscoveryTimeoutRunning()
@@ -1158,11 +1193,6 @@ void Bluez5Adapter::assignGattManager(BluezGattManager1 *gattManager)
 	mGattManagerProxy = gattManager;
 }
 
-void Bluez5Adapter::assingPlayer(Bluez5MprisPlayer* player)
-{
-	mPlayer = player;
-}
-
 Bluez5MprisPlayer* Bluez5Adapter::getPlayer()
 {
 	return mPlayer;
@@ -1799,6 +1829,12 @@ void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, 
 		Bluez5ProfileA2dp *a2dp = dynamic_cast<Bluez5ProfileA2dp*> (getProfile(BLUETOOTH_PROFILE_ID_A2DP));
 		if (a2dp) a2dp->updateConnectionStatus(address, isConnected);
 	}
+}
+
+void Bluez5Adapter::updateAvrcpVolume(std::string address, guint16 volume)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+		if (avrcp) avrcp->updateVolume(address, volume);
 }
 
 void Bluez5Adapter::recievePassThroughCommand(std::string address, std::string key, std::string state)

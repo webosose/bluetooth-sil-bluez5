@@ -113,14 +113,18 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 {
 	Bluez5ProfileA2dp *a2dp = static_cast<Bluez5ProfileA2dp*>(userData);
 
-	auto objectPath = g_dbus_object_get_object_path(object);
+	std::string objectPath = g_dbus_object_get_object_path(object);
 
 	auto mediaTransportInterface = g_dbus_object_get_interface(object, "org.bluez.MediaTransport1");
 	if (mediaTransportInterface)
 	{
+		auto adapterPath = a2dp->mAdapter->getObjectPath();
+		if (objectPath.compare(0, adapterPath.length(), adapterPath))
+			return;
+
 		GError *error = 0;
 		a2dp->mInterface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-													"org.bluez", objectPath, NULL, &error);
+													"org.bluez", objectPath.c_str(), NULL, &error);
 		if (error)
 		{
 			DEBUG("Not able to get media transport interface");
@@ -129,7 +133,7 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 		}
 
 		a2dp->mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-																		   "org.bluez", objectPath, NULL, &error);
+																		   "org.bluez", objectPath.c_str(), NULL, &error);
 		if (error)
 		{
 			DEBUG("Not able to get property interface");
@@ -147,14 +151,17 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 {
 	Bluez5ProfileA2dp *a2dp = static_cast<Bluez5ProfileA2dp*>(userData);
 
-	auto objectPath = g_dbus_object_get_object_path(object);
+	std::string objectPath = g_dbus_object_get_object_path(object);
 
 	auto mediaTransportInterface = g_dbus_object_get_interface(object, "org.bluez.MediaTransport1");
 	if (mediaTransportInterface)
 	{
-		std::string path(objectPath);
-		std::size_t pos = path.find("/fd");
-		std::string devicePath = path.substr (0, pos);
+		auto adapterPath = a2dp->mAdapter->getObjectPath();
+		if (objectPath.compare(0, adapterPath.length(), adapterPath))
+			return;
+
+		std::size_t pos = objectPath.find("/fd");
+		std::string devicePath = objectPath.substr (0, pos);
 
 		Bluez5Device *device = a2dp->mAdapter->findDeviceByObjectPath(devicePath);
 		if (!device)
@@ -219,6 +226,28 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 			g_variant_unref(tmpVar);
 		}
 
+		if (key == "Volume")
+		{
+			GVariant *tmpVar = g_variant_get_variant(valueVar);
+			guint16 volume = g_variant_get_uint16(tmpVar);
+			DEBUG("A2DP Volume %d", volume);
+
+			if (a2dp->mInterface)
+			{
+				const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
+				if (deviceObjectPath)
+				{
+					Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+					if (device)
+					{
+						a2dp->mAdapter->updateAvrcpVolume(convertAddressToLowerCase(device->getAddress()), volume);
+					}
+				}
+			}
+			g_variant_unref(tmpVar);
+		}
+
+
 		g_variant_unref(valueVar);
 		g_variant_unref(keyVar);
 		g_variant_unref(propertyVar);
@@ -244,15 +273,19 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 	for (int n = 0; n < g_list_length(objects); n++)
 	{
 		auto object = static_cast<GDBusObject*>(g_list_nth(objects, n)->data);
-		auto objectPath = g_dbus_object_get_object_path(object);
+		std::string objectPath = g_dbus_object_get_object_path(object);
 
 		auto mediaTransportInterface = g_dbus_object_get_interface(object, "org.bluez.MediaTransport1");
 		if (mediaTransportInterface)
 		{
+			auto adapterPath = a2dp->mAdapter->getObjectPath();
+			if (objectPath.compare(0, adapterPath.length(), adapterPath))
+				return;
+
 			a2dp->mInterface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-																							"org.bluez", objectPath, NULL, &error);
+																							"org.bluez", objectPath.c_str(), NULL, &error);
 			FreeDesktopDBusProperties *propertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-																		   "org.bluez", objectPath, NULL, &error);
+																		   "org.bluez", objectPath.c_str(), NULL, &error);
 			if (error)
 			{
 				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "Not able to get property interface");

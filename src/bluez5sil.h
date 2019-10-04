@@ -31,7 +31,6 @@ extern "C" {
 class Bluez5Adapter;
 class Bluez5Agent;
 class Bluez5Advertise;
-class Bluez5MprisPlayer;
 
 class Bluez5SIL : public BluetoothSIL
 {
@@ -87,10 +86,8 @@ private:
 	BluezLEAdvertisingManager1 *mBleAdvManager;
 	BluezProfileManager1 *mProfileManager;
 	BluezGattManager1 *mGattManager;
-	BluezMedia1 *mMediaManager;
 	Bluez5Agent *mAgent;
 	Bluez5Advertise *mBleAdvertise;
-	Bluez5MprisPlayer *mPlayer;
 	BluetoothPairingIOCapability mCapability;
 };
 

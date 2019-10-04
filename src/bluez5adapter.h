@@ -112,8 +112,6 @@ public:
 	void assignProfileManager(BluezProfileManager1* proxy);
 	BluezProfileManager1 *getProfileManager();
 
-	void assingPlayer(Bluez5MprisPlayer* media);
-
 	Bluez5MprisPlayer* getPlayer();
 
 	bool isPairingFor(const std::string &address) const;
@@ -163,9 +161,12 @@ public:
 	BluezAdapter1* getAdapterProxy() { return mAdapterProxy; }
 	std::string getAddress() { return bluez_adapter1_get_address(mAdapterProxy);}
 	void updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected);
+	void updateAvrcpVolume(std::string address, guint16 volume);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 	void mediaPlayStatusRequest(std::string address);
 	void mediaMetaDataRequest(std::string address);
+	void addMediaManager(std::string objectPath);
+	void removeMediaManager(const std::string &objectPath);
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);
@@ -199,7 +200,6 @@ private:
 	Bluez5Agent *mAgent;
 	Bluez5Advertise *mAdvertise;
 	BluezProfileManager1 *mProfileManager;
-	Bluez5MprisPlayer *mPlayer;
 	bool mPairing;
 	Bluez5Device *mCurrentPairingDevice;
 	BluetoothResultCallback mCurrentPairingCallback;
@@ -211,6 +211,8 @@ private:
 	BluetoothResultCallback mCancelDiscCallback;
 	bool mAdvertising;
 	std::vector <std::string> mUuids;
+	Bluez5MprisPlayer *mPlayer;
+	BluezMedia1 *mMediaManager;
 };
 
 #endif // BLUEZ5ADAPTER_H

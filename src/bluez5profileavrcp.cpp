@@ -20,6 +20,7 @@
 #include "utils.h"
 #include "bluez5mediacontrol.h"
 #include "bluez5mprisplayer.h"
+#include "bluez5profilea2dp.h"
 #include <string>
 
 
@@ -188,6 +189,22 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 	}
 }
 
+void Bluez5ProfileAvcrp::updateVolume(const std::string &address, int volume)
+{
+	DEBUG("updateVolume %d", volume);
+
+	Bluez5Device *device = mAdapter->findDevice(address);
+	if (!device)
+	{
+		DEBUG("Bluez5ProfileAvcrp::updateVolume not handled");
+		return;
+	}
+
+	// TODO: If this condition needed, please verify
+	//if (device->isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID))
+	getAvrcpObserver()->volumeChanged(volume, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
+}
+
 void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::string key, std::string state)
 {
 	DEBUG("Bluez5ProfileAvcrp::recievePassThroughCommand %s %s", key.c_str(), state.c_str());
@@ -211,4 +228,12 @@ void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::str
 	}
 	if (device->isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID))
 		getAvrcpObserver()->passThroughCommandReceived(keyCode, keyStatus, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
+}
+
+BluetoothError Bluez5ProfileAvcrp::setAbsoluteVolume(const std::string &address, int volume)
+{
+	Bluez5ProfileA2dp *a2dp = dynamic_cast<Bluez5ProfileA2dp*> (mAdapter->getProfile(BLUETOOTH_PROFILE_ID_A2DP));
+	if (a2dp)
+		bluez_media_transport1_set_volume(a2dp->getMediaTransport(), (uint8_t)volume);
+	return BLUETOOTH_ERROR_NONE;
 }

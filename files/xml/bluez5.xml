@@ -302,6 +302,7 @@
     </interface>
     <interface name="org.bluez.MediaTransport1">
         <property name="Device" type="o" access="read"></property>
+	<property name="Volume" type="q" access="readwrite"></property>
     </interface>
     <interface name="org.bluez.MediaControl1">
         <property name="Connected" type="b" access="read"></property>

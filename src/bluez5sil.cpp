@@ -40,9 +40,7 @@ Bluez5SIL::Bluez5SIL(BluetoothPairingIOCapability capability) :
 	mAgent(0),
 	mBleAdvertise(0),
 	mCapability(capability),
-	mGattManager(0),
-	mMediaManager(0),
-	mPlayer(0)
+	mGattManager(0)
 {
 }
 
@@ -53,9 +51,6 @@ Bluez5SIL::~Bluez5SIL()
 
 	if (mBleAdvertise)
 		delete mBleAdvertise;
-
-	if (mPlayer)
-		delete mPlayer;
 }
 
 void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *name,
@@ -125,11 +120,6 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 		sil->createProfileManager(std::string(g_dbus_object_get_object_path(profileManager)));
 	}
 
-	GDBusObject* mediaManager = findInterface(objects, "org.bluez.Media1");
-	if (mediaManager)
-	{
-		sil->createMediaManager(std::string(g_dbus_object_get_object_path(mediaManager)));
-	}
 
 	for (int n = 0; n < g_list_length(objects); n++)
 	{
@@ -141,6 +131,18 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 		{
 			sil->createDevice(std::string(objectPath));
 			g_object_unref(deviceInterface);
+		}
+	}
+
+	for (int n = 0; n < g_list_length(objects); n++)
+	{
+		auto object = static_cast<GDBusObject*>(g_list_nth(objects, n)->data);
+		auto objectPath = g_dbus_object_get_object_path(object);
+
+		auto mediaManager = g_dbus_object_get_interface(object, "org.bluez.Media1");
+		if (mediaManager)
+		{
+			sil->createMediaManager(std::string(objectPath));
 		}
 	}
 
@@ -202,6 +204,13 @@ void Bluez5SIL::handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject
 		sil->createDevice(std::string(objectPath));
 		g_object_unref(deviceInterface);
 	}
+
+	auto mediaManagerInterface = g_dbus_object_get_interface(object, "org.bluez.Media1");
+	if (mediaManagerInterface)
+	{
+		sil->createMediaManager(std::string(objectPath));
+		g_object_unref(mediaManagerInterface);
+	}
 }
 
 void Bluez5SIL::handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObject *object, void *user_data)
@@ -229,6 +238,13 @@ void Bluez5SIL::handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObje
 	{
 		sil->removeAgentManager(std::string(objectPath));
 		g_object_unref(agentManagerInterface);
+	}
+
+	auto mediaManagerInterface = g_dbus_object_get_interface(object, "org.bluez.Media1");
+	if (mediaManagerInterface)
+	{
+		sil->removeMediaManager(std::string(objectPath));
+		g_object_unref(mediaManagerInterface);
 	}
 }
 
@@ -476,43 +492,16 @@ void Bluez5SIL::createGattManager(const std::string &objectPath)
 
 void Bluez5SIL::createMediaManager(const std::string &objectPath)
 {
-	if (mMediaManager)
-	{
-		WARNING(MSGID_MULTIPLE_AGENT_MGR, 0, "Tried to create another media instance");
-		return;
-	}
-
-	GError *error = 0;
-	mMediaManager = bluez_media1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                                "org.bluez", objectPath.c_str(), NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for media manager on path %s: %s",
-			  objectPath.c_str(), error->message);
-		g_error_free(error);
-		return;
-	}
-
-	mPlayer = new Bluez5MprisPlayer(mMediaManager, this);
-
-	for (auto adapter : mAdapters)
-		adapter->assingPlayer(mPlayer);
-
+	auto adapter = findAdapterForObjectPath(objectPath);
+	if (adapter)
+		adapter->addMediaManager(objectPath);
 }
 
 void Bluez5SIL::removeMediaManager(const std::string &objectPath)
 {
-	if (!mMediaManager)
-		return;
-
-	g_object_unref(mMediaManager);
-	mMediaManager = 0;
-
-	for (auto adapter : mAdapters)
-		adapter->assingPlayer(0);
-
-	delete mPlayer;
-	mPlayer = 0;
+	auto adapter = findAdapterForObjectPath(objectPath);
+	if (adapter)
+		adapter->removeMediaManager(objectPath);
 }
 
 void Bluez5SIL::connectWithBluez()
