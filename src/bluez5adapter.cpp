@@ -207,23 +207,6 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::PAIRABLE_TIMEOUT, pairableTimeout));
 		changed = true;
 	}
-	else if (key == "UUIDs")
-	{
-		std::vector<std::string> uuids;
-
-		for (int m = 0; m < g_variant_n_children(valueVar); m++)
-		{
-			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
-
-			std::string uuid = g_variant_get_string(uuidVar, NULL);
-			uuids.push_back(uuid);
-
-			g_variant_unref(uuidVar);
-		}
-
-		properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, uuids));
-		changed = true;
-	}
 	else if (key == "Powered")
 	{
 		bool powered = g_variant_get_boolean(valueVar);
