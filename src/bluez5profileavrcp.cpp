@@ -44,7 +44,9 @@ const std::map <std::string, BluetoothAvrcpPassThroughKeyCode> Bluez5ProfileAvcr
 Bluez5ProfileAvcrp::Bluez5ProfileAvcrp(Bluez5Adapter* adapter):
 Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID),
 mMetaDataRequestId(0),
-mMediaPlayStatusRequestId(0)
+mMediaPlayStatusRequestId(0),
+mConnected(false),
+mConnectedDevice(nullptr)
 {
 }
 
@@ -65,7 +67,10 @@ void Bluez5ProfileAvcrp::connect(const std::string& address, BluetoothResultCall
 		callback(BLUETOOTH_ERROR_NONE);
 	};
 
-	Bluez5ProfileBase::connect(address, connectCallback);
+	if (!mConnected)
+		Bluez5ProfileBase::connect(address, connectCallback);
+	else
+		connectCallback(BLUETOOTH_ERROR_DEVICE_ALREADY_CONNECTED);
 }
 
 void Bluez5ProfileAvcrp::disconnect(const std::string& address, BluetoothResultCallback callback)
@@ -107,10 +112,8 @@ void Bluez5ProfileAvcrp::getProperty(const std::string &address, BluetoothProper
 		return;
 	}
 
-	bool isConnected = device->isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID);
-	DEBUG("AVRCP isConnected %d", isConnected);
-
-	prop.setValue<bool>(isConnected);
+	bool connected = (device == mConnectedDevice);
+	prop.setValue<bool>(connected);
 	callback(BLUETOOTH_ERROR_NONE, prop);
 }
 
@@ -148,6 +151,8 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
 	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address), properties);
 
+	mConnected = status;
+
 	if (status)
 	{
 		Bluez5Device *device = mAdapter->findDevice(address);
@@ -156,6 +161,7 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 			return;
 		}
 
+		mConnectedDevice = device;
 		BluetoothAvrcpRemoteFeatures controllerFeatures = FEATURE_NONE;
 		uint8_t ctFeatures =  device->getRemoteControllerFeatures();
 		BluetoothAvrcpRemoteFeatures targetFeatures = FEATURE_NONE;
@@ -187,6 +193,10 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 			getAvrcpObserver()->remoteFeaturesReceived(targetFeatures, convertAddressToLowerCase(address), "TG");
 		}
 	}
+	else
+	{
+		mConnectedDevice = nullptr;
+	}
 }
 
 void Bluez5ProfileAvcrp::updateVolume(const std::string &address, int volume)
@@ -200,9 +210,8 @@ void Bluez5ProfileAvcrp::updateVolume(const std::string &address, int volume)
 		return;
 	}
 
-	// TODO: If this condition needed, please verify
-	//if (device->isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID))
-	getAvrcpObserver()->volumeChanged(volume, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
+	if (mConnected)
+		getAvrcpObserver()->volumeChanged(volume, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
 }
 
 void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::string key, std::string state)
@@ -226,7 +235,7 @@ void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::str
 		DEBUG("Bluez5ProfileAvcrp::recievePassThroughCommand not handled");
 		return;
 	}
-	if (device->isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID))
+	if (mConnected)
 		getAvrcpObserver()->passThroughCommandReceived(keyCode, keyStatus, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
 }
 

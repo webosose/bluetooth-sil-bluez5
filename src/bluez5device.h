@@ -53,7 +53,6 @@ public:
 	uint32_t getClassOfDevice() const;
 	BluetoothDeviceType getType() const;
 	std::vector<std::string> getUuids() const;
-	bool isUUIDConnected(const std::string &uuid) const;
 	bool getConnected() const;
 	Bluez5Adapter* getAdapter() const;
 	std::vector<uint8_t> getScanRecord() const;

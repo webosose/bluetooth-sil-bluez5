@@ -52,6 +52,7 @@ public:
 	BluezMediaTransport1* getMediaTransport() { return mInterface; }
 
 private:
+	bool mConnected;
 	GDBusObjectManager *mObjectManager;
 	BluetoothA2dpProfileState mState;
 	FreeDesktopDBusProperties *mPropertiesProxy;

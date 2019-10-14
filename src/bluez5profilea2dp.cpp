@@ -26,7 +26,8 @@ Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 	mObjectManager(0),
 	mPropertiesProxy(0),
 	mInterface(nullptr),
-	mState(NOT_PLAYING)
+	mState(NOT_PLAYING),
+	mConnected(false)
 {
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
 					 handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);
@@ -55,9 +56,19 @@ void Bluez5ProfileA2dp::getProperty(const std::string &address, BluetoothPropert
 		return;
 	}
 
-	isConnected = device->isUUIDConnected(BLUETOOTH_PROFILE_A2DP_UUID);
-	DEBUG("A2DP isConnected %d", isConnected);
-	
+	if (mInterface)
+	{
+		const char* deviceObjectPath = bluez_media_transport1_get_device(mInterface);
+		if (deviceObjectPath)
+		{
+			Bluez5Device* interfaceDevice = mAdapter->findDeviceByObjectPath(deviceObjectPath);
+			if (interfaceDevice && interfaceDevice == device)
+			{
+				isConnected = true;
+			}
+		}
+	}
+
 	prop.setValue<bool>(isConnected);
 	callback(BLUETOOTH_ERROR_NONE, prop);
 }
@@ -84,7 +95,10 @@ void Bluez5ProfileA2dp::connect(const std::string &address, BluetoothResultCallb
 		callback(BLUETOOTH_ERROR_NONE);
 	};
 
-	Bluez5ProfileBase::connect(address, connectCallback);
+	if (!mConnected)
+		Bluez5ProfileBase::connect(address, connectCallback);
+	else
+		callback(BLUETOOTH_ERROR_DEVICE_ALREADY_CONNECTED);
 }
 
 void Bluez5ProfileA2dp::disconnect(const std::string &address, BluetoothResultCallback callback)
@@ -103,6 +117,7 @@ void Bluez5ProfileA2dp::disconnect(const std::string &address, BluetoothResultCa
 
 void Bluez5ProfileA2dp::updateConnectionStatus(const std::string &address, bool status)
 {
+	mConnected = status;
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
 
@@ -143,6 +158,18 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 
 		g_signal_connect(G_OBJECT(a2dp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 
+		const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
+		if (deviceObjectPath)
+		{
+			Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+			if (device)
+			{
+				a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), true);
+				a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), true);
+				a2dp->mAdapter->handleDevicePropertiesChanged(device);
+			}
+		}
+
 		g_object_unref(mediaTransportInterface);
 	}
 }
@@ -174,6 +201,18 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		{
 			a2dp->mState = NOT_PLAYING;
 			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mAdapter->getAddress()), convertAddressToLowerCase(device->getAddress()), a2dp->mState);
+		}
+
+		const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
+		if (deviceObjectPath)
+		{
+			Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+			if (device)
+			{
+				a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), false);
+				a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), false);
+				a2dp->mAdapter->handleDevicePropertiesChanged(device);
+			}
 		}
 
 		g_object_unref(a2dp->mInterface);
@@ -240,7 +279,7 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 					Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
 					if (device)
 					{
-						a2dp->mAdapter->updateAvrcpVolume(convertAddressToLowerCase(device->getAddress()), volume);
+						a2dp->mAdapter->updateAvrcpVolume(device->getAddress(), volume);
 					}
 				}
 			}
@@ -269,6 +308,9 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 		return;
 	}
 
+	g_signal_connect(a2dp->mObjectManager, "object-added", G_CALLBACK(handleObjectAdded), a2dp);
+	g_signal_connect(a2dp->mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), a2dp);
+
 	GList *objects = g_dbus_object_manager_get_objects(a2dp->mObjectManager);
 	for (int n = 0; n < g_list_length(objects); n++)
 	{
@@ -295,14 +337,23 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 
 			g_signal_connect(G_OBJECT(propertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 
+			const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
+			if (deviceObjectPath)
+			{
+				Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+				if (device)
+				{
+					a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), true);
+					a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), true);
+					a2dp->mAdapter->handleDevicePropertiesChanged(device);
+				}
+			}
+
 			g_object_unref(mediaTransportInterface);
 		}
 		g_object_unref(object);
 	}
 	g_list_free(objects);
-
-	g_signal_connect(a2dp->mObjectManager, "object-added", G_CALLBACK(handleObjectAdded), a2dp);
-	g_signal_connect(a2dp->mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), a2dp);
 }
 
 void Bluez5ProfileA2dp::handleBluezServiceStopped(GDBusConnection *conn, const gchar *name,

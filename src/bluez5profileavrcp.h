@@ -62,6 +62,8 @@ private:
 private:
 	BluetoothAvrcpRequestId mMetaDataRequestId;
 	BluetoothAvrcpRequestId mMediaPlayStatusRequestId;
+	bool mConnected;
+	Bluez5Device *mConnectedDevice;
 };
 
 #endif
