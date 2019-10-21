@@ -35,6 +35,8 @@ Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 
 Bluez5ProfileA2dp::~Bluez5ProfileA2dp()
 {
+	if (mObjectManager)
+		g_object_unref(mObjectManager);
 }
 
 void Bluez5ProfileA2dp::getProperties(const std::string &address, BluetoothPropertiesResultCallback callback)
@@ -203,17 +205,9 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mAdapter->getAddress()), convertAddressToLowerCase(device->getAddress()), a2dp->mState);
 		}
 
-		const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
-		if (deviceObjectPath)
-		{
-			Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
-			if (device)
-			{
-				a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), false);
-				a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), false);
-				a2dp->mAdapter->handleDevicePropertiesChanged(device);
-			}
-		}
+		a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), false);
+		a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), false);
+		a2dp->mAdapter->handleDevicePropertiesChanged(device);
 
 		g_object_unref(a2dp->mInterface);
 		g_object_unref(mediaTransportInterface);

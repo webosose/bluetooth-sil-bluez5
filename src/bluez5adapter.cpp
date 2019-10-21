@@ -92,6 +92,16 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 
 Bluez5Adapter::~Bluez5Adapter()
 {
+	for(auto profile = mProfiles.begin(); profile != mProfiles.end(); profile++)
+	{
+		delete profile->second;
+	}
+
+	for (auto device = mDevices.begin(); device != mDevices.end(); device++)
+	{
+		delete device->second;
+	}
+
 	if (mAdapterProxy)
 		g_object_unref(mAdapterProxy);
 
@@ -106,6 +116,9 @@ Bluez5Adapter::~Bluez5Adapter()
 
 	if (mObexClient)
 		delete mObexClient;
+
+	if (mObexAgent)
+		delete mObexAgent;
 }
 
 void Bluez5Adapter::addMediaManager(std::string objectPath)
