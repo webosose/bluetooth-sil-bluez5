@@ -448,6 +448,8 @@ void Bluez5Adapter::getAdapterProperty(BluetoothProperty::Type type, BluetoothPr
 			property.setValue(boolValue);
 			break;
 		default:
+			g_variant_unref(realPropVar);
+			g_variant_unref(propVar);
 			callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
 			return;
 		}
