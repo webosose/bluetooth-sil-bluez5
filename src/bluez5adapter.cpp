@@ -174,12 +174,14 @@ void Bluez5Adapter::handleAdapterPropertiesChanged(BluezAdapter1 *, gchar *inter
 		GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
 
 		std::string key = g_variant_get_string(keyVar, NULL);
+                GVariant *realValueVar = g_variant_get_variant(valueVar);
 
-		changed |= adapter->addPropertyFromVariant(properties ,key, g_variant_get_variant(valueVar));
+		changed |= adapter->addPropertyFromVariant(properties ,key, realValueVar);
 
 		g_variant_unref(valueVar);
 		g_variant_unref(keyVar);
 		g_variant_unref(propertyVar);
+		g_variant_unref(realValueVar);
 	}
 
 	// If state has changed and we're not discovering or powered any more
@@ -305,14 +307,16 @@ void Bluez5Adapter::getAdapterProperties(BluetoothPropertiesResultCallback callb
 			GVariant *propertyVar = g_variant_get_child_value(propsVar, n);
 			GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
 			GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
+			GVariant *realValueVar = g_variant_get_variant(valueVar);
 
 			std::string key = g_variant_get_string(keyVar, NULL);
 
-			addPropertyFromVariant(properties, key, g_variant_get_variant(valueVar));
+			addPropertyFromVariant(properties, key, realValueVar);
 
 			g_variant_unref(valueVar);
 			g_variant_unref(keyVar);
 			g_variant_unref(propertyVar);
+			g_variant_unref(realValueVar);
 		}
 
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::DISCOVERY_TIMEOUT, mDiscoveryTimeout));
