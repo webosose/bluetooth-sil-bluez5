@@ -39,6 +39,9 @@ public:
 	Bluez5SIL(BluetoothPairingIOCapability capability);
 	~Bluez5SIL();
 
+	Bluez5SIL(const Bluez5SIL&) = delete;
+	Bluez5SIL& operator = (const Bluez5SIL&) = delete;
+
 	BluetoothAdapter* getDefaultAdapter();
 	std::vector<BluetoothAdapter*> getAdapters();
 	Bluez5Adapter* getDefaultBluez5Adapter() { return mDefaultAdapter; }

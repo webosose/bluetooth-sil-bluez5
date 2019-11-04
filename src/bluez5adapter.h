@@ -53,6 +53,9 @@ public:
 	Bluez5Adapter(const std::string &objectPath);
 	~Bluez5Adapter();
 
+	Bluez5Adapter(const Bluez5Adapter&) = delete;
+	Bluez5Adapter& operator = (const Bluez5Adapter&) = delete;
+
 	void getAdapterProperties(BluetoothPropertiesResultCallback callback);
 	void getAdapterProperty(BluetoothProperty::Type type, BluetoothPropertyResultCallback callback);
 	void setAdapterProperty(const BluetoothProperty& property, BluetoothResultCallback callback);

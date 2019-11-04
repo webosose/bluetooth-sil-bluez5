@@ -288,13 +288,14 @@ void Bluez5ProfileGatt::addRemoteDescriptorToCharacteristic(GattRemoteDescriptor
 			return characteristic->objectPath == characteristicObjectPath;
 		});
 
-		if ((*characteristicIter)->characteristic.isPropertySet(BluetoothGattCharacteristic::Property::PROPERTY_READ))
-		{
-			BluetoothGattValue descValue = gattDescriptor->readValue();
-			gattDescriptor->descriptor.setValue(descValue);
-		}
 		if (characteristicIter != characteristicList.end())
 		{
+			if ((*characteristicIter)->characteristic.isPropertySet(BluetoothGattCharacteristic::Property::PROPERTY_READ))
+			{
+				BluetoothGattValue descValue = gattDescriptor->readValue();
+				gattDescriptor->descriptor.setValue(descValue);
+			}
+
 			(*characteristicIter)->gattRemoteDescriptors.push_back(gattDescriptor);
 			(*characteristicIter)->characteristic.addDescriptor(gattDescriptor->descriptor);
 

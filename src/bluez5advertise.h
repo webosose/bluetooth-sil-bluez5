@@ -37,6 +37,10 @@ class Bluez5Advertise
 public:
 	Bluez5Advertise(BluezLEAdvertisingManager1 *advManager, Bluez5SIL *sil);
 	~Bluez5Advertise();
+
+	Bluez5Advertise(const Bluez5Advertise&) = delete;
+	Bluez5Advertise& operator = (const Bluez5Advertise&) = delete;
+
 	void createAdvertisementId(AdvertiserIdStatusCallback callback);
 	void registerAdvertisement(uint8_t advId, AdvertiserStatusCallback callback);
 	gboolean unRegisterAdvertisement(uint8_t advId);
@@ -72,6 +76,10 @@ public:
 			if (mInterface)
 				g_object_unref(mInterface);
 		}
+
+		AdvertiseObject(const AdvertiseObject&) = delete;
+		AdvertiseObject& operator = (const AdvertiseObject&) = delete;
+
 		BluezLEAdvertisement1 *mInterface;
 		std::string mPath;
 	};

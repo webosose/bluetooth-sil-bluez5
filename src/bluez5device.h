@@ -33,6 +33,9 @@ public:
 	Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath);
 	~Bluez5Device();
 
+	Bluez5Device(const Bluez5Device&) = delete;
+	Bluez5Device& operator = (const Bluez5Device&) = delete;
+
 	void pair(BluetoothResultCallback callback);
 	void unpair(BluetoothResultCallback callback);
 	void cancelPairing(BluetoothResultCallback callback);

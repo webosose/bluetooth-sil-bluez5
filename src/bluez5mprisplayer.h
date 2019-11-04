@@ -35,6 +35,10 @@ public:
 	Bluez5MprisPlayer(BluezMedia1* media, Bluez5SIL* sil);
 
 	~Bluez5MprisPlayer();
+
+	Bluez5MprisPlayer(const Bluez5MprisPlayer&) = delete;
+	Bluez5MprisPlayer& operator = (const Bluez5MprisPlayer&) = delete;
+
 	static void handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data);
 	void setConnection(GDBusConnection *connection) { mConn = connection; }
 	void createInterface();

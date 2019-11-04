@@ -42,6 +42,9 @@ public:
 	Bluez5ProfileGatt(Bluez5Adapter *adapter);
 	~Bluez5ProfileGatt();
 
+	Bluez5ProfileGatt(const Bluez5ProfileGatt&) = delete;
+	Bluez5ProfileGatt& operator = (const Bluez5ProfileGatt&) = delete;
+
 	void connectGatt(const uint16_t & appId, bool autoConnection, const std::string & address, BluetoothConnectCallback callback);
 
 	uint16_t addApplication(const BluetoothUuid &appUuid, ApplicationType type);
