@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <sys/stat.h>
 #include "asyncutils.h"
 #include "logging.h"
 #include "bluez5adapter.h"
@@ -212,6 +213,21 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 	{
 		mAlias = g_variant_get_string(valueVar, NULL);
 		DEBUG ("%s: Got alias property as %s", __func__, mAlias.c_str());
+		struct stat fileStat;
+		std::string path("/var/lib/bluetooth/first_boot_done");
+
+		if (stat(path.c_str(), &fileStat) < 0)
+		{
+			std::size_t found = mObjectPath.find("hci");
+			if (found != std::string::npos)
+			{
+				mAlias = mAlias + "-" + mObjectPath.substr(found);
+				BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
+				setAdapterPropertySync(alias);
+				std::string cmd = "touch " + path;
+				system(cmd.c_str());
+			}
+		}
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mAlias));
 		changed = true;
 	}
