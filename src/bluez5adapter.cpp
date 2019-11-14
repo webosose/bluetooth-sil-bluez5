@@ -213,15 +213,20 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 	{
 		mAlias = g_variant_get_string(valueVar, NULL);
 		DEBUG ("%s: Got alias property as %s", __func__, mAlias.c_str());
-		struct stat fileStat;
-		std::string path("/var/lib/bluetooth/first_boot_done");
 
-		if (stat(path.c_str(), &fileStat) < 0)
+		std::size_t found = mObjectPath.find("hci");
+
+		if (found != std::string::npos)
 		{
-			std::size_t found = mObjectPath.find("hci");
-			if (found != std::string::npos)
+			std::string path("/var/lib/bluetooth/first_boot_done_" + mObjectPath.substr(found));
+			struct stat fileStat;
+			if (stat(path.c_str(), &fileStat) < 0)
 			{
-				mAlias = mAlias + "-" + mObjectPath.substr(found);
+				std::size_t space = mAlias.find(" #");
+				//Second adapter system alias name is sa8155 #2 so erasing " #2"
+				if (space != std::string::npos)
+					mAlias.erase(space);
+				mAlias = mAlias + "_" + mObjectPath.substr(found);
 				BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
 				setAdapterPropertySync(alias);
 				std::string cmd = "touch " + path;
