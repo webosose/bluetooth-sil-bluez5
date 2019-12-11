@@ -150,6 +150,12 @@ void Bluez5Adapter::removeMediaManager(const std::string &objectPath)
 
 }
 
+void Bluez5Adapter::updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	avrcp->updateRemoteFeatures(features, role, address);
+}
+
 bool Bluez5Adapter::isDiscoveryTimeoutRunning()
 {
 	return (mDiscoveryTimeoutSource != 0);
@@ -218,20 +224,9 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 
 		if (found != std::string::npos)
 		{
-			std::string path("/var/lib/bluetooth/first_boot_done_" + mObjectPath.substr(found));
-			struct stat fileStat;
-			if (stat(path.c_str(), &fileStat) < 0)
-			{
-				std::size_t space = mAlias.find(" #");
-				//Second adapter system alias name is sa8155 #2 so erasing " #2"
-				if (space != std::string::npos)
-					mAlias.erase(space);
-				mAlias = mAlias + "_" + mObjectPath.substr(found);
-				BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
-				setAdapterPropertySync(alias);
-				std::string cmd = "touch " + path;
-				system(cmd.c_str());
-			}
+			mAlias = std::string("sa8155") + " "+ std::string("Bluetooth ") + mObjectPath.substr(found);
+			BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
+			setAdapterPropertySync(alias);
 		}
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mAlias));
 		changed = true;

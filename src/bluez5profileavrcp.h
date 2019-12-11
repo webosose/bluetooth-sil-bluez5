@@ -54,6 +54,7 @@ public:
 	void updateVolume(const std::string &address, int volume);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 	BluetoothError setAbsoluteVolume(const std::string &address, int volume);
+	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }

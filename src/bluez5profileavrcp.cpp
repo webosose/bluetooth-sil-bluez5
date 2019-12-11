@@ -162,41 +162,32 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 		}
 
 		mConnectedDevice = device;
-		BluetoothAvrcpRemoteFeatures controllerFeatures = FEATURE_NONE;
-		uint8_t ctFeatures =  device->getRemoteControllerFeatures();
-		BluetoothAvrcpRemoteFeatures targetFeatures = FEATURE_NONE;
-		uint8_t tgFeatures =  device->getRemoteTargetFeatures();
-
-		DEBUG("AVRCP ctFeatures %d tgFeatures %d", ctFeatures, tgFeatures);
-
-		if (ctFeatures)
-		{
-			if( ctFeatures & REMOTE_DEVICE_AVRCP_FEATURE_BROWSE)
-				controllerFeatures = FEATURE_BROWSE;
-			else if( ctFeatures & REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME)
-				controllerFeatures = FEATURE_ABSOLUTE_VOLUME;
-			else if( ctFeatures & REMOTE_DEVICE_AVRCP_FEATURE_METADATA)
-				controllerFeatures = FEATURE_METADATA;
-
-			getAvrcpObserver()->remoteFeaturesReceived(controllerFeatures, convertAddressToLowerCase(address), "CT");
-		}
-
-		if (tgFeatures)
-		{
-			if(tgFeatures & REMOTE_DEVICE_AVRCP_FEATURE_BROWSE)
-				targetFeatures = FEATURE_BROWSE;
-			else if(tgFeatures & REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME)
-				targetFeatures = FEATURE_ABSOLUTE_VOLUME;
-			else if(tgFeatures & REMOTE_DEVICE_AVRCP_FEATURE_METADATA)
-				targetFeatures = FEATURE_METADATA;
-
-			getAvrcpObserver()->remoteFeaturesReceived(targetFeatures, convertAddressToLowerCase(address), "TG");
-		}
 	}
 	else
 	{
 		mConnectedDevice = nullptr;
 	}
+
+}
+
+void Bluez5ProfileAvcrp::updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address)
+{
+	Bluez5Device *device = mAdapter->findDevice(address);
+	if (!device)
+	{
+		return;
+	}
+
+	BluetoothAvrcpRemoteFeatures remoteFeatures = FEATURE_NONE;
+	if(features & REMOTE_DEVICE_AVRCP_FEATURE_BROWSE)
+		remoteFeatures = FEATURE_BROWSE;
+	else if(features & REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME)
+		remoteFeatures = FEATURE_ABSOLUTE_VOLUME;
+	else if(features & REMOTE_DEVICE_AVRCP_FEATURE_METADATA)
+		remoteFeatures = FEATURE_METADATA;
+
+	if (mConnected && mConnectedDevice && mConnectedDevice->getAddress() == address)
+		getAvrcpObserver()->remoteFeaturesReceived(remoteFeatures, convertAddressToLowerCase(mAdapter->getAddress()),convertAddressToLowerCase(address), role);
 }
 
 void Bluez5ProfileAvcrp::updateVolume(const std::string &address, int volume)

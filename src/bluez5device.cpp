@@ -314,6 +314,14 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 		DEBUG("key[%s] and state[%s]", key_code.c_str(), state);
 		mAdapter->recievePassThroughCommand(getAddress(), key, state);
 	}
+	else if(key == "AvrcpCTFeatures")
+	{
+		mAdapter->updateRemoteFeatures(getRemoteControllerFeatures(), "CT", mAddress);
+	}
+	else if (key == "AvrcpTGFeatures")
+	{
+		mAdapter->updateRemoteFeatures(getRemoteTargetFeatures(), "TG", mAddress);
+	}
 
 	return changed;
 }

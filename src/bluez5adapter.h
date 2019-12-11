@@ -167,6 +167,7 @@ public:
 	void mediaMetaDataRequest(std::string address);
 	void addMediaManager(std::string objectPath);
 	void removeMediaManager(const std::string &objectPath);
+	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);
