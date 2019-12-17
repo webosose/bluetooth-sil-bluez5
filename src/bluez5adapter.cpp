@@ -153,6 +153,9 @@ void Bluez5Adapter::removeMediaManager(const std::string &objectPath)
 void Bluez5Adapter::updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address)
 {
 	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (!avrcp)
+		return;
+
 	avrcp->updateRemoteFeatures(features, role, address);
 }
 
