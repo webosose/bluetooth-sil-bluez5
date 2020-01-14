@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,6 +31,12 @@ Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 {
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
 					 handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);
+}
+
+
+void Bluez5ProfileA2dp::delayReportChanged(const std::string &adapterAddress, const std::string &deviceAddress, guint16 delay)
+{
+	getA2dpObserver()->delayReportChanged(adapterAddress, deviceAddress, delay);
 }
 
 Bluez5ProfileA2dp::~Bluez5ProfileA2dp()
@@ -115,6 +121,24 @@ void Bluez5ProfileA2dp::disconnect(const std::string &address, BluetoothResultCa
 		callback(BLUETOOTH_ERROR_NONE);
 	};
 	Bluez5ProfileBase::disconnect(address, disConnectCallback);
+}
+
+BluetoothError Bluez5ProfileA2dp::setDelayReportingState(bool state)
+{
+	bool success = mAdapter->setAdapterDelayReport(state);
+	if (!success)
+		return BLUETOOTH_ERROR_FAIL;
+
+	return BLUETOOTH_ERROR_NONE;
+}
+
+BluetoothError Bluez5ProfileA2dp::getDelayReportingState(bool &state)
+{
+	bool success = mAdapter->getAdapterDelayReport(state);
+	if (!success)
+		return BLUETOOTH_ERROR_FAIL;
+
+	return BLUETOOTH_ERROR_NONE;
 }
 
 void Bluez5ProfileA2dp::updateConnectionStatus(const std::string &address, bool status)
@@ -280,6 +304,26 @@ void Bluez5ProfileA2dp::handlePropertiesChanged(BluezMediaTransport1 *transportI
 			g_variant_unref(tmpVar);
 		}
 
+		if (key == "Delay")
+		{
+			GVariant *tmpVar = g_variant_get_variant(valueVar);
+			guint16 delay = g_variant_get_uint16(tmpVar);
+			DEBUG("A2DP Volume %d", delay);
+
+			if (a2dp->mInterface)
+			{
+				const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
+				if (deviceObjectPath)
+				{
+					Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
+					if (device)
+					{
+						a2dp->delayReportChanged(convertAddressToLowerCase(a2dp->mAdapter->getAddress()), convertAddressToLowerCase(device->getAddress()), delay);
+					}
+				}
+			}
+			g_variant_unref(tmpVar);
+		}
 
 		g_variant_unref(valueVar);
 		g_variant_unref(keyVar);

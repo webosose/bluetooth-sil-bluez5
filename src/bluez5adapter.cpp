@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -571,6 +571,48 @@ void Bluez5Adapter::setAdapterProperties(const BluetoothPropertiesList& properti
 	}
 
 	callback(BLUETOOTH_ERROR_NONE);
+}
+
+bool Bluez5Adapter::setAdapterDelayReport(bool delayReporting)
+{
+	GVariant *valueVar = 0;
+	valueVar = g_variant_new_boolean(delayReporting);
+	if (!valueVar)
+		return false;
+
+	GError *error = 0;
+
+	free_desktop_dbus_properties_call_set_sync(mPropertiesProxy, "org.bluez.Adapter1", "DelayReport",
+						g_variant_new_variant(valueVar), NULL, &error);
+
+	if (error)
+	{
+		DEBUG ("%s: error is %s", __func__, error->message);
+		g_error_free(error);
+		return false;
+	}
+
+	return true;
+}
+
+bool Bluez5Adapter::getAdapterDelayReport(bool &delayReporting)
+{
+	GError *error = 0;
+
+	GVariant *propVar, *realPropVar;
+	free_desktop_dbus_properties_call_get_sync(mPropertiesProxy, "org.bluez.Adapter1", "DelayReport", &propVar, NULL, &error);
+
+	if (error)
+	{
+		g_error_free(error);
+		return false;
+	}
+
+	realPropVar = g_variant_get_variant(propVar);
+
+	delayReporting = g_variant_get_boolean(realPropVar);
+
+	return true;
 }
 
 void Bluez5Adapter::getDeviceProperties(const std::string& address, BluetoothPropertiesResultCallback callback)

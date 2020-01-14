@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,8 @@ public:
 	void connect(const std::string &address, BluetoothResultCallback callback);
 	void disconnect(const std::string &address, BluetoothResultCallback callback);
 	void updateConnectionStatus(const std::string &address, bool status);
+	BluetoothError setDelayReportingState(bool state);
+	BluetoothError getDelayReportingState(bool &state);
 
 	static void handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject *object, void *user_data);
 	static void handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObject *object, void *user_data);
@@ -50,6 +52,8 @@ public:
 	static void handlePropertiesChanged(BluezMediaTransport1 *, gchar *interface,  GVariant *changedProperties,
 										GVariant *invalidatedProperties, gpointer userData);
 	BluezMediaTransport1* getMediaTransport() { return mInterface; }
+
+	void delayReportChanged(const std::string &adapterAddress, const std::string &deviceAddress, guint16 delay);
 
 private:
 	bool mConnected;

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,6 +60,8 @@ public:
 	void getAdapterProperty(BluetoothProperty::Type type, BluetoothPropertyResultCallback callback);
 	void setAdapterProperty(const BluetoothProperty& property, BluetoothResultCallback callback);
 	void setAdapterProperties(const BluetoothPropertiesList& newProperties, BluetoothResultCallback callback);
+	bool setAdapterDelayReport(bool delayReporting);
+	bool getAdapterDelayReport(bool &delayReporting);
 	void getDeviceProperties(const std::string& address, BluetoothPropertiesResultCallback callback);
 	void setDeviceProperty(const std::string& address, const BluetoothProperty& property, BluetoothResultCallback callback);
 	void setDeviceProperties(const std::string& address, const BluetoothPropertiesList& properties, BluetoothResultCallback callback);
