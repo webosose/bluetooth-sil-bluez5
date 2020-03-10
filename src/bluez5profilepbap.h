@@ -13,14 +13,19 @@
 // limitations under the License.
 //
 // SPDX-License-Identifier: Apache-2.0
+
 #ifndef BLUEZ5PROFILEPBAP_H
 #define BLUEZ5PROFILEPBAP_H
+
 #include <string>
 #include <map>
+
 #include <bluetooth-sil-api.h>
 #include <bluez5obexprofilebase.h>
 #include "bluez5profilebase.h"
+
 class Bluez5Adapter;
+
 class Bluez5ProfilePbap : public Bluez5ObexProfileBase,
                          public BluetoothPbapProfile
 {
@@ -28,6 +33,10 @@ public:
     Bluez5ProfilePbap(Bluez5Adapter *adapter);
     ~Bluez5ProfilePbap();
     void supplyAccessConfirmation(BluetoothPbapAccessRequestId accessRequestId, bool accept, BluetoothResultCallback callback);
-
+    void setPhoneBook(const std::string &address,const std::string &repository, const std::string &object, BluetoothResultCallback callback);
+private:
+    bool isObjectValid( const std::string object);
+    bool isRepositoryValid( const std::string repository);
 };
+
 #endif

@@ -29,8 +29,9 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 	mSessionProxy(0),
 	mFileTransferProxy(0),
 	mObjectPushProxy(0),
-    mLostRemote(false),
-    mObjectWatch(new DBusUtils::ObjectWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex", objectPath))
+	mPhonebookAccessProxy(nullptr),
+	mLostRemote(false),
+	mObjectWatch(new DBusUtils::ObjectWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex", objectPath))
 {
 	GError *error = 0;
 
