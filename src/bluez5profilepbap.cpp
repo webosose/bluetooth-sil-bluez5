@@ -152,7 +152,75 @@ void Bluez5ProfilePbap::getPhonebookSize(const std::string &address, BluetoothPb
     };
 
     bluez_obex_phonebook_access1_call_get_size(objectPhonebookProxy, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getSizeCallback));
+}
 
+void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVCardListResultCallback callback)
+{
+    BluetoothPbapVCardList emptyVCardList;
+    const Bluez5ObexSession *session = findSession(address);
+    if (!session )
+    {
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, emptyVCardList);
+        return;
+    }
+    BluezObexPhonebookAccess1 *objectPhonebookProxy = session->getObjectPhoneBookProxy();
+    if (!objectPhonebookProxy)
+    {
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, emptyVCardList);
+        return;
+    }
+    GVariantBuilder *dataBuilder;
+    dataBuilder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+    g_variant_builder_add(dataBuilder, "s", "Offset");
+    g_variant_builder_add(dataBuilder, "s", "MaxCount");
+    GVariant *dataValue = g_variant_builder_end(dataBuilder);
+    g_variant_builder_unref(dataBuilder);
+
+    GVariantBuilder *builder = 0;
+    GVariant *arguments = 0;
+    std::string temp="filters";
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    g_variant_builder_add (builder, "{sv}",temp.c_str() , dataValue);
+    arguments = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+
+
+    auto vCardListingCallback = [this, objectPhonebookProxy, callback](GAsyncResult *result) {
+    GError *error = 0;
+    gboolean ret;
+    GVariant *out_vcard_listing = 0;
+    BluetoothPbapVCardList vCardList;
+
+    ret = bluez_obex_phonebook_access1_call_list_finish(objectPhonebookProxy, &out_vcard_listing, result, &error);
+    if (error)
+    {
+        ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access list error:%s",error->message);
+        if (strstr(error->message, "Call Select first of all"))
+        {
+            callback(BLUETOOTH_ERROR_PBAP_CALL_SELECT_FOLDER_TYPE, vCardList);
+        }
+        else
+        {
+            callback(BLUETOOTH_ERROR_FAIL, vCardList);
+        }
+        g_error_free(error);
+        return;
+    }
+
+    GVariantIter *iter;
+    gchar *str1, *str2;
+
+    g_variant_get (out_vcard_listing, "a(ss)", &iter);
+    while (g_variant_iter_loop (iter, "(ss)", &str1, &str2))
+    {
+        vCardList.insert(std::pair<std::string, std::string>(std::string(str1),std::string(str2)));
+    }
+    g_variant_iter_free (iter);
+    callback(BLUETOOTH_ERROR_NONE, vCardList);
+    };
+
+    bluez_obex_phonebook_access1_call_list(objectPhonebookProxy, arguments, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(vCardListingCallback));
+    return;
 }
 
 void Bluez5ProfilePbap::supplyAccessConfirmation(BluetoothPbapAccessRequestId accessRequestId, bool accept, BluetoothResultCallback callback)
