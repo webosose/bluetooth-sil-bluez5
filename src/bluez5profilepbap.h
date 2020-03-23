@@ -27,13 +27,14 @@
 class Bluez5Adapter;
 
 class Bluez5ProfilePbap : public Bluez5ObexProfileBase,
-                         public BluetoothPbapProfile
+                        public BluetoothPbapProfile
 {
 public:
     Bluez5ProfilePbap(Bluez5Adapter *adapter);
     ~Bluez5ProfilePbap();
     void supplyAccessConfirmation(BluetoothPbapAccessRequestId accessRequestId, bool accept, BluetoothResultCallback callback);
     void setPhoneBook(const std::string &address,const std::string &repository, const std::string &object, BluetoothResultCallback callback);
+    void getPhonebookSize(const std::string &address, BluetoothPbapGetSizeResultCallback callback);
 private:
     bool isObjectValid( const std::string object);
     bool isRepositoryValid( const std::string repository);

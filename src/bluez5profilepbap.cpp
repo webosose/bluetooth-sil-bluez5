@@ -107,6 +107,54 @@ void Bluez5ProfilePbap::setPhoneBook(const std::string &address, const std::stri
 
 }
 
+void Bluez5ProfilePbap::getPhonebookSize(const std::string &address, BluetoothPbapGetSizeResultCallback callback)
+{
+    const Bluez5ObexSession *session = findSession(address);
+
+    if (!session)
+    {
+        DEBUG("phonebook session failed");
+        callback(BLUETOOTH_ERROR_PARAM_INVALID,0);
+        return;
+    }
+
+    BluezObexPhonebookAccess1 *objectPhonebookProxy = session->getObjectPhoneBookProxy();
+    if (!objectPhonebookProxy)
+    {
+        DEBUG("objectPhonebookProxy failed");
+        callback(BLUETOOTH_ERROR_FAIL,0);
+        return;
+    }
+
+    auto getSizeCallback = [this, objectPhonebookProxy, callback](GAsyncResult *result) {
+
+    uint16_t size = 0;
+    GError *error = 0;
+    gboolean ret;
+
+    ret = bluez_obex_phonebook_access1_call_get_size_finish(objectPhonebookProxy, &size, result, &error);
+    if (error)
+    {
+        ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access get size error:%s",error->message);
+        if (strstr(error->message, "Call Select first of all"))
+        {
+            callback(BLUETOOTH_ERROR_PBAP_CALL_SELECT_FOLDER_TYPE, 0);
+        }
+        else
+        {
+            callback(BLUETOOTH_ERROR_FAIL, 0);
+        }
+        g_error_free(error);
+        return;
+    }
+
+    callback(BLUETOOTH_ERROR_NONE,size);
+    };
+
+    bluez_obex_phonebook_access1_call_get_size(objectPhonebookProxy, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getSizeCallback));
+
+}
+
 void Bluez5ProfilePbap::supplyAccessConfirmation(BluetoothPbapAccessRequestId accessRequestId, bool accept, BluetoothResultCallback callback)
 {
 
