@@ -38,6 +38,8 @@ const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID = "0000111e-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_REMOTE_HFP_AG_UUID = "0000111f-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_A2DP_SOURCE_UUID	= "0000110a-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
 
 Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -617,6 +619,15 @@ bool Bluez5Adapter::getAdapterDelayReport(bool &delayReporting)
 	delayReporting = g_variant_get_boolean(realPropVar);
 
 	return true;
+}
+
+void Bluez5Adapter::notifyA2dpRoleChnange (const std::string &uuid )
+{
+	std::replace_if(mUuids.begin(),mUuids.end(),[](std::string pUuid)
+	{ return ((pUuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID)|| (pUuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID));},uuid);
+	BluetoothPropertiesList properties;
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
+	observer->adapterPropertiesChanged(properties);
 }
 
 void Bluez5Adapter::getDeviceProperties(const std::string& address, BluetoothPropertiesResultCallback callback)

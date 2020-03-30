@@ -170,6 +170,7 @@ public:
 	void addMediaManager(std::string objectPath);
 	void removeMediaManager(const std::string &objectPath);
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
+	void notifyA2dpRoleChnange (const std::string &uuid );
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);

@@ -39,6 +39,9 @@ public:
 	BluetoothError stopStreaming(const std::string &address);
 	void connect(const std::string &address, BluetoothResultCallback callback);
 	void disconnect(const std::string &address, BluetoothResultCallback callback);
+	void updateA2dpUuid(const std::string &address, BluetoothResultCallback callback);
+	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
+	void disable(const std::string &uuid, BluetoothResultCallback callback) override;
 	void updateConnectionStatus(const std::string &address, bool status);
 	BluetoothError setDelayReportingState(bool state);
 	BluetoothError getDelayReportingState(bool &state);
@@ -51,6 +54,8 @@ public:
 											gpointer user_data);
 	static void handlePropertiesChanged(BluezMediaTransport1 *, gchar *interface,  GVariant *changedProperties,
 										GVariant *invalidatedProperties, gpointer userData);
+
+	static void updateTransportProperties(Bluez5ProfileA2dp *pA2dp);
 	BluezMediaTransport1* getMediaTransport() { return mInterface; }
 
 	void delayReportChanged(const std::string &adapterAddress, const std::string &deviceAddress, guint16 delay);
@@ -61,6 +66,7 @@ private:
 	BluetoothA2dpProfileState mState;
 	FreeDesktopDBusProperties *mPropertiesProxy;
 	BluezMediaTransport1 *mInterface;
+	std::string mTransportUuid;
 };
 
 #endif
