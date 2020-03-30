@@ -37,6 +37,7 @@ public:
     void getPhonebookSize(const std::string &address, BluetoothPbapGetSizeResultCallback callback);
     void vCardListing(const std::string &address, BluetoothPbapVCardListResultCallback callback);
     void getPhoneBookProperties(const std::string &address, BluetoothPropertiesResultCallback callback);
+    void getvCardFilters(const std::string &address, BluetoothPbapListFiltersResultCallback callback);
     static void handlePropertiesChanged(Bluez5ProfilePbap *, gchar *interface, GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData);
 private:
     bool isObjectValid( const std::string object);

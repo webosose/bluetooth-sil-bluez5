@@ -20,6 +20,7 @@
 #include "asyncutils.h"
 
 #define VERSION "1.1"
+#define MAX_FILTER_BIT	32
 
 const std::string BLUETOOTH_PROFILE_PBAP_UUID = "00001130-0000-1000-8000-00805f9b34fb";
 static std::vector<std::string> supportedObjects = {"pb", "ich", "mch", "och", "cch"};
@@ -117,6 +118,49 @@ void Bluez5ProfilePbap::setPhoneBook(const std::string &address, const std::stri
     };
 
     bluez_obex_phonebook_access1_call_select(mObjectPhonebookProxy, repository.c_str(), object.c_str(), NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(setPhoneBookCallback));
+
+}
+
+void Bluez5ProfilePbap::getvCardFilters(const std::string &address, BluetoothPbapListFiltersResultCallback callback)
+{
+
+    const Bluez5ObexSession *session = findSession(address);
+    std::list<std::string> emptyFilterList;
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID,emptyFilterList);
+        return;
+    }
+
+    BluezObexPhonebookAccess1 *objectPhonebookProxy = session->getObjectPhoneBookProxy();
+    if (!objectPhonebookProxy)
+    {
+        callback(BLUETOOTH_ERROR_FAIL,emptyFilterList);
+        return;
+    }
+
+    auto getFilterListCallback = [this, objectPhonebookProxy, callback](GAsyncResult *result) {
+
+        gchar **out_fields = NULL;
+        GError *error = 0;
+        gboolean ret;
+        std::list<std::string> filterList;
+        ret = bluez_obex_phonebook_access1_call_list_filter_fields_finish(objectPhonebookProxy, &out_fields, result, &error);
+        if (error)
+        {
+            g_error_free(error);
+            callback(BLUETOOTH_ERROR_FAIL,filterList);
+            return;
+        }
+
+        for (int filterBit = 0; *out_fields != NULL && filterBit < MAX_FILTER_BIT; filterBit++ )
+        {
+            filterList.push_back(*out_fields++);
+        }
+        callback(BLUETOOTH_ERROR_NONE,filterList);
+    };
+
+    bluez_obex_phonebook_access1_call_list_filter_fields(objectPhonebookProxy, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getFilterListCallback));
 
 }
 
