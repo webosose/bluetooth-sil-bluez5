@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,13 +29,14 @@ extern "C" {
 }
 
 class Bluez5ObexSession;
+class Bluez5Adapter;
 
 typedef std::function<void(Bluez5ObexSession *session)> Bluez5ObexSessionCreateCallback;
 
 class Bluez5ObexClient
 {
 public:
-	Bluez5ObexClient();
+	Bluez5ObexClient(Bluez5Adapter *adapter);
 	~Bluez5ObexClient();
 
 	Bluez5ObexClient(const Bluez5ObexClient&) = delete;
@@ -52,7 +53,7 @@ public:
 private:
 	BluezObexClient1 *mClientProxy;
 	DBusUtils::NameWatch mNameWatch;
-
+	Bluez5Adapter *mAdapter;
 	void connectWithObex();
 
 	void createProxy();

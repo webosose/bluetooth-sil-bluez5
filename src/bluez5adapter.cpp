@@ -88,7 +88,7 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handleAdapterPropertiesChanged), this);
 
-	mObexClient = new Bluez5ObexClient;
+	mObexClient = new Bluez5ObexClient(this);
 	mObexAgent = new Bluez5ObexAgent(this);
 }
 
