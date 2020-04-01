@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -73,11 +73,13 @@ public:
 
 	uint8_t getRemoteTargetFeatures() { return bluez_device1_get_avrcp_tgfeatures(mDeviceProxy); }
 	uint8_t getRemoteControllerFeatures() { return bluez_device1_get_avrcp_ctfeatures(mDeviceProxy); }
+	void updateConnectedUuid(const std::string& uuid , bool status);
 
 private:
 	bool parsePropertyFromVariant(const std::string &key, GVariant *valueVar);
 	GVariant* devPropertyValueToVariant(const BluetoothProperty& property);
 	std::string devPropertyTypeToString(BluetoothProperty::Type type);
+	void updateConnectedRole();
 
 private:
 	Bluez5Adapter *mAdapter;
@@ -105,6 +107,7 @@ private:
 	bool mBlocked;
 	int mTxPower;
 	int mRSSI;
+	uint32_t mConnectedRole;
 };
 
 #endif // BLUEZ5DEVICE_H

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,15 @@
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
 
+static const std::map<std::string,BluetoothDeviceRole> uuidtoRoleMap ={
+	{"0000111e-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_HFP_HF},
+	{"0000111f-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_HFP_AG},
+	{"0000110a-0000-1000-8000-00805f9b34fb" ,BLUETOOTH_DEVICE_ROLE_A2DP_SRC},
+	{"0000110b-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_A2DP_SINK},
+	{"0000110e-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_AVRCP_RMT},
+	{"0000110c-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_AVRCP_TGT},
+	{}
+} ;
 
 Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath) :
 	mAdapter(adapter),
@@ -36,7 +45,8 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	mTxPower(0),
 	mRSSI(0),
 	mDeviceProxy(0),
-	mPropertiesProxy(0)
+	mPropertiesProxy(0),
+	mConnectedRole(BLUETOOTH_DEVICE_ROLE)
 {
 	GError *error = 0;
 	GVariant *propsVar;
@@ -186,6 +196,22 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 	else if (key == "Connected")
 	{
 		mConnected = g_variant_get_boolean(valueVar);
+		changed = true;
+	}
+	else if (key == "ConnectedUUIDS")
+	{
+		mConnectedUuids.clear();
+
+		for (int m = 0; m < g_variant_n_children(valueVar); m++)
+		{
+			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
+
+			std::string uuid = g_variant_get_string(uuidVar, NULL);
+			mConnectedUuids.push_back(uuid);
+
+			g_variant_unref(uuidVar);
+		}
+		updateConnectedRole();
 		changed = true;
 	}
 	else if (key == "UUIDs")
@@ -640,6 +666,7 @@ BluetoothPropertiesList Bluez5Device::buildPropertiesList() const
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::SCAN_RECORD, mServiceData.mScanRecord));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TXPOWER, mTxPower));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::RSSI, mRSSI));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::ROLE, mConnectedRole));
 	return properties;
 }
 
@@ -696,4 +723,17 @@ std::string Bluez5Device::getServiceDataUuid() const
 std::vector<uint8_t> Bluez5Device::getManufactureData() const
 {
 	return mManufacturerData;
+}
+
+void Bluez5Device::updateConnectedRole()
+{
+	mConnectedRole = BLUETOOTH_DEVICE_ROLE;
+	for(auto connectedUuidEntry : mConnectedUuids)
+	{
+		auto it = uuidtoRoleMap.find(connectedUuidEntry);
+		if(it != uuidtoRoleMap.end())
+		{
+			mConnectedRole |= it->second;
+		}
+	}
 }

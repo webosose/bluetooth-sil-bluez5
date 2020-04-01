@@ -63,5 +63,6 @@ extern PmLogContext bluez5LogContext;
 #define MSGID_BLE_ADVERTIMENT_ERROR                    "BLE_ADVERTIMENT_ERROR"
 #define MSGID_MEDIA_PLAYER_ERROR                    "MEDIA_PLAYER_ERROR"
 #define MSGID_MEDIA_CONTROL_ERROR                      "MEDIA_CONTROL_ERROR"
+#define MSGID_DBUS_METHOD_CALL_FAILED                  "DBUS METHOD CALL FAILED"
 
 #endif // LOGGING_H

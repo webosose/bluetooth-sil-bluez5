@@ -30,11 +30,14 @@
 #include "bluez5profilea2dp.h"
 #include "bluez5profileavrcp.h"
 #include "bluez5profilepbap.h"
+#include "bluez5profilehfp.h"
 #include "bluez5mprisplayer.h"
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID = "0000111e-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_REMOTE_HFP_AG_UUID = "0000111f-0000-1000-8000-00805f9b34fb";
 
 Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -1117,13 +1120,24 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 		profile = new Bluez5ProfilePbap(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_PBAP, profile));
 	}
+	else if (profileId == BLUETOOTH_PROFILE_ID_HFP)
+	{
+		profile = new Bluez5ProfileHfp(this);
+		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_HFP, profile));
+	}
 
 	if (profile)
 	{
 		std::string uuid = profile->getProfileUuid();
 		// Profile is initialized with remote uuid which its connecting
 		if (uuid == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID)
+		{
 			mUuids.push_back(BLUETOOTH_PROFILE_AVRCP_TARGET_UUID);
+		}
+		else if (uuid == BLUETOOTH_PROFILE_REMOTE_HFP_AG_UUID)
+		{
+			mUuids.push_back(BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID);
+		}
 		else
 			mUuids.push_back(uuid);
 	}

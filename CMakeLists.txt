@@ -82,6 +82,16 @@ if (codegen_failed)
     message(FATAL_ERROR "Error in generating code for freedesktop dbus interface using gdbus-codegen")
 endif()
 
+execute_process(COMMAND ${GDBUS_CODEGEN_EXECUTABLE}
+        --c-namespace Ofono
+        --generate-c-code ${GDBUS_IF_DIR}/ofono-interface
+        --interface-prefix org.ofono.
+        ${CMAKE_CURRENT_SOURCE_DIR}/files/xml/ofono.xml
+        RESULT_VARIABLE codegen_failed)
+if (codegen_failed)
+    message(FATAL_ERROR "Error in generating code for ofono dbus interface using gdbus-codegen")
+endif()
+
 if (USE_SYSTEM_BUS_FOR_OBEX)
     webos_add_compiler_flags(ALL -DUSE_SYSTEM_BUS_FOR_OBEX)
 endif()
@@ -90,6 +100,7 @@ include_directories(src ${GDBUS_IF_DIR})
 
 file(GLOB SOURCES
      ${GDBUS_IF_DIR}/bluez-interface.c
+     ${GDBUS_IF_DIR}/ofono-interface.c
      ${GDBUS_IF_DIR}/freedesktop-interface.c
      src/asyncutils.cpp
      src/dbusutils.cpp
@@ -115,6 +126,7 @@ file(GLOB SOURCES
      src/bluez5profileavrcp.cpp
      src/bluez5mediacontrol.cpp
      src/bluez5mprisplayer.cpp
+     src/bluez5profilehfp.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})
