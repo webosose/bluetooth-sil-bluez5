@@ -29,6 +29,7 @@
 #include "bluez5profileopp.h"
 #include "bluez5profilea2dp.h"
 #include "bluez5profileavrcp.h"
+#include "bluez5profilepbap.h"
 #include "bluez5mprisplayer.h"
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
@@ -1110,6 +1111,11 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 	{
 		profile = new Bluez5ProfileAvcrp(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_AVRCP, profile));
+	}
+	else if (profileId == BLUETOOTH_PROFILE_ID_PBAP)
+	{
+		profile = new Bluez5ProfilePbap(this);
+		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_PBAP, profile));
 	}
 
 	if (profile)

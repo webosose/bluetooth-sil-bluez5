@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,6 +60,8 @@ public:
 
 	BluezObexObjectPush1* getObjectPushProxy() const { return mObjectPushProxy; }
 
+	BluezObexPhonebookAccess1* getObjectPhoneBookProxy() const { return mPhonebookAccessProxy; }
+
 	void watch(Bluez5ObexSessionStatusCallback callback);
 
 private:
@@ -70,6 +72,7 @@ private:
 	BluezObexSession1 *mSessionProxy;
 	BluezObexFileTransfer1 *mFileTransferProxy;
 	BluezObexObjectPush1 *mObjectPushProxy;
+	BluezObexPhonebookAccess1 *mPhonebookAccessProxy;
 	bool mLostRemote;
 	DBusUtils::ObjectWatch *mObjectWatch;
 	Bluez5ObexSessionStatusCallback mStatusCallback;

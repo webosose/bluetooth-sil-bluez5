@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class Bluez5ObexTransfer;
 class Bluez5ObexProfileBase : public Bluez5ProfileBase
 {
 public:
-	Bluez5ObexProfileBase(Bluez5Adapter *adapter, const std::string &uuid);
+	Bluez5ObexProfileBase(Bluez5ObexSession::Type type,Bluez5Adapter *adapter, const std::string &uuid);
 	virtual ~Bluez5ObexProfileBase() = default;
 
 	void getProperties(const std::string &address, BluetoothPropertiesResultCallback callback);
@@ -44,6 +44,7 @@ public:
 private:
 	std::map<std::string, Bluez5ObexSession*> mSessions;
 	std::map<BluetoothFtpTransferId, Bluez5ObexTransfer*> mTransfers;
+	Bluez5ObexSession::Type mType;
 
 protected:
 	void createSession(const std::string &address, Bluez5ObexSession::Type type, BluetoothResultCallback callback);

@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2019 LG Electronics, Inc.
+# Copyright (c) 2018-2020 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -109,6 +109,7 @@ file(GLOB SOURCES
      src/bluez5gattremoteattribute.cpp
      src/bluez5obexprofilebase.cpp
      src/bluez5profileopp.cpp
+     src/bluez5profilepbap.cpp
      src/bluez5obexagent.cpp
      src/bluez5profilea2dp.cpp
      src/bluez5profileavrcp.cpp

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ extern PmLogContext bluez5LogContext;
 #define MSGID_FAILED_TO_CREATE_OBEX_FILE_TRANSFER_PROXY     "FAILED_TO_CREATE_OBEX_FT_PROXY"
 #define MSGID_FAILED_TO_CREATE_OBEX_TRANSFER_PROXY     "FAILED_TO_CREATE_OBEX_TRANS_PROXY"
 #define MSGID_FAILED_TO_CREATE_OBEX_PUSH_PROXY         "FAILED_TO_CREATE_OBEX_PUSH_PROXY"
+#define MSGID_FAILED_TO_CREATE_OBEX_PHONEBOOK_PROXY    "FAILED_TO_CREATE_OBEX_PHONEBOOK_PROXY"
 #define MSGID_PAIRING_CANCEL_ERROR                     "PAIRING_CANCEL_ERROR"
 #define MSGID_PAIRING_IO_CAPABILITY_ERROR              "PAIRING_IO_CAPABILITY_ERROR"
 #define MSGID_PAIRING_IO_CAPABILITY_STRING_ERROR       "PAIRING_IO_CAPABILITY_STRING_ERROR"

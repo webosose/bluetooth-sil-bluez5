@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,6 +68,18 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 		return;
 	}
 
+	mPhonebookAccessProxy = bluez_obex_phonebook_access1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
+																		"org.bluez.obex", mObjectPath.c_str(), NULL, &error);
+
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_OBEX_PHONEBOOK_PROXY, 0,
+			  "Failed to create dbus proxy for obex phonebook on path %s",
+			  mObjectPath.c_str());
+		g_error_free(error);
+		return;
+	}
+
 	mObjectWatch->watchInterfaceRemoved([this](const std::string &name) {
 		if (name != "org.bluez.obex.Session1" && name != "all")
 			return;
@@ -87,6 +99,7 @@ Bluez5ObexSession::~Bluez5ObexSession()
 
 	g_object_unref(mFileTransferProxy);
 	g_object_unref(mSessionProxy);
+	g_object_unref(mPhonebookAccessProxy);
 
 	delete mObjectWatch;
 }

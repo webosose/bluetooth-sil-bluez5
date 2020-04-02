@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,8 +27,9 @@
 
 using namespace std::placeholders;
 
-Bluez5ObexProfileBase::Bluez5ObexProfileBase(Bluez5Adapter *adapter, const std::string &uuid) :
-	Bluez5ProfileBase(adapter, uuid)
+Bluez5ObexProfileBase::Bluez5ObexProfileBase(Bluez5ObexSession::Type type, Bluez5Adapter *adapter, const std::string &uuid) :
+	Bluez5ProfileBase(adapter, uuid),
+	mType(type)
 {
 }
 
@@ -138,7 +139,7 @@ void Bluez5ObexProfileBase::connect(const std::string &address, BluetoothResultC
 {
 	DEBUG("Connecting with device %s on uuid %s profile", address.c_str(), getProfileUuid().c_str());
 
-	createSession(address, Bluez5ObexSession::Type::OPP, callback);
+	createSession(address, mType, callback);
 }
 
 void Bluez5ObexProfileBase::disconnect(const std::string& address, BluetoothResultCallback callback)
