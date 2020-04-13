@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -141,6 +141,8 @@ void Bluez5ObexAgent::createAgentInterface(const std::string &objectPath)
 	DEBUG("creating interface OBEX agent");
 
 	GError *error = nullptr;
+	gboolean ret;
+
 	GDBusConnection *mConn = g_bus_get_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, NULL, &error);
 	if (error)
 	{
@@ -172,10 +174,17 @@ void Bluez5ObexAgent::createAgentInterface(const std::string &objectPath)
 		G_CALLBACK (onHandleRelease),
 		this);
 
-	g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (mAgentInterface),
+	ret = g_dbus_interface_skeleton_export (G_DBUS_INTERFACE_SKELETON (mAgentInterface),
 									  mConn,
 									  objectPath.c_str(),
 									  &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_OBEX_AGENT_MGR_PROXY, 0, "Failed to export obex interface skeleton on path %s error:%s",objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+
 }
 
 gboolean Bluez5ObexAgent::handleAuthorizePush(BluezObexAgent1 *object, GDBusMethodInvocation *invocation,

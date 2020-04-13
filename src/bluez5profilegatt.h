@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -135,7 +135,8 @@ private:
 	{
 		public:
 			Bluez5GattLocalDescriptor(GDBusObject *object):
-			mDescObject(object)
+			mDescObject(object),
+			mInterface(nullptr)
 			{
 			}
 			static gboolean onHandleReadValue(BluezGattDescriptor1* obj, GDBusMethodInvocation *invocation, GVariant *arg_options, gpointer user_data);
@@ -148,7 +149,8 @@ private:
 	{
 		public:
 			Bluez5GattLocalCharacteristic(GDBusObject *object):
-			mCharObject(object)
+			mCharObject(object),
+			mInterface(nullptr)
 			{
 			}
 			static gboolean onHandleReadValue(BluezGattCharacteristic1* obj, GDBusMethodInvocation *invocation, GVariant *arg_options, gpointer user_data);
@@ -164,7 +166,8 @@ private:
 	{
 		public:
 			Bluez5GattLocalService(GDBusObject *object):
-			mServiceObject(object)
+			mServiceObject(object),
+			mServiceInterface(nullptr)
 			{
 			}
 			GDBusObject *mServiceObject;
