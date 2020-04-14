@@ -630,6 +630,16 @@ void Bluez5Adapter::notifyA2dpRoleChnange (const std::string &uuid )
 	observer->adapterPropertiesChanged(properties);
 }
 
+void Bluez5Adapter::notifyAvrcpRoleChange(const std::string &uuid )
+{
+        std::replace_if(mUuids.begin(),mUuids.end(),[](std::string pUuid)
+        { return ((pUuid == BLUETOOTH_PROFILE_AVRCP_TARGET_UUID) || (pUuid == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID));},uuid);
+        BluetoothPropertiesList properties;
+        properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
+        observer->adapterPropertiesChanged(properties);
+}
+
+
 void Bluez5Adapter::getDeviceProperties(const std::string& address, BluetoothPropertiesResultCallback callback)
 {
 	Bluez5Device *device  = findDevice(address);

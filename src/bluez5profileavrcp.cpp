@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ Bluez5ProfileAvcrp::~Bluez5ProfileAvcrp()
 
 void Bluez5ProfileAvcrp::connect(const std::string& address, BluetoothResultCallback callback)
 {
-		auto connectCallback = [this, address, callback](BluetoothError error) {
+	auto connectCallback = [this, address, callback](BluetoothError error) {
 		if (error != BLUETOOTH_ERROR_NONE)
 		{
 			DEBUG("AVRCP connect failed");
@@ -68,9 +68,33 @@ void Bluez5ProfileAvcrp::connect(const std::string& address, BluetoothResultCall
 	};
 
 	if (!mConnected)
+	{
+		updateAvrcpUuid(address, connectCallback);
 		Bluez5ProfileBase::connect(address, connectCallback);
+	}
 	else
 		connectCallback(BLUETOOTH_ERROR_DEVICE_ALREADY_CONNECTED);
+}
+
+void Bluez5ProfileAvcrp::updateAvrcpUuid(const std::string &address, BluetoothResultCallback callback)
+{
+	Bluez5Device *device = mAdapter->findDevice(address);
+	if (!device)
+	{
+		callback(BLUETOOTH_ERROR_UNKNOWN_DEVICE_ADDR);
+		return;
+	}
+
+	for(auto tempUuid : device->getUuids())
+	{
+		if ((tempUuid == BLUETOOTH_PROFILE_AVRCP_TARGET_UUID) ||
+				(tempUuid == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID))
+		{
+			DEBUG("AVRCP UID supported by device: %s", tempUuid.c_str());
+			mUuid = tempUuid;
+			break;
+		}
+	}
 }
 
 void Bluez5ProfileAvcrp::disconnect(const std::string& address, BluetoothResultCallback callback)
@@ -85,12 +109,14 @@ void Bluez5ProfileAvcrp::disconnect(const std::string& address, BluetoothResultC
 		DEBUG("AVRCP disconnected succesfully");
 		callback(BLUETOOTH_ERROR_NONE);
 	};
+        updateAvrcpUuid(address, disConnectCallback);
 	Bluez5ProfileBase::disconnect(address, disConnectCallback);
 }
 
 void Bluez5ProfileAvcrp::enable(const std::string &uuid, BluetoothResultCallback callback)
 {
-	callback(BLUETOOTH_ERROR_UNSUPPORTED);
+	mAdapter->notifyAvrcpRoleChange(uuid);
+	callback(BLUETOOTH_ERROR_NONE);
 }
 
 void Bluez5ProfileAvcrp::disable(const std::string &uuid, BluetoothResultCallback callback)

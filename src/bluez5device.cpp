@@ -21,6 +21,7 @@
 #include "asyncutils.h"
 
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
 
 static const std::map<std::string,BluetoothDeviceRole> uuidtoRoleMap ={
@@ -728,12 +729,18 @@ std::vector<uint8_t> Bluez5Device::getManufactureData() const
 void Bluez5Device::updateConnectedRole()
 {
 	mConnectedRole = BLUETOOTH_DEVICE_ROLE;
+	bool avrcpConnected = false;
 	for(auto connectedUuidEntry : mConnectedUuids)
 	{
 		auto it = uuidtoRoleMap.find(connectedUuidEntry);
 		if(it != uuidtoRoleMap.end())
 		{
 			mConnectedRole |= it->second;
+			if (BLUETOOTH_DEVICE_ROLE_AVRCP_RMT == it->second || BLUETOOTH_DEVICE_ROLE_AVRCP_TGT == it->second)
+			{
+				avrcpConnected = true;
+			}
 		}
 	}
+	mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, mAddress, avrcpConnected);
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ public:
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 	BluetoothError setAbsoluteVolume(const std::string &address, int volume);
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
+	void updateAvrcpUuid(const std::string &address, BluetoothResultCallback callback);
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }

@@ -228,7 +228,6 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 			if (device)
 			{
 				a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), true);
-				a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), true);
 				a2dp->mAdapter->handleDevicePropertiesChanged(device);
 			}
 		}
@@ -267,7 +266,6 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		}
 		a2dp->mTransportUuid = "";
 		a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), false);
-		a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), false);
 		a2dp->mAdapter->handleDevicePropertiesChanged(device);
 
 		g_object_unref(a2dp->mInterface);
@@ -428,7 +426,6 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 				if (device)
 				{
 					a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), true);
-					a2dp->mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, device->getAddress(), true);
 					a2dp->mAdapter->handleDevicePropertiesChanged(device);
 				}
 			}
