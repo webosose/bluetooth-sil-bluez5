@@ -178,7 +178,7 @@ void Bluez5ObexAgent::createAgentInterface(const std::string &objectPath)
 									  mConn,
 									  objectPath.c_str(),
 									  &error);
-	if (error)
+	if (!ret)
 	{
 		ERROR(MSGID_FAILED_TO_CREATE_OBEX_AGENT_MGR_PROXY, 0, "Failed to export obex interface skeleton on path %s error:%s",objectPath.c_str(), error->message);
 		g_error_free(error);
