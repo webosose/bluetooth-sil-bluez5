@@ -30,6 +30,7 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 	mFileTransferProxy(0),
 	mObjectPushProxy(0),
 	mPhonebookAccessProxy(nullptr),
+	mPropertiesProxy(nullptr),
 	mLostRemote(false),
 	mObjectWatch(new DBusUtils::ObjectWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex", objectPath))
 {
@@ -81,6 +82,17 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 		return;
 	}
 
+	mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
+																		"org.bluez.obex", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_OBEX_PHONEBOOK_PROXY, 0,
+			  "Not able to get property interface on path %s",
+			  mObjectPath.c_str());
+		g_error_free(error);
+		return;
+	}
+
 	mObjectWatch->watchInterfaceRemoved([this](const std::string &name) {
 		if (name != "org.bluez.obex.Session1" && name != "all")
 			return;
@@ -97,10 +109,14 @@ Bluez5ObexSession::~Bluez5ObexSession()
 {
 	if (!mLostRemote)
 		mClient->destroySession(mObjectPath);
-
-	g_object_unref(mFileTransferProxy);
-	g_object_unref(mSessionProxy);
-	g_object_unref(mPhonebookAccessProxy);
+	if(mFileTransferProxy)
+		g_object_unref(mFileTransferProxy);
+	if(mSessionProxy)
+		g_object_unref(mSessionProxy);
+	if(mPhonebookAccessProxy)
+		g_object_unref(mPhonebookAccessProxy);
+	if(mPropertiesProxy)
+		g_object_unref(mPropertiesProxy);
 
 	delete mObjectWatch;
 }

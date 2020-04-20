@@ -26,13 +26,19 @@ static std::vector<std::string> supportedObjects = {"pb", "ich", "mch", "och", "
 static std::vector<std::string> supportedRepositories = {"sim1", "internal"};
 
 Bluez5ProfilePbap::Bluez5ProfilePbap(Bluez5Adapter *adapter) :
-	Bluez5ObexProfileBase(Bluez5ObexSession::Type::PBAP, adapter, BLUETOOTH_PROFILE_PBAP_UUID)
+    Bluez5ObexProfileBase(Bluez5ObexSession::Type::PBAP, adapter, BLUETOOTH_PROFILE_PBAP_UUID),
+    mObjectPhonebookProxy(nullptr),
+    mPropertiesProxy(nullptr)
 {
     INFO(MSGID_PBAP_PROFILE_ERROR, 0, "Supported PBAP Version:%s",VERSION);
 }
 
 Bluez5ProfilePbap::~Bluez5ProfilePbap()
 {
+    if (mPropertiesProxy)
+        g_object_unref(mPropertiesProxy);
+    if (mObjectPhonebookProxy)
+        g_object_unref(mObjectPhonebookProxy);
 }
 
 bool Bluez5ProfilePbap::isObjectValid( const std::string object)
@@ -72,25 +78,30 @@ void Bluez5ProfilePbap::setPhoneBook(const std::string &address, const std::stri
         return;
     }
 
-    BluezObexPhonebookAccess1 *objectPhonebookProxy = session->getObjectPhoneBookProxy();
-    if (!objectPhonebookProxy)
+    mObjectPhonebookProxy = session->getObjectPhoneBookProxy();
+
+    if (!mObjectPhonebookProxy)
     {
         DEBUG("objectPhonebookProxy failed");
-        callback(BLUETOOTH_ERROR_FAIL);
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED);
         return;
     }
 
-    auto setPhoneBookCallback = [this, objectPhonebookProxy, callback](GAsyncResult *result) {
+    auto setPhoneBookCallback = [this, callback](GAsyncResult *result) {
 
     GError *error = 0;
     gboolean ret;
-    ret = bluez_obex_phonebook_access1_call_select_finish(objectPhonebookProxy, result, &error);
+    ret = bluez_obex_phonebook_access1_call_select_finish(this->mObjectPhonebookProxy, result, &error);
     if (error)
     {
         ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access select error:%s",error->message);
         if (strstr(error->message, "Invalid path"))
         {
             callback(BLUETOOTH_ERROR_PARAM_INVALID);
+        }
+        else if (strstr(error->message, "Not Found"))
+        {
+            callback(BLUETOOTH_ERROR_UNSUPPORTED);
         }
         else
         {
@@ -99,11 +110,13 @@ void Bluez5ProfilePbap::setPhoneBook(const std::string &address, const std::stri
         g_error_free(error);
         return;
     }
-
     callback(BLUETOOTH_ERROR_NONE);
+
+    updateVersion();
+
     };
 
-    bluez_obex_phonebook_access1_call_select(objectPhonebookProxy, repository.c_str(), object.c_str(), NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(setPhoneBookCallback));
+    bluez_obex_phonebook_access1_call_select(mObjectPhonebookProxy, repository.c_str(), object.c_str(), NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(setPhoneBookCallback));
 
 }
 
@@ -114,25 +127,25 @@ void Bluez5ProfilePbap::getPhonebookSize(const std::string &address, BluetoothPb
     if (!session)
     {
         DEBUG("phonebook session failed");
-        callback(BLUETOOTH_ERROR_PARAM_INVALID,0);
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED,0);
         return;
     }
 
-    BluezObexPhonebookAccess1 *objectPhonebookProxy = session->getObjectPhoneBookProxy();
-    if (!objectPhonebookProxy)
+    mObjectPhonebookProxy = session->getObjectPhoneBookProxy();
+
+    if (!mObjectPhonebookProxy)
     {
         DEBUG("objectPhonebookProxy failed");
-        callback(BLUETOOTH_ERROR_FAIL,0);
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
         return;
     }
-
-    auto getSizeCallback = [this, objectPhonebookProxy, callback](GAsyncResult *result) {
+    auto getSizeCallback = [this, callback](GAsyncResult *result) {
 
     uint16_t size = 0;
     GError *error = 0;
     gboolean ret;
 
-    ret = bluez_obex_phonebook_access1_call_get_size_finish(objectPhonebookProxy, &size, result, &error);
+    ret = bluez_obex_phonebook_access1_call_get_size_finish(this->mObjectPhonebookProxy, &size, result, &error);
     if (error)
     {
         ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access get size error:%s",error->message);
@@ -151,7 +164,7 @@ void Bluez5ProfilePbap::getPhonebookSize(const std::string &address, BluetoothPb
     callback(BLUETOOTH_ERROR_NONE,size);
     };
 
-    bluez_obex_phonebook_access1_call_get_size(objectPhonebookProxy, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getSizeCallback));
+    bluez_obex_phonebook_access1_call_get_size(mObjectPhonebookProxy, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getSizeCallback));
 }
 
 void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVCardListResultCallback callback)
@@ -163,8 +176,8 @@ void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVC
         callback(BLUETOOTH_ERROR_NOT_ALLOWED, emptyVCardList);
         return;
     }
-    BluezObexPhonebookAccess1 *objectPhonebookProxy = session->getObjectPhoneBookProxy();
-    if (!objectPhonebookProxy)
+
+    if (!mObjectPhonebookProxy)
     {
         callback(BLUETOOTH_ERROR_NOT_ALLOWED, emptyVCardList);
         return;
@@ -185,13 +198,13 @@ void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVC
     g_variant_builder_unref(builder);
 
 
-    auto vCardListingCallback = [this, objectPhonebookProxy, callback](GAsyncResult *result) {
+    auto vCardListingCallback = [this, callback](GAsyncResult *result) {
     GError *error = 0;
     gboolean ret;
     GVariant *out_vcard_listing = 0;
     BluetoothPbapVCardList vCardList;
 
-    ret = bluez_obex_phonebook_access1_call_list_finish(objectPhonebookProxy, &out_vcard_listing, result, &error);
+    ret = bluez_obex_phonebook_access1_call_list_finish(this->mObjectPhonebookProxy, &out_vcard_listing, result, &error);
     if (error)
     {
         ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access list error:%s",error->message);
@@ -219,10 +232,179 @@ void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVC
     callback(BLUETOOTH_ERROR_NONE, vCardList);
     };
 
-    bluez_obex_phonebook_access1_call_list(objectPhonebookProxy, arguments, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(vCardListingCallback));
+    bluez_obex_phonebook_access1_call_list(mObjectPhonebookProxy, arguments, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(vCardListingCallback));
     return;
 }
 
+void Bluez5ProfilePbap::getPhoneBookProperties(const std::string &address, BluetoothPropertiesResultCallback callback)
+{
+    const Bluez5ObexSession *session = findSession(address);
+
+    if (!session)
+    {
+        DEBUG("phonebook session failed");
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, BluetoothPropertiesList());
+        return;
+    }
+
+    mPropertiesProxy = session->getObjectPropertiesProxy();
+    mDeviceAddress = session->getDeviceAddress();
+
+    if (!mPropertiesProxy)
+    {
+        DEBUG("getObjectPropertiesProxy failed");
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, BluetoothPropertiesList());
+        return;
+    }
+
+    setErrorProperties();
+
+    if(mHandleId <= 0)
+    {
+        mHandleId = g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged),this);
+    }
+
+    auto propertiesGetCallback = [this, callback](GAsyncResult *result) {
+        GVariant *propsVar;
+        GError *error = 0;
+        gboolean ret;
+
+        ret = free_desktop_dbus_properties_call_get_all_finish(this->mPropertiesProxy, &propsVar, result, &error);
+        if (error)
+        {
+            g_error_free(error);
+            DEBUG("free_desktop_dbus_properties_call_get_all_finish failed");
+            callback(BLUETOOTH_ERROR_FAIL, BluetoothPropertiesList());
+            return;
+        }
+        BluetoothPropertiesList properties;
+        parseAllProperties(properties, propsVar);
+        callback(BLUETOOTH_ERROR_NONE, properties);
+    };
+
+    free_desktop_dbus_properties_call_get_all(mPropertiesProxy,"org.bluez.obex.PhonebookAccess1", NULL,
+                        glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(propertiesGetCallback));
+}
+
+void Bluez5ProfilePbap::handlePropertiesChanged(Bluez5ProfilePbap *, gchar *interface,  GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData)
+{
+
+    auto pbap = static_cast<Bluez5ProfilePbap*>(userData);
+    bool changed = false;
+    BluetoothPropertiesList properties;
+    DEBUG("properties-changed signal triggered for interface: %s", interface);
+
+    for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+    {
+        GVariant *propertyVar = g_variant_get_child_value(changedProperties, n);
+        GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
+        std::string key = g_variant_get_string(keyVar, NULL);
+        if (key == "Folder")
+        {
+            changed = true;
+        }
+        g_variant_unref(keyVar);
+        g_variant_unref(propertyVar);
+    }
+
+    if (changed)
+        pbap->notifyUpdatedProperties();
+}
+
+void Bluez5ProfilePbap::addPropertyFromVariant(BluetoothPropertiesList& properties, const std::string &key, GVariant *valueVar)
+{
+    if (key == "PrimaryCounter")
+    {
+        mPrimaryCounter = g_variant_get_string(valueVar, NULL);
+    }
+    else if (key == "SecondaryCounter")
+    {
+        mSecondaryCounter = g_variant_get_string(valueVar, NULL);
+    }
+    else if (key == "DatabaseIdentifier")
+    {
+        mDatabaseIdentifier = g_variant_get_string(valueVar, NULL);
+    }
+    else if (key == "FixedImageSize")
+    {
+        mFixedImageSize = g_variant_get_boolean(valueVar);
+    }
+    else  if (key == "Folder")
+    {
+        mFolder = g_variant_get_string(valueVar, NULL);
+    }
+
+    properties.push_back(BluetoothProperty(BluetoothProperty::Type::FOLDER, mFolder));
+    properties.push_back(BluetoothProperty(BluetoothProperty::Type::FIXED_IMAGE_SIZE, mFixedImageSize));
+    properties.push_back(BluetoothProperty(BluetoothProperty::Type::DATABASE_IDENTIFIER, mDatabaseIdentifier));
+    properties.push_back(BluetoothProperty(BluetoothProperty::Type::SECONDERY_COUNTER, mSecondaryCounter));
+    properties.push_back(BluetoothProperty(BluetoothProperty::Type::PRIMARY_COUNTER, mPrimaryCounter));
+}
+
+void Bluez5ProfilePbap::notifyUpdatedProperties()
+{
+
+    auto propertiesGetCallback = [this](GAsyncResult *result) {
+        GVariant *propsVar;
+        GError *error = 0;
+        gboolean ret;
+
+        ret = free_desktop_dbus_properties_call_get_all_finish(this->mPropertiesProxy, &propsVar, result, &error);
+        if (error)
+        {
+            g_error_free(error);
+            DEBUG("free_desktop_dbus_properties_call_get_all_finish failed");
+            return;
+        }
+        BluetoothPropertiesList properties;
+        parseAllProperties(properties, propsVar);
+        getPbapObserver()->profilePropertiesChanged(properties, mDeviceAddress);
+    };
+
+    free_desktop_dbus_properties_call_get_all(mPropertiesProxy,"org.bluez.obex.PhonebookAccess1", NULL,
+                        glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(propertiesGetCallback));
+
+}
+void Bluez5ProfilePbap::setErrorProperties()
+{
+    mFolder = "No folder is selected";
+    mPrimaryCounter = "NULL";
+    mSecondaryCounter = "NULL";
+    mDatabaseIdentifier = "NULL";
+    mFixedImageSize = false;
+}
+
+void Bluez5ProfilePbap::parseAllProperties(BluetoothPropertiesList& properties, GVariant *propsVar)
+{
+
+    for (int n = 0; n < g_variant_n_children(propsVar); n++)
+    {
+        GVariant *propertyVar = g_variant_get_child_value(propsVar, n);
+        GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
+        GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
+
+        std::string key = g_variant_get_string(keyVar, NULL);
+        GVariant *propertyData = g_variant_get_variant(valueVar);
+        addPropertyFromVariant(properties, key, propertyData);
+
+        g_variant_unref(propertyData);
+        g_variant_unref(valueVar);
+        g_variant_unref(keyVar);
+        g_variant_unref(propertyVar);
+    }
+}
+void Bluez5ProfilePbap::updateVersion()
+{
+
+    GError *error = 0;
+    gboolean ret;
+    ret = bluez_obex_phonebook_access1_call_update_version_sync(mObjectPhonebookProxy, NULL, &error);
+    if (error)
+    {
+        ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access update version error:%s",error->message);
+        g_error_free(error);
+    }
+}
 void Bluez5ProfilePbap::supplyAccessConfirmation(BluetoothPbapAccessRequestId accessRequestId, bool accept, BluetoothResultCallback callback)
 {
 

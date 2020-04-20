@@ -36,9 +36,26 @@ public:
     void setPhoneBook(const std::string &address, const std::string &repository, const std::string &object, BluetoothResultCallback callback);
     void getPhonebookSize(const std::string &address, BluetoothPbapGetSizeResultCallback callback);
     void vCardListing(const std::string &address, BluetoothPbapVCardListResultCallback callback);
+    void getPhoneBookProperties(const std::string &address, BluetoothPropertiesResultCallback callback);
+    static void handlePropertiesChanged(Bluez5ProfilePbap *, gchar *interface, GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData);
 private:
     bool isObjectValid( const std::string object);
     bool isRepositoryValid( const std::string repository);
+    void setErrorProperties();
+    void parseAllProperties(BluetoothPropertiesList& properties, GVariant *propsVar);
+    void addPropertyFromVariant(BluetoothPropertiesList& properties, const std::string &key, GVariant *valueVar);
+    void notifyUpdatedProperties();
+    void updateVersion();
+    std::string getDeviceAddress() const { return mDeviceAddress; }
+    std::string mDeviceAddress;
+    BluezObexPhonebookAccess1 *mObjectPhonebookProxy;
+    FreeDesktopDBusProperties *mPropertiesProxy;
+    std::string mFolder;
+    std::string mPrimaryCounter;
+    std::string mSecondaryCounter;
+    std::string mDatabaseIdentifier;
+    bool mFixedImageSize;
+    unsigned long mHandleId;
 };
 
 #endif
