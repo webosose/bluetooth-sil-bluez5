@@ -369,4 +369,27 @@
       <property name="SecondaryCounter" type="s" access="read" />
       <property name="FixedImageSize" type="b" access="read" />
    </interface>
+   <interface name="org.bluez.MediaPlayer1">
+      <method name="Play"></method>
+      <method name="Pause"></method>
+      <method name="Stop"></method>
+      <method name="Next"></method>
+      <method name="Previous"></method>
+      <method name="FastForward"></method>
+      <method name="Rewind"></method>
+      <property name="Name" type="s" access="read"></property>
+      <property name="Type" type="s" access="read"></property>
+      <property name="Subtype" type="s" access="read"></property>
+      <property name="Position" type="u" access="read"></property>
+      <property name="Status" type="s" access="read"></property>
+      <property name="Equalizer" type="s" access="readwrite"></property>
+      <property name="Repeat" type="s" access="readwrite"></property>
+      <property name="Shuffle" type="s" access="readwrite"></property>
+      <property name="Scan" type="s" access="readwrite"></property>
+      <property name="Track" type="a{sv}" access="read"></property>
+      <property name="Device" type="o" access="read"></property>
+      <property name="Browsable" type="b" access="read"></property>
+      <property name="Searchable" type="b" access="read"></property>
+      <property name="Playlist" type="o" access="read"></property>
+   </interface>
 </node>

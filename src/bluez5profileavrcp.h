@@ -33,14 +33,26 @@ extern "C" {
 
 class Bluez5Adapter;
 
+typedef gboolean (* bluezSendPassThroughCommand)(
+		BluezMediaPlayer1 *proxy,
+		GCancellable *cancellable,
+		GError **error);
+
 class Bluez5ProfileAvcrp : public Bluez5ProfileBase,
                       public BluetoothAvrcpProfile
 {
 public:
 	static const std::map <std::string, BluetoothAvrcpPassThroughKeyCode> mKeyMap;
+	static const std::map<BluetoothAvrcpPassThroughKeyCode, bluezSendPassThroughCommand> mPassThroughCmd;
 	Bluez5ProfileAvcrp(Bluez5Adapter* adapter);
 	~Bluez5ProfileAvcrp();
 	void connect(const std::string& address, BluetoothResultCallback callback) override;
+	static void handleBluezServiceStarted(GDBusConnection* conn, const gchar* name, const gchar* nameOwner, gpointer user_data);
+	static void handleBluezServiceStopped(GDBusConnection* conn, const gchar* name, gpointer user_data);
+	static void handleObjectAdded(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
+	static void handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
+	static void handlePropertiesChanged(BluezMediaTransport1* transportInterface, gchar*,
+		GVariant* changedProperties, GVariant* invalidatedProperties, gpointer userData);
 	void disconnect(const std::string& address, BluetoothResultCallback callback) override;
 	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
 	void disable(const std::string &uuid, BluetoothResultCallback callback) override;
@@ -50,10 +62,12 @@ public:
 	void supplyMediaPlayStatus(BluetoothAvrcpRequestId requestId, const BluetoothMediaPlayStatus &playStatus, BluetoothResultCallback callback) override;
 	void mediaMetaDataRequested(const std::string &address);
 	void mediaPlayStatusRequested(const std::string &address);
-	void updateConnectionStatus(const std::string &address, bool status);
+	void updateConnectionStatus(const std::string &address, bool status, const std::string &uuid);
 	void updateVolume(const std::string &address, int volume);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 	BluetoothError setAbsoluteVolume(const std::string &address, int volume);
+	BluetoothError sendPassThroughCommand(const std::string& address, BluetoothAvrcpPassThroughKeyCode keyCode,
+		BluetoothAvrcpPassThroughKeyStatus keyStatus) override;
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
 	void updateAvrcpUuid(const std::string &address, BluetoothResultCallback callback);
 
@@ -64,8 +78,16 @@ private:
 private:
 	BluetoothAvrcpRequestId mMetaDataRequestId;
 	BluetoothAvrcpRequestId mMediaPlayStatusRequestId;
+	/* TRUE if connected as controller */
+	bool mConnectedController;
+	/* TRUE if connected as target */
+	bool mConnectedTarget;
+	/* TRUE if either of the roles is connected. FALSE if both the roles are disconnected*/
 	bool mConnected;
 	Bluez5Device *mConnectedDevice;
+	GDBusObjectManager* mObjectManager;
+	BluezMediaPlayer1 *mPlayerInterface;
+	FreeDesktopDBusProperties* mPropertiesProxy;
 };
 
 #endif

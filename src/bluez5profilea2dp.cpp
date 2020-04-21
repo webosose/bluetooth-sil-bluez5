@@ -43,6 +43,11 @@ Bluez5ProfileA2dp::~Bluez5ProfileA2dp()
 {
 	if (mObjectManager)
 		g_object_unref(mObjectManager);
+	if (mPropertiesProxy)
+	{
+		g_object_unref(mPropertiesProxy);
+		mPropertiesProxy = 0;
+	}
 }
 
 void Bluez5ProfileA2dp::getProperties(const std::string &address, BluetoothPropertiesResultCallback callback)
@@ -271,6 +276,11 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		g_object_unref(a2dp->mInterface);
 		g_object_unref(mediaTransportInterface);
 		a2dp->mInterface = 0;
+		if (a2dp->mPropertiesProxy)
+		{
+			g_object_unref(a2dp->mPropertiesProxy);
+			a2dp->mPropertiesProxy = 0;
+		}
 	}
 }
 
@@ -408,7 +418,7 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 
 			a2dp->mInterface = bluez_media_transport1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 																							"org.bluez", objectPath.c_str(), NULL, &error);
-			FreeDesktopDBusProperties *propertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+			a2dp->mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 																		   "org.bluez", objectPath.c_str(), NULL, &error);
 			if (error)
 			{
@@ -417,7 +427,7 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 				return;
 			}
 
-			g_signal_connect(G_OBJECT(propertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
+			g_signal_connect(G_OBJECT(a2dp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 			updateTransportProperties(a2dp);
 			const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
 			if (deviceObjectPath)
@@ -446,8 +456,12 @@ void Bluez5ProfileA2dp::updateTransportProperties(Bluez5ProfileA2dp *pA2dp)
 	DEBUG("A2DP updateTransportProperties");
 	GVariant *propsVar;
 	GError *error = 0;
+
+	if (!pA2dp->mPropertiesProxy)
+		return;
+
 	free_desktop_dbus_properties_call_get_all_sync(pA2dp->mPropertiesProxy, "org.bluez.MediaTransport1", &propsVar, NULL, &error);
-	if(!error)
+	if (!error)
 	{
 		for (int n = 0; n < g_variant_n_children(propsVar); n++)
 		{
