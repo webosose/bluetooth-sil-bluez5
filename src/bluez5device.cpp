@@ -729,28 +729,18 @@ std::vector<uint8_t> Bluez5Device::getManufactureData() const
 void Bluez5Device::updateConnectedRole()
 {
 	mConnectedRole = BLUETOOTH_DEVICE_ROLE;
-	bool avrcpConnectedCt = false;
-	bool avrcpConnectedTg = false;
+	bool avrcpConnected = false;
 	for(auto connectedUuidEntry : mConnectedUuids)
 	{
 		auto it = uuidtoRoleMap.find(connectedUuidEntry);
 		if(it != uuidtoRoleMap.end())
 		{
 			mConnectedRole |= it->second;
-			if (BLUETOOTH_DEVICE_ROLE_AVRCP_RMT == it->second)
+			if (BLUETOOTH_DEVICE_ROLE_AVRCP_RMT == it->second || BLUETOOTH_DEVICE_ROLE_AVRCP_TGT == it->second)
 			{
-				avrcpConnectedTg = true;
-			}
-			else if (BLUETOOTH_DEVICE_ROLE_AVRCP_TGT == it->second)
-			{
-				avrcpConnectedCt = true;
+				avrcpConnected = true;
 			}
 		}
 	}
-	/* Update if avrcp ct or tg is connected or not from here. AVRCP will check if the status is diffrent from previous
-	update and act accordingly. */
-	mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, mAddress, avrcpConnectedCt,
-		BLUETOOTH_PROFILE_AVRCP_TARGET_UUID);
-	mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, mAddress, avrcpConnectedTg,
-		BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID);
+	mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, mAddress, avrcpConnected);
 }

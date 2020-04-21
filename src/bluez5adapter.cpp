@@ -1938,13 +1938,12 @@ BluetoothError Bluez5Adapter::resetModule(const std::string &deviceName, bool is
 	return BLUETOOTH_ERROR_UNSUPPORTED;
 }
 
-void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected,
-	const std::string &uuid)
+void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected)
 {
 	if (PROFILE_ID == BLUETOOTH_PROFILE_ID_AVRCP)
 	{
 		Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
-		if (avrcp) avrcp->updateConnectionStatus(address, isConnected, uuid);
+		if (avrcp) avrcp->updateConnectionStatus(address, isConnected);
 	}
 	else if (PROFILE_ID == BLUETOOTH_PROFILE_ID_A2DP)
 	{
