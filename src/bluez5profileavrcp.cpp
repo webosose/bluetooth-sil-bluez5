@@ -50,6 +50,15 @@ const std::map<BluetoothAvrcpPassThroughKeyCode, bluezSendPassThroughCommand> Bl
 	{KEY_CODE_FAST_FORWARD, &bluez_media_player1_call_fast_forward_sync}
 };
 
+const std::map<std::string, BluetoothMediaPlayStatus::MediaPlayStatus> Bluez5ProfileAvcrp::mPlayStatus = {
+	{"stopped", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_STOPPED},
+	{"playing", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_PLAYING},
+	{"paused", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_PAUSED},
+	{"forward-seek", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_FWD_SEEK},
+	{"reverse-seek", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_REV_SEEK},
+	{"error", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_ERROR}
+};
+
 Bluez5ProfileAvcrp::Bluez5ProfileAvcrp(Bluez5Adapter* adapter):
 Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID),
 mMetaDataRequestId(0),
@@ -222,11 +231,75 @@ void Bluez5ProfileAvcrp::handleObjectRemoved(GDBusObjectManager* objectManager, 
 	}
 }
 
-void Bluez5ProfileAvcrp::handlePropertiesChanged(BluezMediaTransport1* transportInterface, gchar* interface, GVariant* changedProperties,
+void Bluez5ProfileAvcrp::handlePropertiesChanged(BluezMediaPlayer1* transportInterface, gchar* interface, GVariant* changedProperties,
 	GVariant* invalidatedProperties, gpointer userData)
 {
 	DEBUG("MediaPlayer1 properties changed");
+	auto avrcp = static_cast<Bluez5ProfileAvcrp *>(userData);
+
+	for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+	{
+		GVariant* propertyVar = g_variant_get_child_value(changedProperties, n);
+		GVariant* keyVar = g_variant_get_child_value(propertyVar, 0);
+		GVariant* valueVar = g_variant_get_child_value(propertyVar, 1);
+
+		std::string key = g_variant_get_string(keyVar, NULL);
+
+		avrcp->parsePropertyFromVariant(key, g_variant_get_variant(valueVar));
+
+		g_variant_unref(valueVar);
+		g_variant_unref(keyVar);
+		g_variant_unref(propertyVar);
+	}
 }
+
+void Bluez5ProfileAvcrp::parsePropertyFromVariant(const std::string& key, GVariant* valueVar)
+{
+	if ("Position" == key)
+	{
+		mMediaPlayStatus.setPosition(g_variant_get_uint32(valueVar));
+		DEBUG("Position: %ld", mMediaPlayStatus.getPosition());
+		getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
+			convertAddressToLowerCase(mConnectedDevice->getAddress()));
+
+	}
+	else if ("Status" == key)
+	{
+		auto playStatusIt = mPlayStatus.find(g_variant_get_string(valueVar, NULL));
+		if (playStatusIt != mPlayStatus.end())
+		{
+			mMediaPlayStatus.setStatus(playStatusIt->second);
+		}
+		DEBUG("Play status: %d", mMediaPlayStatus.getStatus());
+		getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
+			convertAddressToLowerCase(mConnectedDevice->getAddress()));
+	}
+	else if ("Track" == key)
+	{
+		GVariantIter* iter;
+		g_variant_get(valueVar, "a{sv}", &iter);
+		GVariant* valueTrack;
+		gchar* keyVar;
+
+		while (g_variant_iter_loop(iter, "{sv}", &keyVar, &valueTrack))
+		{
+			std::string keyTrack(keyVar);
+			DEBUG("Key: %s", keyTrack.c_str());
+			if ("Duration" == keyTrack)
+			{
+				mMediaPlayStatus.setDuration(g_variant_get_uint32(valueTrack));
+				DEBUG("Duration: %d", mMediaPlayStatus.getDuration());
+				getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
+					convertAddressToLowerCase(mConnectedDevice->getAddress()));
+			}
+		}
+	}
+	else
+	{
+		DEBUG("Key: %s", key.c_str());
+	}
+}
+
 
 void Bluez5ProfileAvcrp::disconnect(const std::string& address, BluetoothResultCallback callback)
 {
