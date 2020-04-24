@@ -39,17 +39,29 @@ public:
     void getPhoneBookProperties(const std::string &address, BluetoothPropertiesResultCallback callback);
     void getvCardFilters(const std::string &address, BluetoothPbapListFiltersResultCallback callback);
     static void handlePropertiesChanged(Bluez5ProfilePbap *, gchar *interface, GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData);
+    void pullvCard(const std::string &address, const std::string &targetFile, const std::string &vCardHandle, const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters, BluetoothPbapTransferResultCallback callback);
 private:
-    bool isObjectValid( const std::string object);
-    bool isRepositoryValid( const std::string repository);
+    bool isObjectValid( const std::string &object);
+    bool isRepositoryValid( const std::string &repository);
+    bool isVCardVersionValid( const std::string &vCardVersion);
     void setErrorProperties();
+    std::string convertToSupportedVcardVersion(const std::string &vCardVersion);
     void parseAllProperties(BluetoothPropertiesList& properties, GVariant *propsVar);
     void addPropertyFromVariant(BluetoothPropertiesList& properties, const std::string &key, GVariant *valueVar);
     void notifyUpdatedProperties();
     void updateVersion();
     std::string getDeviceAddress() const { return mDeviceAddress; }
+    inline uint64_t nextTransferId() { return ++mTranfserIdCounter; }
+    GVariant * setFilters(const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters);
+    void startTransfer(BluetoothPbapAccessRequestId id, const std::string &objectPath, BluetoothPbapTransferResultCallback callback, Bluez5ObexTransfer::TransferType type);
+    void removeTransfer(BluetoothPbapAccessRequestId id);
+    void updateActiveTransfer(BluetoothPbapAccessRequestId id, Bluez5ObexTransfer *transfer, BluetoothPbapTransferResultCallback callback);
+
+    uint64_t mTranfserIdCounter;
     std::string mDeviceAddress;
+    Bluez5Adapter *mAdapter;
     BluezObexPhonebookAccess1 *mObjectPhonebookProxy;
+    std::map <BluetoothPbapAccessRequestId, Bluez5ObexTransfer*> mTransfersMap;
     FreeDesktopDBusProperties *mPropertiesProxy;
     std::string mFolder;
     std::string mPrimaryCounter;
