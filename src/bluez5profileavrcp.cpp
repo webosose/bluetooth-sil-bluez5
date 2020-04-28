@@ -68,6 +68,7 @@ mConnectedDevice(nullptr),
 mConnectedController(false),
 mConnectedTarget(false),
 mObjectManager(nullptr),
+mPlayerInterface(nullptr),
 mPropertiesProxy(nullptr)
 {
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
@@ -174,6 +175,10 @@ void Bluez5ProfileAvcrp::handleObjectAdded(GDBusObjectManager* objectManager, GD
 
 	std::string objectPath = g_dbus_object_get_object_path(object);
 
+	auto adapterPath = avrcp->mAdapter->getObjectPath();
+	if (objectPath.compare(0, adapterPath.length(), adapterPath))
+		return;
+
 	auto mediaPlayerInterface = g_dbus_object_get_interface(object, "org.bluez.MediaPlayer1");
 	if (mediaPlayerInterface)
 	{
@@ -212,6 +217,10 @@ void Bluez5ProfileAvcrp::handleObjectRemoved(GDBusObjectManager* objectManager, 
 	Bluez5ProfileAvcrp* avrcp = static_cast<Bluez5ProfileAvcrp*>(userData);
 
 	std::string objectPath = g_dbus_object_get_object_path(object);
+
+	auto adapterPath = avrcp->mAdapter->getObjectPath();
+	if (objectPath.compare(0, adapterPath.length(), adapterPath))
+		return;
 
 	auto mediaPlayerInterface = g_dbus_object_get_interface(object, "org.bluez.MediaPlayer1");
 	if (mediaPlayerInterface)
