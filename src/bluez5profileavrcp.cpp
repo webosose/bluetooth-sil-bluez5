@@ -82,6 +82,11 @@ Bluez5ProfileAvcrp::~Bluez5ProfileAvcrp()
 		g_object_unref(mObjectManager);
 		mObjectManager = nullptr;
 	}
+	if (mPlayerInterface)
+	{
+		g_object_unref(mPlayerInterface);
+		mPlayerInterface = nullptr;
+	}
 	if (mPropertiesProxy)
 	{
 		g_object_unref(mPropertiesProxy);
@@ -144,9 +149,16 @@ void Bluez5ProfileAvcrp::handleBluezServiceStarted(GDBusConnection* conn, const 
 				return;
 
 			avrcp->mPlayerInterface = bluez_media_player1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-				"org.bluez", objectPath.c_str(), NULL, &error);
+					"org.bluez", objectPath.c_str(), NULL, &error);
+			if (error)
+			{
+				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "Not able to get player interface");
+				g_error_free(error);
+				return;
+			}
+
 			avrcp->mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
-				G_DBUS_PROXY_FLAGS_NONE, "org.bluez", objectPath.c_str(), NULL, &error);
+					G_DBUS_PROXY_FLAGS_NONE, "org.bluez", objectPath.c_str(), NULL, &error);
 			if (error)
 			{
 				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "Not able to get property interface");
@@ -182,17 +194,25 @@ void Bluez5ProfileAvcrp::handleObjectAdded(GDBusObjectManager* objectManager, GD
 	auto mediaPlayerInterface = g_dbus_object_get_interface(object, "org.bluez.MediaPlayer1");
 	if (mediaPlayerInterface)
 	{
-		DEBUG("Media player interface added");
-		auto adapterPath = avrcp->mAdapter->getObjectPath();
-		if (objectPath.compare(0, adapterPath.length(), adapterPath))
-			return;
+		DEBUG("Added: %s", objectPath.c_str());
+		/* Unref the existing player reference before getting reference to newly added player object */
+		if (avrcp->mPlayerInterface)
+		{
+			g_object_unref(avrcp->mPlayerInterface);
+			avrcp->mPlayerInterface = nullptr;
+		}
+		if (avrcp->mPropertiesProxy)
+		{
+			g_object_unref(avrcp->mPropertiesProxy);
+			avrcp->mPropertiesProxy = nullptr;
+		}
 
 		GError* error = 0;
 		avrcp->mPlayerInterface = bluez_media_player1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 			"org.bluez", objectPath.c_str(), NULL, &error);
 		if (error)
 		{
-			DEBUG("Not able to get media transport interface");
+			DEBUG("Not able to get media player interface");
 			g_error_free(error);
 			return;
 		}
@@ -213,31 +233,12 @@ void Bluez5ProfileAvcrp::handleObjectAdded(GDBusObjectManager* objectManager, GD
 
 void Bluez5ProfileAvcrp::handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData)
 {
-	DEBUG("AVRCP: handleObjectRemoved");
-	Bluez5ProfileAvcrp* avrcp = static_cast<Bluez5ProfileAvcrp*>(userData);
-
-	std::string objectPath = g_dbus_object_get_object_path(object);
-
-	auto adapterPath = avrcp->mAdapter->getObjectPath();
-	if (objectPath.compare(0, adapterPath.length(), adapterPath))
-		return;
-
-	auto mediaPlayerInterface = g_dbus_object_get_interface(object, "org.bluez.MediaPlayer1");
-	if (mediaPlayerInterface)
-	{
-		DEBUG("Removing MediaPlayer1");
-		g_object_unref(mediaPlayerInterface);
-		if (avrcp->mPlayerInterface)
-		{
-			g_object_unref(avrcp->mPlayerInterface);
-			avrcp->mPlayerInterface = nullptr;
-		}
-		if (avrcp->mPropertiesProxy)
-		{
-			g_object_unref(avrcp->mPropertiesProxy);
-			avrcp->mPropertiesProxy = nullptr;
-		}
-	}
+	/* We are not unrefing the mPropertiesProxy and mPlayerInterface here.
+	 * When new player gets added, object-added event is received first and
+	 * then object-removed for the old one. Hence to avoid unrefing the reference
+	 * to newly added player, unref the existing player reference whenever new player
+	 * is added and get the reference to new player in handleObjectAdded function
+	 */
 }
 
 void Bluez5ProfileAvcrp::handlePropertiesChanged(BluezMediaPlayer1* transportInterface, gchar* interface, GVariant* changedProperties,
@@ -289,6 +290,7 @@ void Bluez5ProfileAvcrp::parsePropertyFromVariant(const std::string& key, GVaria
 		g_variant_get(valueVar, "a{sv}", &iter);
 		GVariant* valueTrack;
 		gchar* keyVar;
+		BluetoothMediaMetaData mediaMetadata;
 
 		while (g_variant_iter_loop(iter, "{sv}", &keyVar, &valueTrack))
 		{
@@ -297,11 +299,38 @@ void Bluez5ProfileAvcrp::parsePropertyFromVariant(const std::string& key, GVaria
 			if ("Duration" == keyTrack)
 			{
 				mMediaPlayStatus.setDuration(g_variant_get_uint32(valueTrack));
+				mediaMetadata.setDuration(mMediaPlayStatus.getDuration());
 				DEBUG("Duration: %d", mMediaPlayStatus.getDuration());
 				getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
 					convertAddressToLowerCase(mConnectedDevice->getAddress()));
 			}
+			else if ("Title" == keyTrack)
+			{
+				mediaMetadata.setTitle(g_variant_get_string(valueTrack, NULL));
+			}
+			else if ("Album" == keyTrack)
+			{
+				mediaMetadata.setAlbum(g_variant_get_string(valueTrack, NULL));
+			}
+			else if ("Artist" == keyTrack)
+			{
+				mediaMetadata.setArtist(g_variant_get_string(valueTrack, NULL));
+			}
+			else if ("Genre" == keyTrack)
+			{
+				mediaMetadata.setGenre(g_variant_get_string(valueTrack, NULL));
+			}
+			else if ("NumberOfTracks" == keyTrack)
+			{
+				mediaMetadata.setTrackCount(g_variant_get_uint32(valueTrack));
+			}
+			else if ("TrackNumber" == keyTrack)
+			{
+				mediaMetadata.setTrackNumber(g_variant_get_uint32(valueTrack));
+			}
 		}
+		getAvrcpObserver()->mediaDataReceived(mediaMetadata,
+			convertAddressToLowerCase(mConnectedDevice->getAddress()));
 	}
 	else
 	{
