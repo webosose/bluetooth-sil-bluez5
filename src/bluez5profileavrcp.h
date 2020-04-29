@@ -54,6 +54,10 @@ public:
 	static void handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
 	static void handlePropertiesChanged(BluezMediaPlayer1* transportInterface, gchar*,
 		GVariant* changedProperties, GVariant* invalidatedProperties, gpointer userData);
+	BluetoothPlayerApplicationSettingsRepeat repeatStringToEnum(std::string repeatVal);
+	BluetoothPlayerApplicationSettingsShuffle shuffleStringToEnum(std::string shuffleVal);
+	BluetoothPlayerApplicationSettingsScan scanStringToEnum(std::string scanVal);
+	BluetoothPlayerApplicationSettingsEqualizer equalizerStringToEnum(std::string equalizerVal);
 	void parsePropertyFromVariant(const std::string& key, GVariant* valueVar);
 	void disconnect(const std::string& address, BluetoothResultCallback callback) override;
 	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
@@ -85,7 +89,7 @@ private:
 	bool mConnectedTarget;
 	/* TRUE if either of the roles is connected. FALSE if both the roles are disconnected*/
 	bool mConnected;
-	Bluez5Device *mConnectedDevice;
+	std::string mConnectedDeviceAddress;
 	GDBusObjectManager *mObjectManager;
 	BluezMediaPlayer1 *mPlayerInterface;
 	FreeDesktopDBusProperties* mPropertiesProxy;
