@@ -80,6 +80,7 @@ private:
 	GVariant* devPropertyValueToVariant(const BluetoothProperty& property);
 	std::string devPropertyTypeToString(BluetoothProperty::Type type);
 	void updateConnectedRole();
+	void updateProfileConnectionStatus(std::vector <std::string> prevConnectedUuis);
 
 private:
 	Bluez5Adapter *mAdapter;

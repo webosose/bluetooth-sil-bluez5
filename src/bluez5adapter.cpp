@@ -428,6 +428,7 @@ void Bluez5Adapter::getAdapterProperty(BluetoothProperty::Type type, BluetoothPr
 	{
 		g_error_free(error);
 		callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
+		return;
 	}
 
 	realPropVar = g_variant_get_variant(propVar);
@@ -1941,16 +1942,9 @@ BluetoothError Bluez5Adapter::resetModule(const std::string &deviceName, bool is
 void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected,
 	const std::string &uuid)
 {
-	if (PROFILE_ID == BLUETOOTH_PROFILE_ID_AVRCP)
-	{
-		Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
-		if (avrcp) avrcp->updateConnectionStatus(address, isConnected, uuid);
-	}
-	else if (PROFILE_ID == BLUETOOTH_PROFILE_ID_A2DP)
-	{
-		Bluez5ProfileA2dp *a2dp = dynamic_cast<Bluez5ProfileA2dp*> (getProfile(BLUETOOTH_PROFILE_ID_A2DP));
-		if (a2dp) a2dp->updateConnectionStatus(address, isConnected);
-	}
+	auto profile = dynamic_cast<Bluez5ProfileBase*> (getProfile(PROFILE_ID));
+	if (profile)
+		profile->updateConnectionStatus(address, isConnected, uuid);
 }
 
 void Bluez5Adapter::updateAvrcpVolume(std::string address, guint16 volume)

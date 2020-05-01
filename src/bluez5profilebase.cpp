@@ -53,3 +53,8 @@ void Bluez5ProfileBase::disconnect(const std::string &address, BluetoothResultCa
 
 	device->disconnect(mUuid, callback);
 }
+
+void Bluez5ProfileBase::updateConnectionStatus(const std::string &address, bool isConnected, const std::string &uuid)
+{
+	DEBUG("Bluez5ProfileBase::updateConnectionStatus address %s state %d uuid %s", address.c_str(), isConnected, uuid.c_str());
+}

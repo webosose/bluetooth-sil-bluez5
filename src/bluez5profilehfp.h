@@ -25,7 +25,6 @@
 extern "C" {
 #include "freedesktop-interface.h"
 #include "bluez-interface.h"
-#include "ofono-interface.h"
 }
 
 class Bluez5ProfileHfp : public Bluez5ProfileBase,
@@ -42,22 +41,11 @@ public:
 	void getProperty(const std::string &address, BluetoothProperty::Type type, BluetoothPropertyResultCallback callback);
 	void connect(const std::string &address, BluetoothResultCallback callback);
 	void disconnect(const std::string &address, BluetoothResultCallback callback);
-	bool isAdapterMatching(std::string objectPath);
-	void getModemProperties(OfonoModem *modemProxy);
-	void paraseModems(GVariant *modems);
-	void updateConnectionStatus(const std::string &address, bool status);
-	void setConnectedDeviceAddress(const std::string address) { mConnectedDeviceAddress = address; }
-	std::string getConnectedDeviceAddress() const { return mConnectedDeviceAddress; }
-	static void handleOfonoServiceStarted(GDBusConnection *conn, const gchar *name, const gchar *nameOwner, gpointer user_data);
-	static void handleOfonoServiceStopped(GDBusConnection *conn, const gchar *name, gpointer user_data);
-	static void handleModemAdded(OfonoManager *object, const gchar *path, GVariant *properties, void *userData);
-	static void handleModemRemoved(OfonoManager *object, const gchar *path, void *userData);
-	static void handleModemPropertyChanged(OfonoModem *proxy, char *name, GVariant *value, void *userData);
+	void updateConnectionStatus(const std::string &address, bool isConnected, const std::string &uuid);
 
 private:
 	std::string mConnectedDeviceAddress;
-	bool mConnected;
-	OfonoManager *mOfonoManager;
+	std::vector<std::string> mConnectedDevices;
 };
 
 #endif

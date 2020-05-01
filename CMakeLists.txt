@@ -82,16 +82,6 @@ if (codegen_failed)
     message(FATAL_ERROR "Error in generating code for freedesktop dbus interface using gdbus-codegen")
 endif()
 
-execute_process(COMMAND ${GDBUS_CODEGEN_EXECUTABLE}
-        --c-namespace Ofono
-        --generate-c-code ${GDBUS_IF_DIR}/ofono-interface
-        --interface-prefix org.ofono.
-        ${CMAKE_CURRENT_SOURCE_DIR}/files/xml/ofono.xml
-        RESULT_VARIABLE codegen_failed)
-if (codegen_failed)
-    message(FATAL_ERROR "Error in generating code for ofono dbus interface using gdbus-codegen")
-endif()
-
 if (USE_SYSTEM_BUS_FOR_OBEX)
     webos_add_compiler_flags(ALL -DUSE_SYSTEM_BUS_FOR_OBEX)
 endif()
