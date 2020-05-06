@@ -263,6 +263,54 @@ void Bluez5ProfileAvcrp::handlePropertiesChanged(BluezMediaPlayer1* transportInt
 	}
 }
 
+std::string Bluez5ProfileAvcrp::equalizerEnumToString(BluetoothPlayerApplicationSettingsEqualizer equalizer)
+{
+	if (BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_OFF == equalizer)
+		return "off";
+	else if (BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_ON == equalizer)
+		return "on";
+	else
+		return "unknown";
+}
+
+std::string Bluez5ProfileAvcrp::repeatEnumToString(BluetoothPlayerApplicationSettingsRepeat repeat)
+{
+	if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_OFF == repeat)
+		return "off";
+	else if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_SINGLE_TRACK == repeat)
+		return "singletrack";
+	else if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_ALL_TRACKS == repeat)
+		return "alltracks";
+	else if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_GROUP == repeat)
+		return "group";
+	else
+		return "unknown";
+}
+
+std::string Bluez5ProfileAvcrp::shuffleEnumToString(BluetoothPlayerApplicationSettingsShuffle shuffle)
+{
+	if (BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_OFF == shuffle)
+		return "off";
+	else if (BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_ALL_TRACKS == shuffle)
+		return "alltracks";
+	else if (BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_GROUP == shuffle)
+		return "group";
+	else
+		return "unknown";
+}
+
+std::string Bluez5ProfileAvcrp::scanEnumToString(BluetoothPlayerApplicationSettingsScan scan)
+{
+	if (BluetoothPlayerApplicationSettingsScan::SCAN_OFF == scan)
+		return "off";
+	else if (BluetoothPlayerApplicationSettingsScan::SCAN_ALL_TRACKS == scan)
+		return "alltracks";
+	else if (BluetoothPlayerApplicationSettingsScan::SCAN_GROUP == scan)
+		return "group";
+	else
+		return "unknown";
+}
+
 BluetoothPlayerApplicationSettingsRepeat Bluez5ProfileAvcrp::repeatStringToEnum(std::string repeat)
 {
 	if ("off" == repeat)
@@ -661,6 +709,56 @@ BluetoothError Bluez5ProfileAvcrp::setAbsoluteVolume(const std::string &address,
 	if (a2dp)
 		bluez_media_transport1_set_volume(a2dp->getMediaTransport(), (uint8_t)volume);
 	return BLUETOOTH_ERROR_NONE;
+}
+
+void Bluez5ProfileAvcrp::setPlayerApplicationSettingsProperties(const BluetoothPlayerApplicationSettingsPropertiesList &properties,
+		BluetoothResultCallback callback)
+{
+	GError *error = 0;
+	std::string property;
+	std::string value;
+	for (auto prop : properties)
+	{
+		switch (prop.getType())
+		{
+			case BluetoothPlayerApplicationSettingsProperty::Type::EQUALIZER:
+				{
+					property = "Equalizer";
+					value = equalizerEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsEqualizer>());
+					break;
+				}
+			case BluetoothPlayerApplicationSettingsProperty::Type::REPEAT:
+				{
+					property = "Repeat";
+					value = repeatEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsRepeat>());
+					break;
+				}
+			case BluetoothPlayerApplicationSettingsProperty::Type::SHUFFLE:
+				{
+					property = "Shuffle";
+					value = shuffleEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsShuffle>());
+					break;
+				}
+			case BluetoothPlayerApplicationSettingsProperty::Type::SCAN:
+				{
+					property = "Scan";
+					value = scanEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsScan>());
+					break;
+				}
+		}
+		GVariant *var = g_variant_new_string(value.c_str());
+		free_desktop_dbus_properties_call_set_sync(mPropertiesProxy,
+				"org.bluez.MediaPlayer1", property.c_str(),
+				g_variant_new_variant(var), NULL, &error);
+		if (error)
+		{
+			DEBUG ("%s: error is %s for prop: %s, value: %s",
+					__func__, error->message, property.c_str(), value.c_str());
+			g_error_free(error);
+			callback(BLUETOOTH_ERROR_FAIL);
+		}
+	}
+	callback(BLUETOOTH_ERROR_NONE);
 }
 
 BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(const std::string& address, BluetoothAvrcpPassThroughKeyCode keyCode,

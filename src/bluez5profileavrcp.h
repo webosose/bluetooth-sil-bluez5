@@ -58,6 +58,10 @@ public:
 	BluetoothPlayerApplicationSettingsShuffle shuffleStringToEnum(std::string shuffleVal);
 	BluetoothPlayerApplicationSettingsScan scanStringToEnum(std::string scanVal);
 	BluetoothPlayerApplicationSettingsEqualizer equalizerStringToEnum(std::string equalizerVal);
+	std::string equalizerEnumToString(BluetoothPlayerApplicationSettingsEqualizer equalizer);
+	std::string repeatEnumToString(BluetoothPlayerApplicationSettingsRepeat repeat);
+	std::string shuffleEnumToString(BluetoothPlayerApplicationSettingsShuffle shuffle);
+	std::string scanEnumToString(BluetoothPlayerApplicationSettingsScan scan);
 	void parsePropertyFromVariant(const std::string& key, GVariant* valueVar);
 	void disconnect(const std::string& address, BluetoothResultCallback callback) override;
 	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
@@ -74,6 +78,8 @@ public:
 	BluetoothError setAbsoluteVolume(const std::string &address, int volume);
 	BluetoothError sendPassThroughCommand(const std::string& address, BluetoothAvrcpPassThroughKeyCode keyCode,
 		BluetoothAvrcpPassThroughKeyStatus keyStatus) override;
+	void setPlayerApplicationSettingsProperties(const BluetoothPlayerApplicationSettingsPropertiesList &properties,
+                BluetoothResultCallback callback) override;
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
 
 private:
