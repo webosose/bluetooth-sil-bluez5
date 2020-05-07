@@ -89,6 +89,23 @@ void Bluez5ObexProfileBase::removeSession(const std::string &address)
 	delete session;
 }
 
+
+void Bluez5ObexProfileBase::updateProperties(GVariant *changedProperties)
+{
+	DEBUG("Bluez5ObexProfileBase::updateProperties");
+
+	return;
+}
+
+void Bluez5ObexProfileBase::handlePropertiesChanged(BluezObexSession1 *, gchar *interface,  GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData)
+{
+	DEBUG("handlePropertiesChanged Bluez5ObexProfileBase");
+
+	Bluez5ObexProfileBase *profileBase = static_cast<Bluez5ObexProfileBase*>(userData);
+
+	profileBase->updateProperties(changedProperties);
+}
+
 void Bluez5ObexProfileBase::createSession(const std::string &address, Bluez5ObexSession::Type type, BluetoothResultCallback callback)
 {
 	Bluez5ObexClient *obexClient = mAdapter->getObexClient();
@@ -107,6 +124,8 @@ void Bluez5ObexProfileBase::createSession(const std::string &address, Bluez5Obex
 		}
 
 		session->watch(std::bind(&Bluez5ObexProfileBase::handleObexSessionStatus, this, address, _1));
+		DEBUG("createSession g_signal_connect");
+		g_signal_connect(G_OBJECT(session->getObjectPropertiesProxy()), "properties-changed", G_CALLBACK(handlePropertiesChanged), this);
 
 		storeSession(address, session);
 		notifySessionStatus(address, true);

@@ -301,14 +301,16 @@ void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVC
     return;
 }
 
-void Bluez5ProfilePbap::getPhoneBookProperties(const std::string &address, BluetoothPropertiesResultCallback callback)
+void Bluez5ProfilePbap::getPhoneBookProperties(const std::string &address, BluetoothPbapApplicationParameterCallback callback)
 {
     const Bluez5ObexSession *session = findSession(address);
+
+    initializePbapApplicationParameters();
 
     if (!session)
     {
         DEBUG("phonebook session failed");
-        callback(BLUETOOTH_ERROR_NOT_ALLOWED, BluetoothPropertiesList());
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, pbapApplicationParameters);
         return;
     }
 
@@ -318,15 +320,8 @@ void Bluez5ProfilePbap::getPhoneBookProperties(const std::string &address, Bluet
     if (!mPropertiesProxy)
     {
         DEBUG("getObjectPropertiesProxy failed");
-        callback(BLUETOOTH_ERROR_NOT_ALLOWED, BluetoothPropertiesList());
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, pbapApplicationParameters);
         return;
-    }
-
-    setErrorProperties();
-
-    if(mHandleId <= 0)
-    {
-        mHandleId = g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged),this);
     }
 
     auto propertiesGetCallback = [this, callback](GAsyncResult *result) {
@@ -339,25 +334,22 @@ void Bluez5ProfilePbap::getPhoneBookProperties(const std::string &address, Bluet
         {
             g_error_free(error);
             DEBUG("free_desktop_dbus_properties_call_get_all_finish failed");
-            callback(BLUETOOTH_ERROR_FAIL, BluetoothPropertiesList());
+            callback(BLUETOOTH_ERROR_FAIL, pbapApplicationParameters);
             return;
         }
-        BluetoothPropertiesList properties;
-        parseAllProperties(properties, propsVar);
-        callback(BLUETOOTH_ERROR_NONE, properties);
+
+        pbapApplicationParameters.setFolder("No folder is selected");
+        parseAllProperties(propsVar);
+        callback(BLUETOOTH_ERROR_NONE, pbapApplicationParameters);
     };
 
     free_desktop_dbus_properties_call_get_all(mPropertiesProxy,"org.bluez.obex.PhonebookAccess1", NULL,
                         glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(propertiesGetCallback));
 }
 
-void Bluez5ProfilePbap::handlePropertiesChanged(Bluez5ProfilePbap *, gchar *interface,  GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData)
+void Bluez5ProfilePbap::updateProperties(GVariant *changedProperties)
 {
-
-    auto pbap = static_cast<Bluez5ProfilePbap*>(userData);
     bool changed = false;
-    BluetoothPropertiesList properties;
-    DEBUG("properties-changed signal triggered for interface: %s", interface);
 
     for (int n = 0; n < g_variant_n_children(changedProperties); n++)
     {
@@ -373,37 +365,31 @@ void Bluez5ProfilePbap::handlePropertiesChanged(Bluez5ProfilePbap *, gchar *inte
     }
 
     if (changed)
-        pbap->notifyUpdatedProperties();
+       notifyUpdatedProperties();
 }
 
-void Bluez5ProfilePbap::addPropertyFromVariant(BluetoothPropertiesList& properties, const std::string &key, GVariant *valueVar)
+void Bluez5ProfilePbap::addPropertyFromVariant(const std::string &key, GVariant *valueVar)
 {
     if (key == "PrimaryCounter")
     {
-        mPrimaryCounter = g_variant_get_string(valueVar, NULL);
+        pbapApplicationParameters.setPrimaryCounter(g_variant_get_string(valueVar, NULL));
     }
     else if (key == "SecondaryCounter")
     {
-        mSecondaryCounter = g_variant_get_string(valueVar, NULL);
+        pbapApplicationParameters.setSecondaryCounter(g_variant_get_string(valueVar, NULL));
     }
     else if (key == "DatabaseIdentifier")
     {
-        mDatabaseIdentifier = g_variant_get_string(valueVar, NULL);
+        pbapApplicationParameters.setDataBaseIdentifier(g_variant_get_string(valueVar, NULL));
     }
     else if (key == "FixedImageSize")
     {
-        mFixedImageSize = g_variant_get_boolean(valueVar);
+        pbapApplicationParameters.setFixedImageSize(g_variant_get_boolean(valueVar));
     }
     else  if (key == "Folder")
     {
-        mFolder = g_variant_get_string(valueVar, NULL);
+        pbapApplicationParameters.setFolder(g_variant_get_string(valueVar, NULL));
     }
-
-    properties.push_back(BluetoothProperty(BluetoothProperty::Type::FOLDER, mFolder));
-    properties.push_back(BluetoothProperty(BluetoothProperty::Type::FIXED_IMAGE_SIZE, mFixedImageSize));
-    properties.push_back(BluetoothProperty(BluetoothProperty::Type::DATABASE_IDENTIFIER, mDatabaseIdentifier));
-    properties.push_back(BluetoothProperty(BluetoothProperty::Type::SECONDERY_COUNTER, mSecondaryCounter));
-    properties.push_back(BluetoothProperty(BluetoothProperty::Type::PRIMARY_COUNTER, mPrimaryCounter));
 }
 
 void Bluez5ProfilePbap::notifyUpdatedProperties()
@@ -421,25 +407,27 @@ void Bluez5ProfilePbap::notifyUpdatedProperties()
             DEBUG("free_desktop_dbus_properties_call_get_all_finish failed");
             return;
         }
-        BluetoothPropertiesList properties;
-        parseAllProperties(properties, propsVar);
-        getPbapObserver()->profilePropertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), mDeviceAddress ,properties);
+
+        parseAllProperties(propsVar);
+
+        getPbapObserver()->profilePropertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), mDeviceAddress, pbapApplicationParameters);
     };
 
     free_desktop_dbus_properties_call_get_all(mPropertiesProxy,"org.bluez.obex.PhonebookAccess1", NULL,
                         glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(propertiesGetCallback));
 
 }
-void Bluez5ProfilePbap::setErrorProperties()
+
+void Bluez5ProfilePbap::initializePbapApplicationParameters()
 {
-    mFolder = "No folder is selected";
-    mPrimaryCounter = "NULL";
-    mSecondaryCounter = "NULL";
-    mDatabaseIdentifier = "NULL";
-    mFixedImageSize = false;
+    pbapApplicationParameters.setFolder("NULL");
+    pbapApplicationParameters.setPrimaryCounter("NULL");
+    pbapApplicationParameters.setSecondaryCounter("NULL");
+    pbapApplicationParameters.setDataBaseIdentifier("NULL");
+    pbapApplicationParameters.setFixedImageSize(false);
 }
 
-void Bluez5ProfilePbap::parseAllProperties(BluetoothPropertiesList& properties, GVariant *propsVar)
+void Bluez5ProfilePbap::parseAllProperties(GVariant *propsVar)
 {
 
     for (int n = 0; n < g_variant_n_children(propsVar); n++)
@@ -450,7 +438,7 @@ void Bluez5ProfilePbap::parseAllProperties(BluetoothPropertiesList& properties, 
 
         std::string key = g_variant_get_string(keyVar, NULL);
         GVariant *propertyData = g_variant_get_variant(valueVar);
-        addPropertyFromVariant(properties, key, propertyData);
+        addPropertyFromVariant(key, propertyData);
 
         g_variant_unref(propertyData);
         g_variant_unref(valueVar);
@@ -458,6 +446,7 @@ void Bluez5ProfilePbap::parseAllProperties(BluetoothPropertiesList& properties, 
         g_variant_unref(propertyVar);
     }
 }
+
 void Bluez5ProfilePbap::updateVersion()
 {
 

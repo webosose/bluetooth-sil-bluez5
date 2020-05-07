@@ -40,6 +40,8 @@ public:
 	void connect(const std::string &address, BluetoothResultCallback callback);
 	void disconnect(const std::string& address, BluetoothResultCallback callback);
 	void handleObexSessionStatus(const std::string &address, bool lost);
+	virtual void updateProperties(GVariant *changedProperties);
+	static void handlePropertiesChanged(BluezObexSession1 *, gchar *interface,  GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData);
 
 private:
 	std::map<std::string, Bluez5ObexSession*> mSessions;
