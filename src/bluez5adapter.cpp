@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <sys/stat.h>
+#include <stdlib.h>
 #include "asyncutils.h"
 #include "logging.h"
 #include "bluez5adapter.h"
@@ -285,6 +286,22 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 	else if (key == "Powered")
 	{
 		bool powered = g_variant_get_boolean(valueVar);
+
+		//Enable SCO audio routing
+		if (!mPowered && powered)
+		{
+			std::size_t found = mObjectPath.find("hci");
+
+			if (found != std::string::npos)
+			{   //hcitool cmd 0x3F 0x01C 0x01 0x02 0x00 0x01 0x01 &
+				std::string hcitool = "hcitool";
+				std::string hcicmd = "0x3F 0x01C 0x01 0x02 0x00 0x01 0x01 &";
+				std::string hcidevice = mObjectPath.substr(found);
+				std::string cmd = hcitool +  " -i " + hcidevice + std::string(" cmd ") + hcicmd;
+				(void) system(cmd.c_str());
+			}
+		}
+
 		if (powered != mPowered)
 		{
 			mPowered = powered;
