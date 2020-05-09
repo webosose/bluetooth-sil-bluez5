@@ -26,7 +26,10 @@
 const std::string BLUETOOTH_PROFILE_PBAP_UUID = "00001130-0000-1000-8000-00805f9b34fb";
 static std::vector<std::string> supportedObjects = {"pb", "ich", "mch", "och", "cch"};
 static std::vector<std::string> supportedRepositories = {"sim1", "internal"};
+static std::vector<std::string> supportedSearchKey = {"name", "number", "sound"};
+static std::vector<std::string> supportedSearchOrder = {"indexed", "alphanumeric", "phonetic"};
 static std::map<std::string, std::string> supportedVCardVersions = {{"2.1", "vcard21"}, {"3.0", "vcard30"}};
+static std::vector<std::string> stateString = {"idle", "idle", "active", "active","completed","error"};
 
 Bluez5ProfilePbap::Bluez5ProfilePbap(Bluez5Adapter *adapter) :
     Bluez5ObexProfileBase(Bluez5ObexSession::Type::PBAP, adapter, BLUETOOTH_PROFILE_PBAP_UUID),
@@ -43,6 +46,40 @@ Bluez5ProfilePbap::~Bluez5ProfilePbap()
         g_object_unref(mPropertiesProxy);
     if (mObjectPhonebookProxy)
         g_object_unref(mObjectPhonebookProxy);
+
+    mTransferStateMap.clear();
+    clearTransferMap();
+}
+
+bool Bluez5ProfilePbap::isSearchKeyValid( const std::string &searchKey)
+{
+    if (std::find(supportedSearchKey.begin(), supportedSearchKey.end(), searchKey) != supportedSearchKey.end())
+        return true;
+    else
+        return false;
+}
+
+bool Bluez5ProfilePbap::isSearchOrderValid( const std::string &searchOrder)
+{
+    if (std::find(supportedSearchOrder.begin(), supportedSearchOrder.end(), searchOrder) != supportedSearchOrder.end())
+        return true;
+    else
+        return false;
+}
+
+void Bluez5ProfilePbap::clearTransferMap()
+{
+    if(mTransfersMap.size()>0)
+    {
+        auto it = mTransfersMap.begin();
+        while (it != mTransfersMap.end())
+        {
+            if(it->second)
+                delete it->second;
+            it = mTransfersMap.erase(it);
+        }
+    }
+    mTransfersMap.clear();
 }
 
 bool Bluez5ProfilePbap::isObjectValid( const std::string &object)
@@ -247,6 +284,7 @@ void Bluez5ProfilePbap::vCardListing(const std::string &address, BluetoothPbapVC
         callback(BLUETOOTH_ERROR_NOT_ALLOWED, emptyVCardList);
         return;
     }
+
     GVariantBuilder *dataBuilder;
     dataBuilder = g_variant_builder_new (G_VARIANT_TYPE ("as"));
     g_variant_builder_add(dataBuilder, "s", "Offset");
@@ -495,17 +533,142 @@ GVariant * Bluez5ProfilePbap::setFilters(const std::string &vCardVersion, Blueto
     return filters;
 }
 
-void Bluez5ProfilePbap::pullvCard(const std::string &address, const std::string &targetFile, const std::string &vCardHandle, const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters, BluetoothPbapTransferResultCallback callback)
+GVariant * Bluez5ProfilePbap::setSearchFilters(const std::string &searchOrder)
+{
+
+    GVariant *searchOrderValue = g_variant_new_string(searchOrder.c_str());
+    GVariantBuilder *builder = 0;
+    GVariant *filters = 0;
+    std::string order="Order";
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    g_variant_builder_add (builder, "{sv}",order.c_str() , searchOrderValue);
+    filters = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+    return filters;
+}
+
+GVariant * Bluez5ProfilePbap::setPhoneBookFilters(const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters , uint16_t startOffset , uint16_t maxCount)
+{
+    GVariant *vCardVersionValue = g_variant_new_string(vCardVersion.c_str());
+    GVariantBuilder *builderVcardFiltersValue = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+    GVariant *startIndexValue = g_variant_new_uint16(startOffset);
+    GVariant *maxCountValue = g_variant_new_uint16(maxCount);
+    GVariantBuilder *builder = 0;
+    GVariant *filters = 0;
+    std::string format="Format";
+    std::string fields="Fields";
+
+    if(vCardFilters.size())
+    {
+        for(int i = 0; i < vCardFilters.size(); i++)
+        {
+            g_variant_builder_add(builderVcardFiltersValue, "s", vCardFilters[i].c_str());
+        }
+    }
+    else
+    {
+         g_variant_builder_add(builderVcardFiltersValue, "s", "ALL");
+    }
+
+    GVariant *vCardFiltersValue = g_variant_builder_end(builderVcardFiltersValue);
+
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    g_variant_builder_add (builder, "{sv}",format.c_str() , vCardVersionValue);
+    g_variant_builder_add (builder, "{sv}","Offset" , startIndexValue);
+    g_variant_builder_add (builder, "{sv}","MaxCount" , maxCountValue);
+    g_variant_builder_add (builder, "{sv}",fields.c_str() , vCardFiltersValue);
+    filters = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+    return filters;
+}
+
+void Bluez5ProfilePbap::searchPhoneBook (const std::string &address, const std::string &searchOrder, const std::string &searchKey, const std::string &searchValue, BluetoothPbapVCardListResultCallback callback)
+{
+    BluetoothPbapVCardList emptySearchList;
+    if (searchOrder.empty() || searchKey.empty() || searchValue.empty())
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID, emptySearchList);
+        return;
+    }
+
+    if (!isSearchKeyValid(searchKey))
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID, emptySearchList);
+        return;
+    }
+
+    if (!isSearchOrderValid(searchOrder))
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID, emptySearchList);
+        return;
+    }
+
+    const Bluez5ObexSession *session = findSession(address);
+
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED,emptySearchList);
+        return;
+    }
+
+    mObjectPhonebookProxy = session->getObjectPhoneBookProxy();
+
+    if (!mObjectPhonebookProxy)
+    {
+        DEBUG("objectPhonebookProxy failed");
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED,emptySearchList);
+        return;
+    }
+
+    auto searchCallback = [this, callback](GAsyncResult *result) {
+        GError *error = 0;
+        gboolean ret;
+        GVariant *outSearchlisting = 0;
+        BluetoothPbapVCardList searchList;
+
+        ret = bluez_obex_phonebook_access1_call_search_finish(this->mObjectPhonebookProxy, &outSearchlisting, result, &error);
+        if (error)
+        {
+            ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access list error:%s",error->message);
+            if (strstr(error->message, "Call Select first of all"))
+            {
+                callback(BLUETOOTH_ERROR_PBAP_CALL_SELECT_FOLDER_TYPE, searchList);
+            }
+            else
+            {
+                callback(BLUETOOTH_ERROR_FAIL, searchList);
+            }
+            g_error_free(error);
+            return;
+        }
+
+        GVariantIter *iter;
+        gchar *str1, *str2;
+
+        g_variant_get (outSearchlisting, "a(ss)", &iter);
+        while (g_variant_iter_loop (iter, "(ss)", &str1, &str2))
+        {
+            searchList.insert(std::pair<std::string, std::string>(std::string(str1),std::string(str2)));
+        }
+        g_variant_iter_free (iter);
+        callback(BLUETOOTH_ERROR_NONE, searchList);
+    };
+
+    bluez_obex_phonebook_access1_call_search(mObjectPhonebookProxy, searchKey.c_str(), searchValue.c_str(), setSearchFilters(searchOrder), NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(searchCallback));
+    return;
+}
+
+void Bluez5ProfilePbap::pullvCard(const std::string &address, const std::string &targetFile, const std::string &vCardHandle, const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters, BluetoothResultCallback callback)
 {
     if (targetFile.empty() || vCardHandle.empty())
     {
-        callback(BLUETOOTH_ERROR_PARAM_INVALID, 0, false);
+        callback(BLUETOOTH_ERROR_PARAM_INVALID);
         return;
     }
 
     if (!isVCardVersionValid(vCardVersion))
     {
-        callback(BLUETOOTH_ERROR_PARAM_INVALID, 0, false);
+        callback(BLUETOOTH_ERROR_PARAM_INVALID);
         return;
     }
 
@@ -515,7 +678,7 @@ void Bluez5ProfilePbap::pullvCard(const std::string &address, const std::string 
     if (!session)
     {
         DEBUG("phonebook session failed");
-        callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0, false);
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED);
         return;
     }
 
@@ -524,13 +687,11 @@ void Bluez5ProfilePbap::pullvCard(const std::string &address, const std::string 
     if (!mObjectPhonebookProxy)
     {
         DEBUG("objectPhonebookProxy failed");
-        callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0, false);
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED);
         return;
     }
 
-    BluetoothPbapAccessRequestId transferId = nextTransferId();
-
-    auto pullCallback = [this, transferId, callback](GAsyncResult *result) {
+    auto pullCallback = [this, callback](GAsyncResult *result) {
         GError *error = 0;
         gboolean ret;
         gchar *objectPath = 0;
@@ -541,36 +702,107 @@ void Bluez5ProfilePbap::pullvCard(const std::string &address, const std::string 
             ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access list error:%s",error->message);
             if (strstr(error->message, "Call Select first of all"))
             {
-                callback(BLUETOOTH_ERROR_PBAP_CALL_SELECT_FOLDER_TYPE, 0, false);
+                callback(BLUETOOTH_ERROR_PBAP_CALL_SELECT_FOLDER_TYPE);
             }
             else
             {
-                callback(BLUETOOTH_ERROR_FAIL, 0, false);
+                callback(BLUETOOTH_ERROR_FAIL);
             }
             g_error_free(error);
             return;
         }
 
-        startTransfer(transferId, std::string(objectPath), callback, Bluez5ObexTransfer::TransferType::RECEIVING);
+        startTransfer(std::string(objectPath), callback, Bluez5ObexTransfer::TransferType::RECEIVING);
     };
 
     bluez_obex_phonebook_access1_call_pull(mObjectPhonebookProxy, vCardHandle.c_str(),  targetFile.c_str(),setFilters(supportedVcardVersion, vCardFilters),
                                         NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(pullCallback));
-
 }
 
-void Bluez5ProfilePbap::startTransfer(BluetoothPbapAccessRequestId id, const std::string &objectPath, BluetoothPbapTransferResultCallback callback, Bluez5ObexTransfer::TransferType type)
+
+void Bluez5ProfilePbap::pullPhoneBook(const std::string &address,const std::string &destinationFile,const std::string &vCardVersion,BluetoothPbapVCardFilterList &vCardFilters, const uint16_t &startIndex, const uint16_t &maxCount, BluetoothGetPhoneBookResultCallback callback)
+{
+    if (destinationFile.empty())
     {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID, "");
+        return;
+    }
+
+    if (!isVCardVersionValid(vCardVersion))
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID, "");
+        return;
+    }
+
+    const std::string supportedVcardVersion = convertToSupportedVcardVersion(vCardVersion);
+
+    const Bluez5ObexSession *session = findSession(address);
+    if (!session)
+    {
+        DEBUG("phonebook session failed");
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, "");
+        return;
+    }
+
+    mObjectPhonebookProxy = session->getObjectPhoneBookProxy();
+
+    if (!mObjectPhonebookProxy)
+    {
+        DEBUG("objectPhonebookProxy failed");
+        callback(BLUETOOTH_ERROR_NOT_ALLOWED, "");
+        return;
+    }
+
+    auto getPhoneBookCallback = [this,address,callback](GAsyncResult *result) {
+        GError *error = 0;
+        gboolean ret;
+        gchar *objectPath = 0;
+
+        ret = bluez_obex_phonebook_access1_call_pull_all_finish(this->mObjectPhonebookProxy, &objectPath, NULL, result, &error);
+        if (error)
+        {
+            ERROR(MSGID_PBAP_PROFILE_ERROR, 0, "Failed to call phonebook access list error:%s",error->message);
+            if (strstr(error->message, "Call Select first of all"))
+            {
+                callback(BLUETOOTH_ERROR_PBAP_CALL_SELECT_FOLDER_TYPE, "");
+            }
+            else
+            {
+                callback(BLUETOOTH_ERROR_FAIL, "");
+            }
+            g_error_free(error);
+            return;
+        }
+
+        callback(BLUETOOTH_ERROR_NONE, std::string(objectPath));
+        startPhoneBookTransfer(std::string(objectPath),address,Bluez5ObexTransfer::TransferType::RECEIVING);
+    };
+
+    bluez_obex_phonebook_access1_call_pull_all(mObjectPhonebookProxy,destinationFile.c_str(),setPhoneBookFilters(supportedVcardVersion, vCardFilters, startIndex, maxCount),
+                                        NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getPhoneBookCallback));
+}
+
+void Bluez5ProfilePbap::startPhoneBookTransfer(const std::string &objectPath, const std::string &address ,Bluez5ObexTransfer::TransferType type)
+{
     // NOTE: ownership of the transfer object is passed to updateActiveTransfer which
     // will delete it once there is nothing to left to do with it
     Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
-    mTransfersMap.insert(std::pair<BluetoothPbapAccessRequestId, Bluez5ObexTransfer*>(id, transfer));
-    transfer->watch(std::bind(&Bluez5ProfilePbap::updateActiveTransfer, this, id, transfer, callback));
-    }
+    mTransfersMap.insert({std::string(objectPath), transfer});
+    transfer->watch(std::bind(&Bluez5ProfilePbap::monitorTransfer, this, objectPath,address,transfer));
+}
 
-void Bluez5ProfilePbap::removeTransfer(BluetoothPbapAccessRequestId id)
+void Bluez5ProfilePbap::startTransfer(const std::string &objectPath, BluetoothResultCallback callback, Bluez5ObexTransfer::TransferType type)
 {
-    auto transferIter = mTransfersMap.find(id);
+    // NOTE: ownership of the transfer object is passed to updateActiveTransfer which
+    // will delete it once there is nothing to left to do with it
+    Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
+    mTransfersMap.insert({std::string(objectPath), transfer});
+    transfer->watch(std::bind(&Bluez5ProfilePbap::updateActiveTransfer, this, objectPath, transfer, callback));
+}
+
+void Bluez5ProfilePbap::removeTransfer(const std::string &objectPath)
+{
+    auto transferIter = mTransfersMap.find(objectPath);
     if (transferIter == mTransfersMap.end())
         return;
 
@@ -579,27 +811,52 @@ void Bluez5ProfilePbap::removeTransfer(BluetoothPbapAccessRequestId id)
     delete transfer;
 }
 
-void Bluez5ProfilePbap::updateActiveTransfer(BluetoothPbapAccessRequestId id, Bluez5ObexTransfer *transfer, BluetoothPbapTransferResultCallback callback)
+void Bluez5ProfilePbap::monitorTransfer(const std::string &objectPath, const std::string &address, Bluez5ObexTransfer *transfer)
+{
+    std::string state = stateString[transfer->getState()];
+    auto itr = mTransferStateMap.find(std::string(objectPath));
+    if(itr != mTransferStateMap.end())
+    {
+        if(state != itr->second)
+        {
+            if ((Bluez5ObexTransfer::State::COMPLETE == transfer->getState()) && (itr->second == stateString[Bluez5ObexTransfer::State::QUEUED])) 
+                getPbapObserver()->transferStatusChanged(convertAddressToLowerCase(mAdapter->getAddress()), address ,transfer->getFilePath(),std::string(objectPath),stateString[Bluez5ObexTransfer::State::ACTIVE]);
+
+            itr->second = state;
+
+            getPbapObserver()->transferStatusChanged(convertAddressToLowerCase(mAdapter->getAddress()), address ,transfer->getFilePath(),std::string(objectPath),state);
+        }
+    }
+    else
+    {
+        mTransferStateMap.insert({std::string(objectPath),state});
+        getPbapObserver()->transferStatusChanged(convertAddressToLowerCase(mAdapter->getAddress()), address ,transfer->getFilePath(),std::string(objectPath),state);
+    }
+
+    if ((Bluez5ObexTransfer::State::COMPLETE == transfer->getState())||
+         (Bluez5ObexTransfer::State::ERROR == transfer->getState()))
+    {
+        removeTransfer(objectPath);
+        mTransferStateMap.erase(itr);
+    }
+}
+
+void Bluez5ProfilePbap::updateActiveTransfer(const std::string &objectPath, Bluez5ObexTransfer *transfer, BluetoothResultCallback callback)
 {
     bool cleanup = false;
 
-    if (transfer->getState() == Bluez5ObexTransfer::State::ACTIVE)
+    if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE)
     {
-        callback(BLUETOOTH_ERROR_NONE, transfer->getBytesTransferred(), false);
-    }
-    else if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE)
-    {
-        uint64_t temp = transfer->getBytesTransferred();
-        callback(BLUETOOTH_ERROR_NONE, transfer->getBytesTransferred(), true);
+        callback(BLUETOOTH_ERROR_NONE);
         cleanup = true;
     }
     else if (transfer->getState() == Bluez5ObexTransfer::State::ERROR)
     {
         DEBUG("File transfer failed");
-        callback(BLUETOOTH_ERROR_FAIL, transfer->getBytesTransferred(), false);
+        callback(BLUETOOTH_ERROR_FAIL);
         cleanup = true;
     }
 
     if (cleanup)
-        removeTransfer(id);
+        removeTransfer(objectPath);
 }
