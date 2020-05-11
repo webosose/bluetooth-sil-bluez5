@@ -165,6 +165,15 @@ void Bluez5Adapter::updateRemoteFeatures(uint8_t features, const std::string &ro
 	avrcp->updateRemoteFeatures(features, role, address);
 }
 
+void Bluez5Adapter::updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address)
+{
+	Bluez5ProfileAvcrp* avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (!avrcp)
+		return;
+
+	avrcp->updateSupportedNotificationEvents(notificationEvents, address);
+}
+
 bool Bluez5Adapter::isDiscoveryTimeoutRunning()
 {
 	return (mDiscoveryTimeoutSource != 0);

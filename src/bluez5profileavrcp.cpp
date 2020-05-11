@@ -405,7 +405,6 @@ void Bluez5ProfileAvcrp::parsePropertyFromVariant(const std::string& key, GVaria
 			{
 				mMediaPlayStatus.setDuration(g_variant_get_uint32(valueTrack));
 				mediaMetadata.setDuration(mMediaPlayStatus.getDuration());
-				DEBUG("Duration: %d", mMediaPlayStatus.getDuration());
 				if (!mConnectedDeviceAddress.empty())
 				{
 					getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
@@ -627,6 +626,66 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 
 }
 
+void Bluez5ProfileAvcrp::updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address)
+{
+	DEBUG("notificationEvents: %x\n", notificationEvents);
+	BluetoothAvrcpSupportedNotificationEventList eventsList;
+	if (notificationEvents & (1 << EVENT_STATUS_CHANGED))
+	{
+		eventsList.push_back(EVENT_STATUS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_TRACK_CHANGED))
+	{
+		eventsList.push_back(EVENT_TRACK_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_TRACK_REACHED_END))
+	{
+		eventsList.push_back(EVENT_TRACK_REACHED_END);
+	}
+	if (notificationEvents & (1 << EVENT_TRACK_REACHED_START))
+	{
+		eventsList.push_back(EVENT_TRACK_REACHED_START);
+	}
+	if (notificationEvents & (1 << EVENT_PLAYBACK_POS_CHANGED))
+	{
+		eventsList.push_back(EVENT_PLAYBACK_POS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_BATTERY_STATUS_CHANGED))
+	{
+		eventsList.push_back(EVENT_BATTERY_STATUS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_SYSTEM_STATUS_CHANGED))
+	{
+		eventsList.push_back(EVENT_SYSTEM_STATUS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_PLAYER_APPLICATION_SETTING_CHANGED))
+	{
+		eventsList.push_back(EVENT_PLAYER_APPLICATION_SETTING_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_NOW_PLAYING_CHANGED))
+	{
+		eventsList.push_back(EVENT_NOW_PLAYING_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_AVAILABLE_PLAYERS_CHANGED))
+	{
+		eventsList.push_back(EVENT_AVAILABLE_PLAYERS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_ADDRESSED_PLAYERS_CHANGED))
+	{
+		eventsList.push_back(EVENT_ADDRESSED_PLAYERS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_UIDS_CHANGED))
+	{
+		eventsList.push_back(EVENT_UIDS_CHANGED);
+	}
+	if (notificationEvents & (1 << EVENT_VOLUME_CHANGED))
+	{
+		eventsList.push_back(EVENT_VOLUME_CHANGED);
+	}
+	getAvrcpObserver()->supportedNotificationEventsReceived(eventsList, convertAddressToLowerCase(mAdapter->getAddress()),
+		convertAddressToLowerCase(address));
+}
+
 void Bluez5ProfileAvcrp::updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address)
 {
 	Bluez5Device *device = mAdapter->findDevice(address);
@@ -787,7 +846,7 @@ BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(const std::string& add
 		}
 		else
 		{
-			DEBUG("AVRCP: Keycode: %d, Unsupported");
+			DEBUG("AVRCP: Keycode unsupported");
 			return BLUETOOTH_ERROR_UNSUPPORTED;
 		}
 	}

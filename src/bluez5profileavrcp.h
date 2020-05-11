@@ -26,6 +26,7 @@ extern "C" {
 #include "bluez-interface.h"
 }
 
+/* AVRCP features */
 #define REMOTE_DEVICE_AVRCP_FEATURE_NONE			0x00
 #define REMOTE_DEVICE_AVRCP_FEATURE_METADATA		0x01
 #define REMOTE_DEVICE_AVRCP_FEATURE_ABSOLUTE_VOLUME	0x02
@@ -81,6 +82,7 @@ public:
 	void setPlayerApplicationSettingsProperties(const BluetoothPlayerApplicationSettingsPropertiesList &properties,
                 BluetoothResultCallback callback) override;
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
+	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address);
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }

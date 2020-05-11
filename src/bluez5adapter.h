@@ -170,6 +170,7 @@ public:
 	void addMediaManager(std::string objectPath);
 	void removeMediaManager(const std::string &objectPath);
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
+	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address);
 	void notifyA2dpRoleChnange (const std::string &uuid );
 	void notifyAvrcpRoleChange(const std::string &uuid);
 

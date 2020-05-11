@@ -361,6 +361,11 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 	{
 		mAdapter->updateRemoteFeatures(getRemoteTargetFeatures(), "TG", mAddress);
 	}
+	else if (key == "AvrcpCTSupportedEvents")
+	{
+		uint16_t events = g_variant_get_uint16(valueVar);
+		mAdapter->updateSupportedNotificationEvents(events, mAddress);
+	}
 
 	return changed;
 }
