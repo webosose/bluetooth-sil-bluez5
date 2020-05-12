@@ -170,9 +170,6 @@ void Bluez5ProfilePbap::setPhoneBook(const std::string &address, const std::stri
         return;
     }
     callback(BLUETOOTH_ERROR_NONE);
-
-    updateVersion();
-
     };
 
     bluez_obex_phonebook_access1_call_select(mObjectPhonebookProxy, repository.c_str(), object.c_str(), NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(setPhoneBookCallback));
@@ -403,7 +400,11 @@ void Bluez5ProfilePbap::updateProperties(GVariant *changedProperties)
     }
 
     if (changed)
-       notifyUpdatedProperties();
+    {
+        updateVersion();
+        notifyUpdatedProperties();
+    }
+
 }
 
 void Bluez5ProfilePbap::addPropertyFromVariant(const std::string &key, GVariant *valueVar)
