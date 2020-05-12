@@ -55,7 +55,6 @@ private:
     void notifyUpdatedProperties();
     void updateVersion();
     std::string getDeviceAddress() const { return mDeviceAddress; }
-    inline uint64_t nextTransferId() { return ++mTranfserIdCounter; }
     GVariant * setFilters(const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters);
     GVariant * setSearchFilters(const std::string &searchOrder);
     void startTransfer( const std::string &objectPath, BluetoothResultCallback callback, Bluez5ObexTransfer::TransferType type);
@@ -65,7 +64,6 @@ private:
     void monitorTransfer(const std::string &objectPath, const std::string &address, Bluez5ObexTransfer *transfer);
     GVariant * setPhoneBookFilters(const std::string &vCardVersion, BluetoothPbapVCardFilterList &vCardFilters , uint16_t startOffset , uint16_t maxCount);
     void clearTransferMap();
-    uint64_t mTranfserIdCounter;
     std::string mDeviceAddress;
     Bluez5Adapter *mAdapter;
     BluezObexPhonebookAccess1 *mObjectPhonebookProxy;
