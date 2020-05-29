@@ -1,0 +1,4 @@
+Open Source Software Package:
+- name: webOSOSE-bluetooth-sil-bluez5
+  source: https://github.com/webosose/bluetooth-sil-bluez5
+  license: Apache-2.0
