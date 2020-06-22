@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@
 #include "bluez5adapter.h"
 #include "bluez5device.h"
 #include "bluez5agent.h"
-#include "bluez5advertise.h"
 #include "logging.h"
 #include "asyncutils.h"
 #include "dbusutils.h"
@@ -35,10 +34,8 @@ Bluez5SIL::Bluez5SIL(BluetoothPairingIOCapability capability) :
 	mObjectManager(0),
 	mDefaultAdapter(0),
 	mAgentManager(0),
-	mBleAdvManager(0),
 	mProfileManager(0),
 	mAgent(0),
-	mBleAdvertise(0),
 	mCapability(capability),
 	mGattManager(0)
 {
@@ -49,8 +46,12 @@ Bluez5SIL::~Bluez5SIL()
 	if (mAgent)
 		delete mAgent;
 
-	if (mBleAdvertise)
-		delete mBleAdvertise;
+	for (auto iter = mAdapters.begin(); iter != mAdapters.end(); ++iter)
+	{
+		if (*iter)
+		    delete *iter;
+	}
+	mAdapters.clear();
 }
 
 void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *name,
@@ -100,12 +101,6 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 	if (agentManagerObject)
 	{
 		sil->createAgentManager(std::string(g_dbus_object_get_object_path(agentManagerObject)));
-	}
-
-	GDBusObject* advertiseManager = findInterface(objects, "org.bluez.LEAdvertisingManager1");
-	if (advertiseManager)
-	{
-		sil->createBleAdvManager(std::string(g_dbus_object_get_object_path(advertiseManager)));
 	}
 
 	GDBusObject* gattManager = findInterface(objects, "org.bluez.GattManager1");
@@ -290,9 +285,6 @@ void Bluez5SIL::createAdapter(const std::string &objectPath)
 	if (observer)
 		observer->adaptersChanged();
 
-	if (mBleAdvertise)
-		adapter->assignBleAdvertise(mBleAdvertise);
-
 	if (mGattManager)
 		adapter->assignGattManager(mGattManager);
 
@@ -392,47 +384,6 @@ void Bluez5SIL::removeAgentManager(const std::string &objectPath)
 
 	g_object_unref(mAgentManager);
 	mAgentManager = 0;
-}
-
-void Bluez5SIL::createBleAdvManager(const std::string &objectPath)
-{
-	if (mBleAdvManager)
-	{
-		WARNING(MSGID_MULTIPLE_AGENT_MGR, 0, "Tried to create another BleAdvertise manager instance");
-		return;
-	}
-
-	GError *error = 0;
-	mBleAdvManager = bluez_leadvertising_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                                "org.bluez", objectPath.c_str(), NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for agent manager on path %s: %s",
-			  objectPath.c_str(), error->message);
-		g_error_free(error);
-		return;
-	}
-
-	mBleAdvertise = new Bluez5Advertise(mBleAdvManager, this);
-
-	for (auto adapter : mAdapters)
-		adapter->assignBleAdvertise(mBleAdvertise);
-
-}
-
-void Bluez5SIL::removeBleAdvManager(const std::string &objectPath)
-{
-	if (!mBleAdvManager)
-		return;
-
-	g_object_unref(mBleAdvManager);
-	mBleAdvManager = 0;
-
-	for (auto adapter : mAdapters)
-		adapter->assignBleAdvertise(0);
-
-	delete mBleAdvertise;
-	mBleAdvertise = 0;
 }
 
 void Bluez5SIL::createProfileManager(const std::string &objectPath)

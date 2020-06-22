@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,13 +29,12 @@ extern "C" {
 #include "bluez-interface.h"
 }
 
-class Bluez5SIL;
 class string;
 
 class Bluez5Advertise
 {
 public:
-	Bluez5Advertise(BluezLEAdvertisingManager1 *advManager, Bluez5SIL *sil);
+	Bluez5Advertise(BluezLEAdvertisingManager1 *advManager);
 	~Bluez5Advertise();
 
 	Bluez5Advertise(const Bluez5Advertise&) = delete;
@@ -91,7 +90,6 @@ private:
 	guint mBusId;
 	bool mTxPower;
 	BluezLEAdvertisingManager1 *mAdvManager;
-	Bluez5SIL *mSIL;
 	GDBusConnection *mConn;
 	std::unordered_map <uint8_t, std::unique_ptr <AdvertiseObject> > mAdvertiserMap;
 };

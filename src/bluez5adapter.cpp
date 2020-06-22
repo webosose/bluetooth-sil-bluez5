@@ -95,6 +95,24 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 
 	mObexClient = new Bluez5ObexClient(this);
 	mObexAgent = new Bluez5ObexAgent(this);
+
+	BluezLEAdvertisingManager1 *bleAdvManager =
+		bluez_leadvertising_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
+		G_DBUS_PROXY_FLAGS_NONE, "org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0,
+			"Failed to create dbus proxy for agent manager on path %s: %s",
+			objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+	mAdvertise = new (std::nothrow) Bluez5Advertise(bleAdvManager);
+	if (!mAdvertise)
+	{
+		DEBUG("ERROR in creating memory %s", objectPath.c_str());
+		g_object_unref(bleAdvManager);
+	}
 }
 
 Bluez5Adapter::~Bluez5Adapter()
@@ -126,6 +144,9 @@ Bluez5Adapter::~Bluez5Adapter()
 
 	if (mObexAgent)
 		delete mObexAgent;
+
+	if (mAdvertise)
+		delete mAdvertise;
 }
 
 void Bluez5Adapter::addMediaManager(std::string objectPath)
