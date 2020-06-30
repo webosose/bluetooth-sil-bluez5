@@ -54,7 +54,6 @@ void Bluez5ProfileSpp::initialiseChannelIds()
 int Bluez5ProfileSpp::registerProfile(spDeviceInfo &deviceInfo, std::string objPath, BluezProfileManager1 *proxy)
 {
 	GVariant *profileVariant;
-	GVariant *mChannelId;
 	GVariantBuilder profileBuilder;
 	GError *error = nullptr;
 
@@ -73,9 +72,7 @@ int Bluez5ProfileSpp::registerProfile(spDeviceInfo &deviceInfo, std::string objP
 
 	g_variant_builder_open(&profileBuilder, G_VARIANT_TYPE("{sv}"));
 	g_variant_builder_add (&profileBuilder, "s", "Channel");
-	mChannelId = g_variant_new_uint16(deviceInfo->mChannelId);
-	g_variant_builder_add (&profileBuilder, "v", mChannelId);
-	g_variant_unref(mChannelId);
+	g_variant_builder_add (&profileBuilder, "v", g_variant_new_uint16(deviceInfo->mChannelId));
 	g_variant_builder_close(&profileBuilder);
 
 	g_variant_builder_open(&profileBuilder, G_VARIANT_TYPE("{sv}"));

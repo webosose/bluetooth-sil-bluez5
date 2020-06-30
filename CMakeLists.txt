@@ -58,6 +58,12 @@ set(CMAKE_SHARED_MODULE_PREFIX "")
 
 webos_add_linker_options(ALL --no-undefined)
 
+if(WEBOS_TARGET_DISTRO STREQUAL "webos-auto")
+        if(WEBOS_TARGET_MACHINE STREQUAL "sa8155" OR WEBOS_TARGET_MACHINE STREQUAL "qemux86" OR WEBOS_TARGET_MACHINE STREQUAL "qemux86-64")
+                add_definitions(-DWEBOS_AUTO)
+        endif()
+endif()
+
 set(GDBUS_IF_DIR ${WEBOS_BINARY_CONFIGURED_DIR}/src)
 file(MAKE_DIRECTORY ${GDBUS_IF_DIR})
 

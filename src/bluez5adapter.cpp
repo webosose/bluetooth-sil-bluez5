@@ -258,7 +258,7 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 	{
 		mAlias = g_variant_get_string(valueVar, NULL);
 		DEBUG ("%s: Got alias property as %s", __func__, mAlias.c_str());
-
+#ifdef WEBOS_AUTO
 		std::size_t found = mObjectPath.find("hci");
 
 		if (found != std::string::npos)
@@ -267,6 +267,7 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 			BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
 			setAdapterPropertySync(alias);
 		}
+#endif
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mAlias));
 		changed = true;
 	}
