@@ -124,6 +124,8 @@ file(GLOB SOURCES
      src/bluez5mprisplayer.cpp
      src/bluez5profilehfp.cpp
      src/bluez5profilemap.cpp
+     src/bluez5mediaplayer.cpp
+     src/bluez5mediafolder.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})

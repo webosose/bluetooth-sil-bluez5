@@ -470,4 +470,30 @@
     <property name="Protected" type="b" access="read"></property>
     <property name="Deleted" type="b" access="write"></property>
     </interface>
+   <interface name="org.bluez.MediaFolder1">
+      <method name="Search">
+         <arg name="string" type="s" direction="in"/>
+         <arg name="filter" type="a{sv}" direction="in"/>
+         <arg name="folder" type="o" direction="out"/>
+      </method>
+      <method name="ListItems">
+         <arg name="filter" type="a{sv}" direction="in"/>
+         <arg name="items" type="a{oa{sv}}" direction="out"/>
+      </method>
+      <method name="ChangeFolder">
+         <arg name="folder" type="o" direction="in"/>
+      </method>
+      <property name="Name" type="s" access="read"></property>
+      <property name="NumberOfItems" type="u" access="read"></property>
+   </interface>
+   <interface name="org.bluez.MediaItem1">
+      <method name="Play"></method>
+      <method name="AddtoNowPlaying"></method>
+      <property name="Player" type="o" access="read"></property>
+      <property name="Name" type="s" access="read"></property>
+      <property name="Type" type="s" access="read"></property>
+      <property name="FolderType" type="s" access="read"></property>
+      <property name="Playable" type="b" access="read"></property>
+      <property name="Metadata" type="a{sv}" access="read"></property>
+   </interface>
 </node>

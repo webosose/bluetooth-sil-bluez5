@@ -33,19 +33,13 @@ extern "C" {
 #define REMOTE_DEVICE_AVRCP_FEATURE_BROWSE		0x04
 
 class Bluez5Adapter;
-
-typedef gboolean (* bluezSendPassThroughCommand)(
-		BluezMediaPlayer1 *proxy,
-		GCancellable *cancellable,
-		GError **error);
+class Bluez5MediaPlayer;
 
 class Bluez5ProfileAvcrp : public Bluez5ProfileBase,
                       public BluetoothAvrcpProfile
 {
 public:
 	static const std::map <std::string, BluetoothAvrcpPassThroughKeyCode> mKeyMap;
-	static const std::map<BluetoothAvrcpPassThroughKeyCode, bluezSendPassThroughCommand> mPassThroughCmd;
-	static const std::map<std::string, BluetoothMediaPlayStatus::MediaPlayStatus> mPlayStatus;
 	Bluez5ProfileAvcrp(Bluez5Adapter* adapter);
 	~Bluez5ProfileAvcrp();
 	void connect(const std::string& address, BluetoothResultCallback callback) override;
@@ -53,17 +47,10 @@ public:
 	static void handleBluezServiceStopped(GDBusConnection* conn, const gchar* name, gpointer user_data);
 	static void handleObjectAdded(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
 	static void handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
-	static void handlePropertiesChanged(BluezMediaPlayer1* transportInterface, gchar*,
-		GVariant* changedProperties, GVariant* invalidatedProperties, gpointer userData);
-	BluetoothPlayerApplicationSettingsRepeat repeatStringToEnum(std::string repeatVal);
-	BluetoothPlayerApplicationSettingsShuffle shuffleStringToEnum(std::string shuffleVal);
-	BluetoothPlayerApplicationSettingsScan scanStringToEnum(std::string scanVal);
-	BluetoothPlayerApplicationSettingsEqualizer equalizerStringToEnum(std::string equalizerVal);
-	std::string equalizerEnumToString(BluetoothPlayerApplicationSettingsEqualizer equalizer);
-	std::string repeatEnumToString(BluetoothPlayerApplicationSettingsRepeat repeat);
-	std::string shuffleEnumToString(BluetoothPlayerApplicationSettingsShuffle shuffle);
-	std::string scanEnumToString(BluetoothPlayerApplicationSettingsScan scan);
-	void parsePropertyFromVariant(const std::string& key, GVariant* valueVar);
+	static void handlePropertiesChangedControl(
+		BluezMediaControl1 *controlInterface, gchar *interface,
+		GVariant *changedProperties, GVariant *invalidatedProperties,
+		gpointer userData);
 	void disconnect(const std::string& address, BluetoothResultCallback callback) override;
 	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
 	void disable(const std::string &uuid, BluetoothResultCallback callback) override;
@@ -82,7 +69,17 @@ public:
 	void setPlayerApplicationSettingsProperties(const BluetoothPlayerApplicationSettingsPropertiesList &properties,
                 BluetoothResultCallback callback) override;
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
-	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address);
+	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string &address);
+	void addressedPlayerChanged(const std::string &playerPath);
+	const std::string getDeviceObjPath();
+	void addMediaPlayer(GDBusObject *object);
+	void removeMediaPlayer(const std::string &playerPath);
+	std::string getConnectedDeviceAddress() { return mConnectedDeviceAddress ; }
+	std::string getAdapterAddress();
+	BluetoothAvrcpStatusObserver* getAvrcpObserver() { return BluetoothAvrcpProfile::getAvrcpObserver(); }
+	void mediaControlInterfacePresent(const std::string &deviceObjPath);
+	void updatePlayerInfo();
+
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }
@@ -98,10 +95,11 @@ private:
 	/* TRUE if either of the roles is connected. FALSE if both the roles are disconnected*/
 	bool mConnected;
 	std::string mConnectedDeviceAddress;
+	std::string mAddressedPlayerPath;
 	GDBusObjectManager *mObjectManager;
-	BluezMediaPlayer1 *mPlayerInterface;
-	FreeDesktopDBusProperties* mPropertiesProxy;
-	BluetoothMediaPlayStatus mMediaPlayStatus;
+	std::list<Bluez5MediaPlayer *> mMediaPlayerList;
+	Bluez5MediaPlayer *mAddressedMediaPlayer;
+	FreeDesktopDBusProperties* mPropertiesProxyControl;
 };
 
 #endif

@@ -21,6 +21,7 @@
 #include "bluez5mediacontrol.h"
 #include "bluez5mprisplayer.h"
 #include "bluez5profilea2dp.h"
+#include "bluez5mediaplayer.h"
 #include <string>
 
 
@@ -40,24 +41,6 @@ const std::map <std::string, BluetoothAvrcpPassThroughKeyCode> Bluez5ProfileAvcr
 	{ "REWIND",		KEY_CODE_REWIND},
 	{ "FAST FORWARD",KEY_CODE_FAST_FORWARD}
 };
-const std::map<BluetoothAvrcpPassThroughKeyCode, bluezSendPassThroughCommand> Bluez5ProfileAvcrp::mPassThroughCmd = {
-	{KEY_CODE_PLAY, &bluez_media_player1_call_play_sync},
-	{KEY_CODE_STOP, &bluez_media_player1_call_stop_sync},
-	{KEY_CODE_PAUSE, &bluez_media_player1_call_pause_sync},
-	{KEY_CODE_NEXT, &bluez_media_player1_call_next_sync},
-	{KEY_CODE_PREVIOUS, &bluez_media_player1_call_previous_sync},
-	{KEY_CODE_REWIND, &bluez_media_player1_call_rewind_sync},
-	{KEY_CODE_FAST_FORWARD, &bluez_media_player1_call_fast_forward_sync}
-};
-
-const std::map<std::string, BluetoothMediaPlayStatus::MediaPlayStatus> Bluez5ProfileAvcrp::mPlayStatus = {
-	{"stopped", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_STOPPED},
-	{"playing", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_PLAYING},
-	{"paused", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_PAUSED},
-	{"forward-seek", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_FWD_SEEK},
-	{"reverse-seek", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_REV_SEEK},
-	{"error", BluetoothMediaPlayStatus::MediaPlayStatus::MEDIA_PLAYSTATUS_ERROR}
-};
 
 Bluez5ProfileAvcrp::Bluez5ProfileAvcrp(Bluez5Adapter* adapter):
 Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID),
@@ -68,8 +51,7 @@ mConnectedDeviceAddress(""),
 mConnectedController(false),
 mConnectedTarget(false),
 mObjectManager(nullptr),
-mPlayerInterface(nullptr),
-mPropertiesProxy(nullptr)
+mAddressedMediaPlayer(nullptr)
 {
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
 		handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);
@@ -82,15 +64,10 @@ Bluez5ProfileAvcrp::~Bluez5ProfileAvcrp()
 		g_object_unref(mObjectManager);
 		mObjectManager = nullptr;
 	}
-	if (mPlayerInterface)
+	if (mPropertiesProxyControl)
 	{
-		g_object_unref(mPlayerInterface);
-		mPlayerInterface = nullptr;
-	}
-	if (mPropertiesProxy)
-	{
-		g_object_unref(mPropertiesProxy);
-		mPropertiesProxy = nullptr;
+		g_object_unref(mPropertiesProxyControl);
+		mPropertiesProxyControl = nullptr;
 	}
 }
 
@@ -139,36 +116,24 @@ void Bluez5ProfileAvcrp::handleBluezServiceStarted(GDBusConnection* conn, const 
 	{
 		auto object = static_cast<GDBusObject*>(g_list_nth(objects, n)->data);
 		std::string objectPath = g_dbus_object_get_object_path(object);
+		auto adapterPath = avrcp->mAdapter->getObjectPath();
+		if (objectPath.compare(0, adapterPath.length(), adapterPath))
+			continue;
 
 		auto mediaPlayerInterface = g_dbus_object_get_interface(object, "org.bluez.MediaPlayer1");
 		if (mediaPlayerInterface)
 		{
 			DEBUG("MediaPlayer interface");
-			auto adapterPath = avrcp->mAdapter->getObjectPath();
-			if (objectPath.compare(0, adapterPath.length(), adapterPath))
-				return;
-
-			avrcp->mPlayerInterface = bluez_media_player1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-					"org.bluez", objectPath.c_str(), NULL, &error);
-			if (error)
-			{
-				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "Not able to get player interface");
-				g_error_free(error);
-				return;
-			}
-
-			avrcp->mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
-					G_DBUS_PROXY_FLAGS_NONE, "org.bluez", objectPath.c_str(), NULL, &error);
-			if (error)
-			{
-				ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "Not able to get property interface");
-				g_error_free(error);
-				return;
-			}
-
-			g_signal_connect(G_OBJECT(avrcp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), avrcp);
-
+			avrcp->addMediaPlayer(object);
 			g_object_unref(mediaPlayerInterface);
+		}
+		/* Handling already connected devices */
+		auto mediaControlInterface = g_dbus_object_get_interface(object, "org.bluez.MediaControl1");
+		if (mediaControlInterface)
+		{
+			DEBUG("mediaControlInterface present");
+			avrcp->mediaControlInterfacePresent(objectPath);
+			g_object_unref(mediaControlInterface);
 		}
 		g_object_unref(object);
 	}
@@ -195,314 +160,31 @@ void Bluez5ProfileAvcrp::handleObjectAdded(GDBusObjectManager* objectManager, GD
 	if (mediaPlayerInterface)
 	{
 		DEBUG("Added: %s", objectPath.c_str());
-		/* Unref the existing player reference before getting reference to newly added player object */
-		if (avrcp->mPlayerInterface)
-		{
-			g_object_unref(avrcp->mPlayerInterface);
-			avrcp->mPlayerInterface = nullptr;
-		}
-		if (avrcp->mPropertiesProxy)
-		{
-			g_object_unref(avrcp->mPropertiesProxy);
-			avrcp->mPropertiesProxy = nullptr;
-		}
-
-		GError* error = 0;
-		avrcp->mPlayerInterface = bluez_media_player1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-			"org.bluez", objectPath.c_str(), NULL, &error);
-		if (error)
-		{
-			DEBUG("Not able to get media player interface");
-			g_error_free(error);
-			return;
-		}
-
-		avrcp->mPropertiesProxy = free_desktop_dbus_properties_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-			"org.bluez", objectPath.c_str(), NULL, &error);
-		if (error)
-		{
-			DEBUG("Not able to get property interface");
-			g_error_free(error);
-			return;
-		}
-
-		g_signal_connect(G_OBJECT(avrcp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), avrcp);
+		avrcp->addMediaPlayer(object);
 		g_object_unref(mediaPlayerInterface);
 	}
 }
 
 void Bluez5ProfileAvcrp::handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData)
 {
+	Bluez5ProfileAvcrp* avrcp = static_cast<Bluez5ProfileAvcrp*>(userData);
 	/* We are not unrefing the mPropertiesProxy and mPlayerInterface here.
 	 * When new player gets added, object-added event is received first and
 	 * then object-removed for the old one. Hence to avoid unrefing the reference
 	 * to newly added player, unref the existing player reference whenever new player
 	 * is added and get the reference to new player in handleObjectAdded function
 	 */
-}
-
-void Bluez5ProfileAvcrp::handlePropertiesChanged(BluezMediaPlayer1* transportInterface, gchar* interface, GVariant* changedProperties,
-	GVariant* invalidatedProperties, gpointer userData)
-{
-	DEBUG("MediaPlayer1 properties changed");
-	auto avrcp = static_cast<Bluez5ProfileAvcrp *>(userData);
-
-	for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+	std::string objectPath = g_dbus_object_get_object_path(object);
+	auto adapterPath = avrcp->mAdapter->getObjectPath();
+	if (objectPath.compare(0, adapterPath.length(), adapterPath))
+		return;
+	auto mediaPlayerInterface = g_dbus_object_get_interface(object, "org.bluez.MediaPlayer1");
+	if (mediaPlayerInterface)
 	{
-		GVariant* propertyVar = g_variant_get_child_value(changedProperties, n);
-		GVariant* keyVar = g_variant_get_child_value(propertyVar, 0);
-		GVariant* valueVar = g_variant_get_child_value(propertyVar, 1);
-
-		std::string key = g_variant_get_string(keyVar, NULL);
-
-		avrcp->parsePropertyFromVariant(key, g_variant_get_variant(valueVar));
-
-		g_variant_unref(valueVar);
-		g_variant_unref(keyVar);
-		g_variant_unref(propertyVar);
+		avrcp->removeMediaPlayer(objectPath);
+		g_object_unref(mediaPlayerInterface);
 	}
 }
-
-std::string Bluez5ProfileAvcrp::equalizerEnumToString(BluetoothPlayerApplicationSettingsEqualizer equalizer)
-{
-	if (BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_OFF == equalizer)
-		return "off";
-	else if (BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_ON == equalizer)
-		return "on";
-	else
-		return "unknown";
-}
-
-std::string Bluez5ProfileAvcrp::repeatEnumToString(BluetoothPlayerApplicationSettingsRepeat repeat)
-{
-	if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_OFF == repeat)
-		return "off";
-	else if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_SINGLE_TRACK == repeat)
-		return "singletrack";
-	else if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_ALL_TRACKS == repeat)
-		return "alltracks";
-	else if (BluetoothPlayerApplicationSettingsRepeat::REPEAT_GROUP == repeat)
-		return "group";
-	else
-		return "unknown";
-}
-
-std::string Bluez5ProfileAvcrp::shuffleEnumToString(BluetoothPlayerApplicationSettingsShuffle shuffle)
-{
-	if (BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_OFF == shuffle)
-		return "off";
-	else if (BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_ALL_TRACKS == shuffle)
-		return "alltracks";
-	else if (BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_GROUP == shuffle)
-		return "group";
-	else
-		return "unknown";
-}
-
-std::string Bluez5ProfileAvcrp::scanEnumToString(BluetoothPlayerApplicationSettingsScan scan)
-{
-	if (BluetoothPlayerApplicationSettingsScan::SCAN_OFF == scan)
-		return "off";
-	else if (BluetoothPlayerApplicationSettingsScan::SCAN_ALL_TRACKS == scan)
-		return "alltracks";
-	else if (BluetoothPlayerApplicationSettingsScan::SCAN_GROUP == scan)
-		return "group";
-	else
-		return "unknown";
-}
-
-BluetoothPlayerApplicationSettingsRepeat Bluez5ProfileAvcrp::repeatStringToEnum(std::string repeat)
-{
-	if ("off" == repeat)
-		return BluetoothPlayerApplicationSettingsRepeat::REPEAT_OFF;
-	else if ("singletrack" == repeat)
-		return BluetoothPlayerApplicationSettingsRepeat::REPEAT_SINGLE_TRACK;
-	else if ("alltracks" == repeat)
-		return BluetoothPlayerApplicationSettingsRepeat::REPEAT_ALL_TRACKS;
-	else if ("group" == repeat)
-		return BluetoothPlayerApplicationSettingsRepeat::REPEAT_GROUP;
-	else
-		return BluetoothPlayerApplicationSettingsRepeat::REPEAT_UNKNOWN;
-}
-
-BluetoothPlayerApplicationSettingsShuffle Bluez5ProfileAvcrp::shuffleStringToEnum(std::string shuffle)
-{
-	if ("off" == shuffle)
-		return BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_OFF;
-	else if ("alltracks" == shuffle)
-		return BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_ALL_TRACKS;
-	else if ("group" == shuffle)
-		return BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_GROUP;
-	else
-		return BluetoothPlayerApplicationSettingsShuffle::SHUFFLE_UNKNOWN;
-}
-
-BluetoothPlayerApplicationSettingsScan Bluez5ProfileAvcrp::scanStringToEnum(std::string scan)
-{
-	if ("off" == scan)
-		return BluetoothPlayerApplicationSettingsScan::SCAN_OFF;
-	else if ("alltracks" == scan)
-		return BluetoothPlayerApplicationSettingsScan::SCAN_ALL_TRACKS;
-	else if ("group" == scan)
-		return BluetoothPlayerApplicationSettingsScan::SCAN_GROUP;
-	else
-		return BluetoothPlayerApplicationSettingsScan::SCAN_UNKNOWN;
-}
-
-BluetoothPlayerApplicationSettingsEqualizer Bluez5ProfileAvcrp::equalizerStringToEnum(std::string equalizer)
-{
-	if ("off" == equalizer)
-		return BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_OFF;
-	else if ("on" == equalizer)
-		return BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_ON;
-	else
-		return BluetoothPlayerApplicationSettingsEqualizer::EQUALIZER_UNKNOWN;
-}
-
-void Bluez5ProfileAvcrp::parsePropertyFromVariant(const std::string& key, GVariant* valueVar)
-{
-	BluetoothPlayerApplicationSettingsPropertiesList applicationSettings;
-	if ("Position" == key)
-	{
-		mMediaPlayStatus.setPosition(g_variant_get_uint32(valueVar));
-		DEBUG("Position: %ld", mMediaPlayStatus.getPosition());
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-
-	}
-	else if ("Status" == key)
-	{
-		auto playStatusIt = mPlayStatus.find(g_variant_get_string(valueVar, NULL));
-		if (playStatusIt != mPlayStatus.end())
-		{
-			mMediaPlayStatus.setStatus(playStatusIt->second);
-		}
-		DEBUG("Play status: %d", mMediaPlayStatus.getStatus());
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-	}
-	else if ("Track" == key)
-	{
-		GVariantIter* iter;
-		g_variant_get(valueVar, "a{sv}", &iter);
-		GVariant* valueTrack;
-		gchar* keyVar;
-		BluetoothMediaMetaData mediaMetadata;
-
-		while (g_variant_iter_loop(iter, "{sv}", &keyVar, &valueTrack))
-		{
-			std::string keyTrack(keyVar);
-			DEBUG("Key: %s", keyTrack.c_str());
-			if ("Duration" == keyTrack)
-			{
-				mMediaPlayStatus.setDuration(g_variant_get_uint32(valueTrack));
-				mediaMetadata.setDuration(mMediaPlayStatus.getDuration());
-				if (!mConnectedDeviceAddress.empty())
-				{
-					getAvrcpObserver()->mediaPlayStatusReceived(mMediaPlayStatus,
-							convertAddressToLowerCase(mAdapter->getAddress()),
-							convertAddressToLowerCase(mConnectedDeviceAddress));
-				}
-			}
-			else if ("Title" == keyTrack)
-			{
-				mediaMetadata.setTitle(g_variant_get_string(valueTrack, NULL));
-			}
-			else if ("Album" == keyTrack)
-			{
-				mediaMetadata.setAlbum(g_variant_get_string(valueTrack, NULL));
-			}
-			else if ("Artist" == keyTrack)
-			{
-				mediaMetadata.setArtist(g_variant_get_string(valueTrack, NULL));
-			}
-			else if ("Genre" == keyTrack)
-			{
-				mediaMetadata.setGenre(g_variant_get_string(valueTrack, NULL));
-			}
-			else if ("NumberOfTracks" == keyTrack)
-			{
-				mediaMetadata.setTrackCount(g_variant_get_uint32(valueTrack));
-			}
-			else if ("TrackNumber" == keyTrack)
-			{
-				mediaMetadata.setTrackNumber(g_variant_get_uint32(valueTrack));
-			}
-		}
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->mediaDataReceived(mediaMetadata,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-	}
-	else if ("Equalizer" == key)
-	{
-		BluetoothPlayerApplicationSettingsEqualizer equalizer =
-			equalizerStringToEnum(g_variant_get_string(valueVar, NULL));
-		applicationSettings.push_back(BluetoothPlayerApplicationSettingsProperty(
-			BluetoothPlayerApplicationSettingsProperty::Type::EQUALIZER, equalizer));
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->playerApplicationSettingsReceived(applicationSettings,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-	}
-	else if ("Repeat" == key)
-	{
-		BluetoothPlayerApplicationSettingsRepeat repeat =
-			repeatStringToEnum(g_variant_get_string(valueVar, NULL));
-		applicationSettings.push_back(BluetoothPlayerApplicationSettingsProperty(
-			BluetoothPlayerApplicationSettingsProperty::Type::REPEAT, repeat));
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->playerApplicationSettingsReceived(applicationSettings,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-
-	}
-	else if ("Shuffle" == key)
-	{
-		BluetoothPlayerApplicationSettingsShuffle shuffle =
-			shuffleStringToEnum(g_variant_get_string(valueVar, NULL));
-		applicationSettings.push_back(BluetoothPlayerApplicationSettingsProperty(
-			BluetoothPlayerApplicationSettingsProperty::Type::SHUFFLE, shuffle));
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->playerApplicationSettingsReceived(applicationSettings,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-	}
-	else if ("Scan" == key)
-	{
-		BluetoothPlayerApplicationSettingsScan scan =
-			scanStringToEnum(g_variant_get_string(valueVar, NULL));
-		applicationSettings.push_back(BluetoothPlayerApplicationSettingsProperty(
-			BluetoothPlayerApplicationSettingsProperty::Type::SCAN, scan));
-		if (!mConnectedDeviceAddress.empty())
-		{
-			getAvrcpObserver()->playerApplicationSettingsReceived(applicationSettings,
-					convertAddressToLowerCase(mAdapter->getAddress()),
-					convertAddressToLowerCase(mConnectedDeviceAddress));
-		}
-	}
-	else
-	{
-		DEBUG("Key: %s", key.c_str());
-	}
-}
-
 
 void Bluez5ProfileAvcrp::disconnect(const std::string& address, BluetoothResultCallback callback)
 {
@@ -606,6 +288,45 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 			getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()),
 					convertAddressToLowerCase(address), properties);
 			mConnectedDeviceAddress = address;
+
+
+			/* Handle media control interface for the device. The bluetooth
+			 * service restart case - when the device object is not created
+			 * yet is handled in handleBluezServiceStarted function
+			 */
+			if (mConnectedController)
+			{
+				if (!mPropertiesProxyControl)
+				{
+					GError *error = 0;
+					DEBUG("MediaControl1 interface is not handled yet: %s", mConnectedDeviceAddress.c_str());
+					std::string deviceObjPath = getDeviceObjPath();
+					if (!deviceObjPath.empty())
+					{
+						BluezMediaControl1 *mediaControl1 = bluez_media_control1_proxy_new_for_bus_sync(
+							G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+							"org.bluez", deviceObjPath.c_str(), NULL, &error);
+
+						if (error)
+						{
+							ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Failed to get control interface");
+							g_error_free(error);
+						}
+						else
+						{
+							mediaControlInterfacePresent(deviceObjPath);
+						}
+					}
+					else
+					{
+						/* This is ok. This casse will arise when bluetooth
+						 * service is restarted, handled in
+						 * handleBluezServiceStarted function.
+						 */
+						WARNING("MSGID_AVRCP_PROFILE_ERROR", 0, "Failed to get device object");
+					}
+				}
+			}
 		}
 	}
 	else
@@ -613,6 +334,13 @@ void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool
 		if (mConnected && !mConnectedController && !mConnectedTarget)
 		{
 			mConnectedDeviceAddress = "";
+			mAddressedPlayerPath = "";
+			if (mPropertiesProxyControl)
+			{
+				DEBUG("Unrefing proxy control");
+				g_object_unref(mPropertiesProxyControl);
+				mPropertiesProxyControl = nullptr;
+			}
 
 			DEBUG("AVRCP: Notifying upper layer avrcp disconnected");
 			/* Inform upper layer if previous status is connected and current status is
@@ -789,57 +517,34 @@ BluetoothError Bluez5ProfileAvcrp::setAbsoluteVolume(const std::string &address,
 	return BLUETOOTH_ERROR_NONE;
 }
 
-void Bluez5ProfileAvcrp::setPlayerApplicationSettingsProperties(const BluetoothPlayerApplicationSettingsPropertiesList &properties,
-		BluetoothResultCallback callback)
+void Bluez5ProfileAvcrp::setPlayerApplicationSettingsProperties(
+	const BluetoothPlayerApplicationSettingsPropertiesList &properties,
+	BluetoothResultCallback callback)
 {
-	GError *error = 0;
-	std::string property;
-	std::string value;
-	for (auto prop : properties)
+	if (mConnectedController)
 	{
-		switch (prop.getType())
+		if (mAddressedMediaPlayer)
 		{
-			case BluetoothPlayerApplicationSettingsProperty::Type::EQUALIZER:
-				{
-					property = "Equalizer";
-					value = equalizerEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsEqualizer>());
-					break;
-				}
-			case BluetoothPlayerApplicationSettingsProperty::Type::REPEAT:
-				{
-					property = "Repeat";
-					value = repeatEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsRepeat>());
-					break;
-				}
-			case BluetoothPlayerApplicationSettingsProperty::Type::SHUFFLE:
-				{
-					property = "Shuffle";
-					value = shuffleEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsShuffle>());
-					break;
-				}
-			case BluetoothPlayerApplicationSettingsProperty::Type::SCAN:
-				{
-					property = "Scan";
-					value = scanEnumToString(prop.getValue<BluetoothPlayerApplicationSettingsScan>());
-					break;
-				}
+			BluetoothError btError =
+				mAddressedMediaPlayer->setPlayerApplicationSettingsProperties(properties);
+			callback(btError);
 		}
-		GVariant *var = g_variant_new_string(value.c_str());
-		free_desktop_dbus_properties_call_set_sync(mPropertiesProxy,
-				"org.bluez.MediaPlayer1", property.c_str(),
-				g_variant_new_variant(var), NULL, &error);
-		if (error)
+		else
 		{
-			DEBUG ("%s: error is %s for prop: %s, value: %s",
-					__func__, error->message, property.c_str(), value.c_str());
-			g_error_free(error);
-			callback(BLUETOOTH_ERROR_FAIL);
+			ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Addressed player is not there");
+			callback(BLUETOOTH_ERROR_NOT_ALLOWED);
 		}
 	}
-	callback(BLUETOOTH_ERROR_NONE);
+	else
+	{
+		DEBUG("AVRCP: Not connected as controller");
+		callback(BLUETOOTH_ERROR_NOT_ALLOWED);
+	}
 }
 
-BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(const std::string& address, BluetoothAvrcpPassThroughKeyCode keyCode,
+BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(
+	const std::string &address,
+	BluetoothAvrcpPassThroughKeyCode keyCode,
 	BluetoothAvrcpPassThroughKeyStatus keyStatus)
 {
 	DEBUG("AVRCP: sendPassThroughCommand");
@@ -849,24 +554,16 @@ BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(const std::string& add
 		DEBUG("AVRCP: device not found.");
 		return BLUETOOTH_ERROR_UNKNOWN_DEVICE_ADDR;
 	}
-	GError* error = 0;
 	/* process the command if avrcp is connected in CT role.  */
 	if (mConnectedController)
 	{
-		auto passThroughCmdIt = mPassThroughCmd.find(keyCode);
-		if (passThroughCmdIt != mPassThroughCmd.end())
+		if (mAddressedMediaPlayer)
 		{
-			passThroughCmdIt->second(mPlayerInterface, NULL, &error);
-			if (error)
-			{
-				g_error_free(error);
-				return BLUETOOTH_ERROR_FAIL;
-			}
+			return mAddressedMediaPlayer->sendPassThroughCommand(keyCode, keyStatus);
 		}
 		else
 		{
-			DEBUG("AVRCP: Keycode unsupported");
-			return BLUETOOTH_ERROR_UNSUPPORTED;
+			ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Addressed player is not there");
 		}
 	}
 	else
@@ -876,4 +573,173 @@ BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(const std::string& add
 	}
 	return BLUETOOTH_ERROR_NONE;
 
+}
+
+const std::string Bluez5ProfileAvcrp::getDeviceObjPath()
+{
+	Bluez5Device *device = mAdapter->findDevice(mConnectedDeviceAddress);
+	std::string deviceObjPath = "";
+	if (device)
+	{
+		deviceObjPath = device->getObjectPath();
+	}
+	else
+	{
+		DEBUG("device does not exist");
+	}
+	return deviceObjPath;
+}
+
+void Bluez5ProfileAvcrp::addMediaPlayer(GDBusObject *object)
+{
+	Bluez5MediaPlayer *mediaPlayer = new Bluez5MediaPlayer(this, object);
+	mMediaPlayerList.push_back(mediaPlayer);
+	mediaPlayer->getAllProperties();
+}
+
+void Bluez5ProfileAvcrp::removeMediaPlayer(const std::string &playerPath)
+{
+	for (auto player = mMediaPlayerList.begin();
+		 player != mMediaPlayerList.end(); ++player)
+	{
+		if ((*player)->getPlayerObjPath() == playerPath)
+		{
+			if ((*player)->getAddressed())
+			{
+				mAddressedMediaPlayer = nullptr;
+			}
+			auto playerToRemove = *player;
+			mMediaPlayerList.erase(player);
+			delete playerToRemove;
+			break;
+		}
+	}
+	updatePlayerInfo();
+}
+
+std::string Bluez5ProfileAvcrp::getAdapterAddress()
+{
+	 return mAdapter->getAddress();
+}
+
+void Bluez5ProfileAvcrp::handlePropertiesChangedControl(
+	BluezMediaControl1 *controlInterface, gchar *interface,
+	GVariant *changedProperties, GVariant *invalidatedProperties,
+	gpointer userData)
+{
+	auto avrcp = static_cast<Bluez5ProfileAvcrp *>(userData);
+
+	if (avrcp)
+	{
+		if (strcmp(interface, "org.bluez.MediaControl1") == 0)
+		{
+			for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+			{
+				GVariant *propertyVar = g_variant_get_child_value(changedProperties, n);
+				GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
+				GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
+
+				std::string key = g_variant_get_string(keyVar, NULL);
+
+				if (key == "Player")
+				{
+					std::string playerPath = g_variant_get_string(
+						g_variant_get_variant(valueVar), NULL);
+					if (avrcp->mAddressedPlayerPath != playerPath)
+					{
+						avrcp->mAddressedPlayerPath = playerPath;
+						DEBUG("Addressed player: %s", playerPath.c_str());
+						avrcp->addressedPlayerChanged(playerPath);
+					}
+				}
+
+				g_variant_unref(valueVar);
+				g_variant_unref(keyVar);
+				g_variant_unref(propertyVar);
+			}
+		}
+	}
+	else
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "AVRCP profile creation not complete");
+	}
+}
+
+void Bluez5ProfileAvcrp::addressedPlayerChanged(const std::string &playerPath)
+{
+	for (auto player = mMediaPlayerList.begin();
+		 player != mMediaPlayerList.end(); ++player)
+	{
+		if ((*player)->getPlayerObjPath() == playerPath)
+		{
+			(*player)->setAddressed(true);
+			mAddressedMediaPlayer = *player;
+		}
+		else
+		{
+			(*player)->setAddressed(false);
+		}
+	}
+	updatePlayerInfo();
+}
+
+void Bluez5ProfileAvcrp::mediaControlInterfacePresent(const std::string &deviceObjPath)
+{
+	GError *error = 0;
+	mPropertiesProxyControl = free_desktop_dbus_properties_proxy_new_for_bus_sync(
+		G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+		"org.bluez", deviceObjPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Failed to get property proxy for MediaControl1");
+		g_error_free(error);
+		return;
+	}
+	g_signal_connect(G_OBJECT(mPropertiesProxyControl), "properties-changed",
+					 G_CALLBACK(handlePropertiesChangedControl), this);
+	GVariant *changedProperties;
+	free_desktop_dbus_properties_call_get_all_sync(
+		mPropertiesProxyControl,
+		"org.bluez.MediaControl1", &changedProperties, NULL, NULL);
+	for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+	{
+		GVariant *propertyVar = g_variant_get_child_value(changedProperties, n);
+		GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
+		GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
+
+		std::string key = g_variant_get_string(keyVar, NULL);
+		if (key == "Player")
+		{
+
+			std::string playerPath = g_variant_get_string(
+				g_variant_get_variant(valueVar), NULL);
+			if (mAddressedPlayerPath != playerPath)
+			{
+				mAddressedPlayerPath = playerPath;
+				DEBUG("Addressed player: %s", playerPath.c_str());
+				addressedPlayerChanged(playerPath);
+			}
+		}
+
+		g_variant_unref(valueVar);
+		g_variant_unref(keyVar);
+		g_variant_unref(propertyVar);
+	}
+}
+
+void Bluez5ProfileAvcrp::updatePlayerInfo()
+{
+	bool changed = false;
+	bool playerExists = false;
+
+	BluetothPlayerInfoList playerInfoList;
+	for (auto player : mMediaPlayerList)
+	{
+		playerInfoList.push_back(player->getPlayerInfo());
+	}
+	DEBUG("Calling observer API for playerInfo");
+	getAvrcpObserver()->playerInfoReceived(
+		playerInfoList,
+		convertAddressToLowerCase(mAdapter->getAddress()),
+		convertAddressToLowerCase(mConnectedDeviceAddress));
 }
