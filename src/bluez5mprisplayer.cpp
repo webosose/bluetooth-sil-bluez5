@@ -1,4 +1,4 @@
-// Copyright (c) 2019 LG Electronics, Inc.
+// Copyright (c) 2019-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,7 +98,8 @@ void Bluez5MprisPlayer::registerPlayer()
 	arguments = g_variant_builder_end (builder);
 	g_variant_builder_unref(builder);
 
-	bool ret = bluez_media1_call_register_player_sync(mMediaProxy, BLUEZ5_MEDIA_PLAYER_PATH, arguments, NULL, NULL);
+	std::string path = mAdapter->getObjectPath() + BLUEZ5_MEDIA_PLAYER_PATH;
+	bool ret = bluez_media1_call_register_player_sync(mMediaProxy, path.c_str(), arguments, NULL, NULL);
 	if (!ret)
 	{
 		ERROR(MSGID_MEDIA_PLAYER_ERROR, 0, "Registration of player failed");
@@ -107,7 +108,8 @@ void Bluez5MprisPlayer::registerPlayer()
 
 gboolean Bluez5MprisPlayer::unRegisterPlayer()
 {
-	return bluez_media1_call_unregister_player_sync(mMediaProxy, BLUEZ5_MEDIA_PLAYER_PATH, NULL, NULL);
+	std::string path = mAdapter->getObjectPath() + BLUEZ5_MEDIA_PLAYER_PATH;
+	return bluez_media1_call_unregister_player_sync(mMediaProxy,  path.c_str(), NULL, NULL);
 }
 
 bool Bluez5MprisPlayer::setMediaPlayStatus(const BluetoothMediaPlayStatus &status)

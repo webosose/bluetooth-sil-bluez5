@@ -759,7 +759,26 @@ void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::str
 		return;
 	}
 	if (mConnectedTarget)
+	{
 		getAvrcpObserver()->passThroughCommandReceived(keyCode, keyStatus, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
+
+		BluetoothMediaPlayStatus status;
+		if (key == "PLAY")
+		{
+			status.setStatus(BluetoothMediaPlayStatus::MEDIA_PLAYSTATUS_PLAYING);
+			mAdapter->getPlayer()->setMediaPlayStatus(status);
+		}
+		else if (key == "PAUSE")
+		{
+			status.setStatus(BluetoothMediaPlayStatus::MEDIA_PLAYSTATUS_PAUSED);
+			mAdapter->getPlayer()->setMediaPlayStatus(status);
+		}
+		else if (key == "STOP")
+		{
+			status.setStatus(BluetoothMediaPlayStatus::MEDIA_PLAYSTATUS_STOPPED);
+			mAdapter->getPlayer()->setMediaPlayStatus(status);
+		}
+	}
 }
 
 BluetoothError Bluez5ProfileAvcrp::setAbsoluteVolume(const std::string &address, int volume)
