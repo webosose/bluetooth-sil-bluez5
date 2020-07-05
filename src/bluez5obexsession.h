@@ -62,6 +62,8 @@ public:
 
 	BluezObexPhonebookAccess1* getObjectPhoneBookProxy() const { return mPhonebookAccessProxy; }
 
+	BluezObexMessageAccess1* getObjectMessageProxy() const { return mMessageAccessProxy; }
+
 	FreeDesktopDBusProperties* getObjectPropertiesProxy() const { return mPropertiesProxy; }
 
 	void watch(Bluez5ObexSessionStatusCallback callback);
@@ -75,6 +77,7 @@ private:
 	BluezObexFileTransfer1 *mFileTransferProxy;
 	BluezObexObjectPush1 *mObjectPushProxy;
 	BluezObexPhonebookAccess1 *mPhonebookAccessProxy;
+	BluezObexMessageAccess1 *mMessageAccessProxy;
 	FreeDesktopDBusProperties *mPropertiesProxy;
 	bool mLostRemote;
 	DBusUtils::ObjectWatch *mObjectWatch;

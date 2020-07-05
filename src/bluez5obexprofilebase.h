@@ -42,6 +42,7 @@ public:
 	void handleObexSessionStatus(const std::string &address, bool lost);
 	virtual void updateProperties(GVariant *changedProperties);
 	static void handlePropertiesChanged(BluezObexSession1 *, gchar *interface,  GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData);
+	virtual void notifySessionStatus(const std::string &address, bool createdOrRemoved);
 
 private:
 	std::map<std::string, Bluez5ObexSession*> mSessions;
@@ -54,7 +55,6 @@ protected:
 	void storeSession(const std::string &address, Bluez5ObexSession *session);
 	const Bluez5ObexSession* findSession(const std::string &address) const;
 	void handleFailedToCreateSession(const std::string &address, BluetoothResultCallback callback);
-	void notifySessionStatus(const std::string &address, bool createdOrRemoved);
 	void startTransfer(BluetoothFtpTransferId id, const std::string &objectPath, BluetoothOppTransferResultCallback callback, Bluez5ObexTransfer::TransferType type);
 	void updateActiveTransfer(BluetoothFtpTransferId id, Bluez5ObexTransfer *transfer, BluetoothOppTransferResultCallback callback);
 	void removeTransfer(BluetoothFtpTransferId id);

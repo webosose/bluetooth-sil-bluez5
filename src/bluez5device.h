@@ -53,6 +53,8 @@ public:
 	uint32_t getClassOfDevice() const;
 	BluetoothDeviceType getType() const;
 	std::vector<std::string> getUuids() const;
+	std::vector<std::string> getMapInstancesName() const;
+	std::map<std::string, std::vector<std::string>> getSupportedMessageTypes() const;
 	bool getConnected() const;
 	Bluez5Adapter* getAdapter() const;
 	std::vector<uint8_t> getScanRecord() const;
@@ -81,7 +83,8 @@ private:
 	std::string devPropertyTypeToString(BluetoothProperty::Type type);
 	void updateConnectedRole();
 	void updateProfileConnectionStatus(std::vector <std::string> prevConnectedUuis);
-
+	std::vector<std::string> convertToSupportedtypes(std::uint8_t data);
+	bool isLittleEndian();
 private:
 	Bluez5Adapter *mAdapter;
 	std::string mName;
@@ -91,6 +94,8 @@ private:
 	uint32_t mClassOfDevice;
 	BluetoothDeviceType mType;
 	std::vector<std::string> mUuids;
+	std::vector<std::string> mMapInstancesName;
+	std::map <std::string, std::vector<std::string>> mMapSupportedMessageTypes;
 	std::vector <std::string> mConnectedUuids;
 	std::vector <std::uint8_t> mManufacturerData;
 	struct ServiceData

@@ -42,7 +42,7 @@ public:
 	Bluez5ObexClient(const Bluez5ObexClient&) = delete;
 	Bluez5ObexClient& operator = (const Bluez5ObexClient&) = delete;
 
-	void createSession(Bluez5ObexSession::Type type, const std::string &deviceAddress, Bluez5ObexSessionCreateCallback callback);
+	void createSession(Bluez5ObexSession::Type type, const std::string &deviceAddress, Bluez5ObexSessionCreateCallback callback, const std::string &instanceName = "");
 	void destroySession(const std::string &objectPath);
 
 	static void handleObexServiceStarted(GDBusConnection *conn, const gchar *name,

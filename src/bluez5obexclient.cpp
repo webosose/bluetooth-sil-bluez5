@@ -127,7 +127,7 @@ std::string sessionTypeToString(Bluez5ObexSession::Type type)
 	return result;
 }
 
-void Bluez5ObexClient::createSession(Bluez5ObexSession::Type type, const std::string &deviceAddress, Bluez5ObexSessionCreateCallback callback)
+void Bluez5ObexClient::createSession(Bluez5ObexSession::Type type, const std::string &deviceAddress, Bluez5ObexSessionCreateCallback callback, const std::string &instanceName)
 {
 	if (!mClientProxy)
 	{
@@ -163,6 +163,8 @@ void Bluez5ObexClient::createSession(Bluez5ObexSession::Type type, const std::st
 	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
 	g_variant_builder_add (builder, "{sv}", "Target", g_variant_new_string (typeStr.c_str()));
 	g_variant_builder_add (builder, "{sv}", "Source", g_variant_new_string (adapterAddress.c_str()));
+	if(!instanceName.empty())
+		g_variant_builder_add (builder, "{sv}", "InstanceName", g_variant_new_string (instanceName.c_str()));
 	arguments = g_variant_builder_end (builder);
 	g_variant_builder_unref(builder);
 

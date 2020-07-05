@@ -44,6 +44,8 @@ static const std::map<std::string,std::string> profileIdUuidMap ={
 	{}
 };
 
+static const std::array<std::string, 4> supportedMessageTypes = {"EMAIL", "SMS_GSM", "SMS_CDMA", "MMS"};
+
 Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath) :
 	mAdapter(adapter),
 	mObjectPath(objectPath),
@@ -117,6 +119,15 @@ Bluez5Device::~Bluez5Device()
 
 	if (mPropertiesProxy)
 		g_object_unref(mPropertiesProxy);
+}
+
+bool Bluez5Device::isLittleEndian()
+{
+	unsigned int i = 1;
+	char *c = (char*)&i;
+	if (*c)
+		return true;
+	return false;
 }
 
 void Bluez5Device::handleMediaPlayRequest(BluezDevice1 *, gpointer userData)
@@ -243,6 +254,44 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 
 		changed = true;
 	}
+	else if (key == "MapInstances")
+	{
+		mMapInstancesName.clear();
+
+		for (int m = 0; m < g_variant_n_children(valueVar); m++)
+		{
+			GVariant *mapInstanceVar = g_variant_get_child_value(valueVar, m);
+
+			std::string mapInstance = g_variant_get_string(mapInstanceVar, NULL);
+			mMapInstancesName.push_back(mapInstance);
+
+			g_variant_unref(mapInstanceVar);
+		}
+
+		changed = true;
+	}
+	else if (key == "MapInstanceProperties")
+	{
+		mMapSupportedMessageTypes.clear();
+
+		for (int m = 0; m < g_variant_n_children(valueVar); m++)
+		{
+			GVariant *mapInstanceVar = g_variant_get_child_value(valueVar, m);
+			std::uint8_t mapInstance = g_variant_get_byte(mapInstanceVar);
+			if (isLittleEndian())
+			{
+				mMapSupportedMessageTypes.insert(std::pair<std::string, std::vector<std::string>>(mMapInstancesName.at(m), convertToSupportedtypes(mapInstance & 0x000F)));
+			}
+			else
+			{
+				mMapSupportedMessageTypes.insert(std::pair<std::string, std::vector<std::string>>(mMapInstancesName.at(m), convertToSupportedtypes((mapInstance & 0xF000) >> 24)));
+			}
+
+			g_variant_unref(mapInstanceVar);
+		}
+
+		changed = true;
+	}
 	else if (key == "Trusted")
 	{
 		mTrusted = g_variant_get_boolean(valueVar);
@@ -257,12 +306,6 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 	}
 	else if (key == "ManufacturerData")
 	{
-		unsigned int i = 1;
-		bool isLittleEndian = false;
-		char *c = (char*)&i;
-		if (*c)
-			isLittleEndian = true;
-
 		GVariantIter *iter;
 		g_variant_get (valueVar, "a{qv}", &iter);
 
@@ -272,7 +315,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 
 		while (g_variant_iter_loop(iter, "{qv}", &key, &array))
 		{
-			if (isLittleEndian)
+			if (isLittleEndian())
 			{
 				mManufacturerData.push_back((key & 0xFF00) >> 8);
 				mManufacturerData.push_back(key & 0x00FF);
@@ -404,6 +447,32 @@ std::string Bluez5Device::devPropertyTypeToString(BluetoothProperty::Type type)
 	}
 
 	return propertyName;
+}
+
+std::vector<std::string> Bluez5Device::convertToSupportedtypes(std::uint8_t data)
+{
+	std::vector<std::string> supportedMessageTypesList;
+	if (isLittleEndian())
+	{
+		for (unsigned int j = 0; j < 4; j++)
+		{
+			if(data & 1<<j )
+			{
+				supportedMessageTypesList.push_back(supportedMessageTypes.at(j));
+			}
+		}
+	}
+	else
+	{
+		for (unsigned int j = 3, k = 0; j >= 0; j--, k++)
+		{
+			if(data & 1<<j )
+			{
+				supportedMessageTypesList.push_back(supportedMessageTypes.at(k));
+			}
+		}
+	}
+	return supportedMessageTypesList;
 }
 
 void Bluez5Device::setDevicePropertyAsync(const BluetoothProperty& property, BluetoothResultCallback callback)
@@ -676,6 +745,8 @@ BluetoothPropertiesList Bluez5Device::buildPropertiesList() const
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CLASS_OF_DEVICE, mClassOfDevice));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TYPE_OF_DEVICE, (uint32_t)mType));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::MAP_INSTANCES_NAME, mMapInstancesName));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::MAP_SUPPORTED_MESSAGE_TYPE, mMapSupportedMessageTypes));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::PAIRED, mPaired));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, mConnected));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TRUSTED, mTrusted));
@@ -716,6 +787,16 @@ BluetoothDeviceType Bluez5Device::getType() const
 std::vector<std::string> Bluez5Device::getUuids() const
 {
 	return mUuids;
+}
+
+std::vector<std::string> Bluez5Device::getMapInstancesName() const
+{
+	return mMapInstancesName;
+}
+
+std::map<std::string, std::vector<std::string>> Bluez5Device::getSupportedMessageTypes() const
+{
+	return mMapSupportedMessageTypes;
 }
 
 bool Bluez5Device::getConnected() const

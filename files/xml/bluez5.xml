@@ -28,8 +28,34 @@
             </signal>
             <signal name="MediaMetaRequest">
             </signal>
+            <property name="Address" type="s" access="read"></property>
+            <property name="AddressType" type="s" access="read"></property>
+            <property name="DeviceType" type="u" access="read"></property>
+            <property name="Name" type="s" access="read"></property>
+            <property name="Alias" type="s" access="readwrite"></property>
+            <property name="Class" type="u" access="read"></property>
+            <property name="Appearance" type="q" access="read"></property>
+            <property name="Icon" type="s" access="read"></property>
+            <property name="Paired" type="b" access="read"></property>
+            <property name="Trusted" type="b" access="readwrite"></property>
+            <property name="Blocked" type="b" access="readwrite"></property>
+            <property name="LegacyPairing" type="b" access="read"></property>
+            <property name="RSSI" type="n" access="read"></property>
+            <property name="Connected" type="b" access="read"></property>
+            <property name="UUIDs" type="as" access="read"></property>
+            <property name="ConnectedUUIDS" type="as" access="read"></property>
+            <property name="Modalias" type="s" access="read"></property>
+            <property name="Adapter" type="o" access="read"></property>
+            <property name="ManufacturerData" type="a{qv}" access="read"></property>
+            <property name="KeyCode" type="a{sv}" access="read"></property>
             <property name="AvrcpCTFeatures" type="y" access="read"></property>
             <property name="AvrcpTGFeatures" type="y" access="read"></property>
+            <property name="AvrcpCTSupportedEvents" type="q" access="read"></property>
+            <property name="ServiceData" type="a{sv}" access="read"></property>
+            <property name="TxPower" type="n" access="read"></property>
+            <property name="ServicesResolved" type="b" access="read"></property>
+            <property name="MapInstances" type="as" access="read"></property>
+            <property name="MapInstanceProperties" type="ay" access="read"></property>
     </interface>
     <interface name="org.bluez.AgentManager1">
         <method name="RegisterAgent">
@@ -392,4 +418,56 @@
       <property name="Searchable" type="b" access="read"></property>
       <property name="Playlist" type="o" access="read"></property>
    </interface>
+   <interface name="org.bluez.obex.MessageAccess1">
+    <method name="SetFolder">
+        <arg name="name" type="s" direction="in"/>
+    </method>
+    <method name="ListFolders">
+        <arg name="filters" type="a{sv}" direction="in"/>
+        <arg name="content" type="aa{sv}" direction="out"/>
+    </method>
+    <method name="ListMessages">
+        <arg name="folder" type="s" direction="in"/>
+        <arg name="filter" type="a{sv}" direction="in"/>
+        <arg name="messages" type="a{oa{sv}}" direction="out"/>
+    </method>
+    <method name="ListFilterFields">
+        <arg name="fields" type="as" direction="out"/>
+    </method>
+    <method name="UpdateInbox">
+    </method>
+    <method name="PushMessage">
+        <arg name="file" type="s" direction="in"/>
+        <arg name="folder" type="s" direction="in"/>
+        <arg name="args" type="a{sv}" direction="in"/>
+        <arg name="transfer" type="o" direction="out"/>
+        <arg name="properties" type="a{sv}" direction="out"/>
+    </method>
+   </interface>
+   <interface name="org.bluez.obex.Message1">
+    <method name="Get">
+        <arg name="targetfile" type="s" direction="in"/>
+        <arg name="attachment" type="b" direction="in"/>
+        <arg name="transfer" type="o" direction="out"/>
+        <arg name="properties" type="a{sv}" direction="out"/>
+    </method>
+    <property name="Folder" type="s" access="read"></property>
+    <property name="Subject" type="s" access="read"></property>
+    <property name="Timestamp" type="s" access="read"></property>
+    <property name="Sender" type="s" access="read"></property>
+    <property name="SenderAddress" type="s" access="read"></property>
+    <property name="ReplyTo" type="s" access="read"></property>
+    <property name="Recipient" type="s" access="read"></property>
+    <property name="RecipientAddress" type="s" access="read"></property>
+    <property name="Type" type="s" access="read"></property>
+    <property name="Size" type="t" access="read"></property>
+    <property name="Text" type="b" access="read"></property>
+    <property name="Status" type="s" access="read"></property>
+    <property name="AttachmentSize" type="t" access="read"></property>
+    <property name="Priority" type="b" access="read"></property>
+    <property name="Read" type="b" access="readwrite"></property>
+    <property name="Sent" type="b" access="read"></property>
+    <property name="Protected" type="b" access="read"></property>
+    <property name="Deleted" type="b" access="write"></property>
+    </interface>
 </node>
