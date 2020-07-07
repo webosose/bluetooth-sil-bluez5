@@ -36,8 +36,7 @@ Bluez5SIL::Bluez5SIL(BluetoothPairingIOCapability capability) :
 	mAgentManager(0),
 	mProfileManager(0),
 	mAgent(0),
-	mCapability(capability),
-	mGattManager(0)
+	mCapability(capability)
 {
 }
 
@@ -101,12 +100,6 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 	if (agentManagerObject)
 	{
 		sil->createAgentManager(std::string(g_dbus_object_get_object_path(agentManagerObject)));
-	}
-
-	GDBusObject* gattManager = findInterface(objects, "org.bluez.GattManager1");
-	if (gattManager)
-	{
-		sil->createGattManager(std::string(g_dbus_object_get_object_path(gattManager)));
 	}
 
 	GDBusObject* profileManager = findInterface(objects, "org.bluez.ProfileManager1");
@@ -285,9 +278,6 @@ void Bluez5SIL::createAdapter(const std::string &objectPath)
 	if (observer)
 		observer->adaptersChanged();
 
-	if (mGattManager)
-		adapter->assignGattManager(mGattManager);
-
 	if (mProfileManager)
 		adapter->assignProfileManager(mProfileManager);
 }
@@ -416,29 +406,6 @@ void Bluez5SIL::removeProfileManager(const std::string &objectPath)
 
 	g_object_unref(mProfileManager);
 	mProfileManager = 0;
-}
-
-void Bluez5SIL::createGattManager(const std::string &objectPath)
-{
-	if (mGattManager)
-	{
-		WARNING(MSGID_MULTIPLE_AGENT_MGR, 0, "Tried to create another BleAdvertise manager instance");
-		return;
-	}
-
-	GError *error = 0;
-	mGattManager = bluez_gatt_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                                "org.bluez", objectPath.c_str(), NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for agent manager on path %s: %s",
-			  objectPath.c_str(), error->message);
-		g_error_free(error);
-		return;
-	}
-
-	for (auto adapter : mAdapters)
-		adapter->assignGattManager(mGattManager);
 }
 
 void Bluez5SIL::createMediaManager(const std::string &objectPath)

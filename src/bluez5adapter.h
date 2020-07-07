@@ -108,7 +108,6 @@ public:
 	void assignBleAdvertise(Bluez5Advertise *advertise);
 	Bluez5Advertise *getAdvertise();
 
-	void assignGattManager(BluezGattManager1 *gattManager);
 	BluezGattManager1 *getGattManager();
 
 	void assignProfileManager(BluezProfileManager1* proxy);

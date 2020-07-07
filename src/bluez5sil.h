@@ -70,7 +70,6 @@ private:
 	Bluez5Adapter* findAdapterForObjectPath(const std::string &objectPath);
 	void createProfileManager(const std::string &objectPath);
 	void removeProfileManager(const std::string &objectPath);
-	void createGattManager(const std::string &objectPath);
 	void createMediaManager(const std::string &objectPath);
 	void removeMediaManager(const std::string &objectPath);
 
@@ -81,7 +80,6 @@ private:
 	Bluez5Adapter *mDefaultAdapter;
 	BluezAgentManager1 *mAgentManager;
 	BluezProfileManager1 *mProfileManager;
-	BluezGattManager1 *mGattManager;
 	Bluez5Agent *mAgent;
 	BluetoothPairingIOCapability mCapability;
 };

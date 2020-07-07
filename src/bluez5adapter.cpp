@@ -114,6 +114,16 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 		DEBUG("ERROR in creating memory %s", objectPath.c_str());
 		g_object_unref(bleAdvManager);
 	}
+
+	mGattManagerProxy = bluez_gatt_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+																"org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for agent manager on path %s: %s",
+			  objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
 }
 
 Bluez5Adapter::~Bluez5Adapter()
@@ -136,6 +146,9 @@ Bluez5Adapter::~Bluez5Adapter()
 
 	if (mMediaManager)
 		g_object_unref(mMediaManager);
+
+	if (mGattManagerProxy)
+		g_object_unref(mGattManagerProxy);
 
 	if (mPlayer)
 		delete mPlayer;
@@ -1345,11 +1358,6 @@ Bluez5Agent* Bluez5Adapter::getAgent()
 void Bluez5Adapter::assignBleAdvertise(Bluez5Advertise *advertise)
 {
 	mAdvertise = advertise;
-}
-
-void Bluez5Adapter::assignGattManager(BluezGattManager1 *gattManager)
-{
-	mGattManagerProxy = gattManager;
 }
 
 Bluez5MprisPlayer* Bluez5Adapter::getPlayer()

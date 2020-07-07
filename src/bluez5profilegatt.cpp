@@ -1561,7 +1561,8 @@ void Bluez5ProfileGatt::removeLocalServices(Bluez5GattLocalService *service)
 
 void Bluez5ProfileGatt::createObjectManagers()
 {
-	mObjectManagerGattServer = g_dbus_object_manager_server_new(BLUEZ5_GATT_OBJECT_SERVER_PATH);
+	std::string objectPath = mAdapter->getObjectPath() + SERVER_PATH;
+	mObjectManagerGattServer = g_dbus_object_manager_server_new(objectPath.c_str());
 
 	if (!mObjectManagerGattServer)
 	{
