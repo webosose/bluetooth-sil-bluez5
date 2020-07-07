@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <sys/stat.h>
 #include "asyncutils.h"
 #include "logging.h"
 #include "bluez5adapter.h"
@@ -28,11 +29,17 @@
 #include "bluez5profileopp.h"
 #include "bluez5profilea2dp.h"
 #include "bluez5profileavrcp.h"
+#include "bluez5profilepbap.h"
+#include "bluez5profilehfp.h"
 #include "bluez5mprisplayer.h"
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID = "0000111e-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_REMOTE_HFP_AG_UUID = "0000111f-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_A2DP_SOURCE_UUID	= "0000110a-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
 
 Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -50,14 +57,15 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mAgent(0),
 	mAdvertise(0),
 	mProfileManager(0),
-	mPlayer(nullptr),
 	mPairing(false),
 	mCurrentPairingDevice(0),
 	mCurrentPairingCallback(0),
 	mObexClient(0),
 	mObexAgent(0),
 	mCancelDiscCallback(0),
-	mAdvertising(false)
+	mAdvertising(false),
+	mMediaManager(nullptr),
+	mPlayer(nullptr)
 {
 	GError *error = 0;
 
@@ -85,20 +93,106 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handleAdapterPropertiesChanged), this);
 
-	mObexClient = new Bluez5ObexClient;
+	mObexClient = new Bluez5ObexClient(this);
 	mObexAgent = new Bluez5ObexAgent(this);
+
+	BluezLEAdvertisingManager1 *bleAdvManager =
+		bluez_leadvertising_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
+		G_DBUS_PROXY_FLAGS_NONE, "org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0,
+			"Failed to create dbus proxy for agent manager on path %s: %s",
+			objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+	mAdvertise = new (std::nothrow) Bluez5Advertise(bleAdvManager);
+	if (!mAdvertise)
+	{
+		DEBUG("ERROR in creating memory %s", objectPath.c_str());
+		g_object_unref(bleAdvManager);
+	}
 }
 
 Bluez5Adapter::~Bluez5Adapter()
 {
+	for(auto profile = mProfiles.begin(); profile != mProfiles.end(); profile++)
+	{
+		delete profile->second;
+	}
+
+	for (auto device = mDevices.begin(); device != mDevices.end(); device++)
+	{
+		delete device->second;
+	}
+
 	if (mAdapterProxy)
 		g_object_unref(mAdapterProxy);
 
 	if (mPropertiesProxy)
 		g_object_unref(mPropertiesProxy);
 
+	if (mMediaManager)
+		g_object_unref(mMediaManager);
+
+	if (mPlayer)
+		delete mPlayer;
+
 	if (mObexClient)
 		delete mObexClient;
+
+	if (mObexAgent)
+		delete mObexAgent;
+
+	if (mAdvertise)
+		delete mAdvertise;
+}
+
+void Bluez5Adapter::addMediaManager(std::string objectPath)
+{
+	GError *error = 0;
+	mMediaManager = bluez_media1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
+                                                                "org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for media manager on path %s: %s",
+			  objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+
+	mPlayer = new Bluez5MprisPlayer(mMediaManager, this);
+}
+
+void Bluez5Adapter::removeMediaManager(const std::string &objectPath)
+{
+	if (!mMediaManager)
+		return;
+	g_object_unref(mMediaManager);
+	mMediaManager = nullptr;
+
+	delete mPlayer;
+	mPlayer = nullptr;
+
+}
+
+void Bluez5Adapter::updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (!avrcp)
+		return;
+
+	avrcp->updateRemoteFeatures(features, role, address);
+}
+
+void Bluez5Adapter::updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address)
+{
+	Bluez5ProfileAvcrp* avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+	if (!avrcp)
+		return;
+
+	avrcp->updateSupportedNotificationEvents(notificationEvents, address);
 }
 
 bool Bluez5Adapter::isDiscoveryTimeoutRunning()
@@ -126,12 +220,14 @@ void Bluez5Adapter::handleAdapterPropertiesChanged(BluezAdapter1 *, gchar *inter
 		GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
 
 		std::string key = g_variant_get_string(keyVar, NULL);
+                GVariant *realValueVar = g_variant_get_variant(valueVar);
 
-		changed |= adapter->addPropertyFromVariant(properties ,key, g_variant_get_variant(valueVar));
+		changed |= adapter->addPropertyFromVariant(properties ,key, realValueVar);
 
 		g_variant_unref(valueVar);
 		g_variant_unref(keyVar);
 		g_variant_unref(propertyVar);
+		g_variant_unref(realValueVar);
 	}
 
 	// If state has changed and we're not discovering or powered any more
@@ -162,6 +258,16 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 	{
 		mAlias = g_variant_get_string(valueVar, NULL);
 		DEBUG ("%s: Got alias property as %s", __func__, mAlias.c_str());
+#ifdef WEBOS_AUTO
+		std::size_t found = mObjectPath.find("hci");
+
+		if (found != std::string::npos)
+		{
+			mAlias = std::string("sa8155") + " "+ std::string("Bluetooth ") + mObjectPath.substr(found);
+			BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
+			setAdapterPropertySync(alias);
+		}
+#endif
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mAlias));
 		changed = true;
 	}
@@ -214,7 +320,10 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 		{
 			mPowered = powered;
 			if (observer)
+			{
+				mPowered = powered;
 				observer->adapterStateChanged(mPowered);
+			}
 		}
 	}
 	else if (key == "Discovering")
@@ -254,14 +363,16 @@ void Bluez5Adapter::getAdapterProperties(BluetoothPropertiesResultCallback callb
 			GVariant *propertyVar = g_variant_get_child_value(propsVar, n);
 			GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
 			GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
+			GVariant *realValueVar = g_variant_get_variant(valueVar);
 
 			std::string key = g_variant_get_string(keyVar, NULL);
 
-			addPropertyFromVariant(properties, key, g_variant_get_variant(valueVar));
+			addPropertyFromVariant(properties, key, realValueVar);
 
 			g_variant_unref(valueVar);
 			g_variant_unref(keyVar);
 			g_variant_unref(propertyVar);
+			g_variant_unref(realValueVar);
 		}
 
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::DISCOVERY_TIMEOUT, mDiscoveryTimeout));
@@ -339,28 +450,28 @@ void Bluez5Adapter::getAdapterProperty(BluetoothProperty::Type type, BluetoothPr
 		return;
 	}
 
-	auto propertyGetCallback = [this, callback, type](GAsyncResult *result) {
-		GVariant *propVar, *realPropVar;
-		GError *error = 0;
-		gboolean ret;
+	GError *error = 0;
 
-		ret = free_desktop_dbus_properties_call_get_finish(mPropertiesProxy, &propVar, result, &error);
-		if (error)
-		{
-			g_error_free(error);
-			callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
-			return;
-		}
+	GVariant *propVar, *realPropVar;
+	free_desktop_dbus_properties_call_get_sync(mPropertiesProxy, "org.bluez.Adapter1", propertyName.c_str(), &propVar, NULL, &error);
 
-		realPropVar = g_variant_get_variant(propVar);
+	if (error)
+	{
+		g_error_free(error);
+		callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
+		return;
+	}
 
-		BluetoothProperty property(type);
-		std::string strValue;
-		uint32_t uint32Value;
-		bool boolValue;
+	realPropVar = g_variant_get_variant(propVar);
 
-		switch (type)
-		{
+	BluetoothProperty property(type);
+	std::string strValue;
+	uint32_t uint32Value;
+	bool boolValue;
+
+
+	switch (type)
+	{
 		case BluetoothProperty::Type::NAME:
 			if (mAlias.empty())
 			{
@@ -398,18 +509,16 @@ void Bluez5Adapter::getAdapterProperty(BluetoothProperty::Type type, BluetoothPr
 			property.setValue(boolValue);
 			break;
 		default:
+			g_variant_unref(realPropVar);
+			g_variant_unref(propVar);
 			callback(BLUETOOTH_ERROR_FAIL, BluetoothProperty());
 			return;
 		}
 
-		g_variant_unref(realPropVar);
-		g_variant_unref(propVar);
+	g_variant_unref(realPropVar);
+	g_variant_unref(propVar);
 
-		callback(BLUETOOTH_ERROR_NONE, property);
-	};
-
-	free_desktop_dbus_properties_call_get(mPropertiesProxy, "org.bluez.Adapter1", propertyName.c_str(), NULL,
-						glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(propertyGetCallback));
+	callback(BLUETOOTH_ERROR_NONE, property);
 }
 
 GVariant* Bluez5Adapter::propertyValueToVariant(const BluetoothProperty& property)
@@ -501,6 +610,67 @@ void Bluez5Adapter::setAdapterProperties(const BluetoothPropertiesList& properti
 
 	callback(BLUETOOTH_ERROR_NONE);
 }
+
+bool Bluez5Adapter::setAdapterDelayReport(bool delayReporting)
+{
+	GVariant *valueVar = 0;
+	valueVar = g_variant_new_boolean(delayReporting);
+	if (!valueVar)
+		return false;
+
+	GError *error = 0;
+
+	free_desktop_dbus_properties_call_set_sync(mPropertiesProxy, "org.bluez.Adapter1", "DelayReport",
+						g_variant_new_variant(valueVar), NULL, &error);
+
+	if (error)
+	{
+		DEBUG ("%s: error is %s", __func__, error->message);
+		g_error_free(error);
+		return false;
+	}
+
+	return true;
+}
+
+bool Bluez5Adapter::getAdapterDelayReport(bool &delayReporting)
+{
+	GError *error = 0;
+
+	GVariant *propVar, *realPropVar;
+	free_desktop_dbus_properties_call_get_sync(mPropertiesProxy, "org.bluez.Adapter1", "DelayReport", &propVar, NULL, &error);
+
+	if (error)
+	{
+		g_error_free(error);
+		return false;
+	}
+
+	realPropVar = g_variant_get_variant(propVar);
+
+	delayReporting = g_variant_get_boolean(realPropVar);
+
+	return true;
+}
+
+void Bluez5Adapter::notifyA2dpRoleChnange (const std::string &uuid )
+{
+	std::replace_if(mUuids.begin(),mUuids.end(),[](std::string pUuid)
+	{ return ((pUuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID)|| (pUuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID));},uuid);
+	BluetoothPropertiesList properties;
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
+	observer->adapterPropertiesChanged(properties);
+}
+
+void Bluez5Adapter::notifyAvrcpRoleChange(const std::string &uuid )
+{
+        std::replace_if(mUuids.begin(),mUuids.end(),[](std::string pUuid)
+        { return ((pUuid == BLUETOOTH_PROFILE_AVRCP_TARGET_UUID) || (pUuid == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID));},uuid);
+        BluetoothPropertiesList properties;
+        properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
+        observer->adapterPropertiesChanged(properties);
+}
+
 
 void Bluez5Adapter::getDeviceProperties(const std::string& address, BluetoothPropertiesResultCallback callback)
 {
@@ -998,13 +1168,29 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 		profile = new Bluez5ProfileAvcrp(this);
 		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_AVRCP, profile));
 	}
+	else if (profileId == BLUETOOTH_PROFILE_ID_PBAP)
+	{
+		profile = new Bluez5ProfilePbap(this);
+		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_PBAP, profile));
+	}
+	else if (profileId == BLUETOOTH_PROFILE_ID_HFP)
+	{
+		profile = new Bluez5ProfileHfp(this);
+		mProfiles.insert(std::pair<std::string,BluetoothProfile*>(BLUETOOTH_PROFILE_ID_HFP, profile));
+	}
 
 	if (profile)
 	{
 		std::string uuid = profile->getProfileUuid();
 		// Profile is initialized with remote uuid which its connecting
 		if (uuid == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID)
+		{
 			mUuids.push_back(BLUETOOTH_PROFILE_AVRCP_TARGET_UUID);
+		}
+		else if (uuid == BLUETOOTH_PROFILE_REMOTE_HFP_AG_UUID)
+		{
+			mUuids.push_back(BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID);
+		}
 		else
 			mUuids.push_back(uuid);
 	}
@@ -1158,11 +1344,6 @@ void Bluez5Adapter::assignBleAdvertise(Bluez5Advertise *advertise)
 void Bluez5Adapter::assignGattManager(BluezGattManager1 *gattManager)
 {
 	mGattManagerProxy = gattManager;
-}
-
-void Bluez5Adapter::assingPlayer(Bluez5MprisPlayer* player)
-{
-	mPlayer = player;
 }
 
 Bluez5MprisPlayer* Bluez5Adapter::getPlayer()
@@ -1558,7 +1739,7 @@ BluetoothError Bluez5Adapter::supplyPairingConfirmation(const std::string &addre
 		return BLUETOOTH_ERROR_PARAM_INVALID;
 	}
 
-	if (mAgent->supplyPairingConfirmation(address, accept))
+	if (mAgent->supplyPairingConfirmation(this, address, accept))
 	{
 		return BLUETOOTH_ERROR_NONE;
 	}
@@ -1789,18 +1970,18 @@ BluetoothError Bluez5Adapter::resetModule(const std::string &deviceName, bool is
 	return BLUETOOTH_ERROR_UNSUPPORTED;
 }
 
-void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected)
+void Bluez5Adapter::updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected,
+	const std::string &uuid)
 {
-	if (PROFILE_ID == BLUETOOTH_PROFILE_ID_AVRCP)
-	{
-		Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
-		if (avrcp) avrcp->updateConnectionStatus(address, isConnected);
-	}
-	else if (PROFILE_ID == BLUETOOTH_PROFILE_ID_A2DP)
-	{
-		Bluez5ProfileA2dp *a2dp = dynamic_cast<Bluez5ProfileA2dp*> (getProfile(BLUETOOTH_PROFILE_ID_A2DP));
-		if (a2dp) a2dp->updateConnectionStatus(address, isConnected);
-	}
+	auto profile = dynamic_cast<Bluez5ProfileBase*> (getProfile(PROFILE_ID));
+	if (profile)
+		profile->updateConnectionStatus(address, isConnected, uuid);
+}
+
+void Bluez5Adapter::updateAvrcpVolume(std::string address, guint16 volume)
+{
+	Bluez5ProfileAvcrp *avrcp = dynamic_cast<Bluez5ProfileAvcrp*> (getProfile(BLUETOOTH_PROFILE_ID_AVRCP));
+		if (avrcp) avrcp->updateVolume(address, volume);
 }
 
 void Bluez5Adapter::recievePassThroughCommand(std::string address, std::string key, std::string state)

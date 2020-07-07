@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2019 LG Electronics, Inc.
+# Copyright (c) 2018-2020 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,6 +58,12 @@ set(CMAKE_SHARED_MODULE_PREFIX "")
 
 webos_add_linker_options(ALL --no-undefined)
 
+if(WEBOS_TARGET_DISTRO STREQUAL "webos-auto")
+        if(WEBOS_TARGET_MACHINE STREQUAL "sa8155" OR WEBOS_TARGET_MACHINE STREQUAL "qemux86" OR WEBOS_TARGET_MACHINE STREQUAL "qemux86-64")
+                add_definitions(-DWEBOS_AUTO)
+        endif()
+endif()
+
 set(GDBUS_IF_DIR ${WEBOS_BINARY_CONFIGURED_DIR}/src)
 file(MAKE_DIRECTORY ${GDBUS_IF_DIR})
 
@@ -90,6 +96,7 @@ include_directories(src ${GDBUS_IF_DIR})
 
 file(GLOB SOURCES
      ${GDBUS_IF_DIR}/bluez-interface.c
+     ${GDBUS_IF_DIR}/ofono-interface.c
      ${GDBUS_IF_DIR}/freedesktop-interface.c
      src/asyncutils.cpp
      src/dbusutils.cpp
@@ -109,11 +116,13 @@ file(GLOB SOURCES
      src/bluez5gattremoteattribute.cpp
      src/bluez5obexprofilebase.cpp
      src/bluez5profileopp.cpp
+     src/bluez5profilepbap.cpp
      src/bluez5obexagent.cpp
      src/bluez5profilea2dp.cpp
      src/bluez5profileavrcp.cpp
      src/bluez5mediacontrol.cpp
      src/bluez5mprisplayer.cpp
+     src/bluez5profilehfp.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,10 +20,13 @@
 #include "asyncutils.h"
 #include "logging.h"
 #include "bluez5busconfig.h"
+#include "bluez5adapter.h"
 
-Bluez5ObexClient::Bluez5ObexClient() :
+
+Bluez5ObexClient::Bluez5ObexClient(Bluez5Adapter *adapter) :
     mClientProxy(0),
-    mNameWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex")
+    mNameWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex"),
+    mAdapter(adapter)
 {
 	DBusUtils::waitForBus(BLUEZ5_OBEX_DBUS_BUS_TYPE, [this](bool available) {
 		if (!available) {
@@ -155,9 +158,11 @@ void Bluez5ObexClient::createSession(Bluez5ObexSession::Type type, const std::st
 	GVariant *arguments = 0;
 
 	std::string typeStr = sessionTypeToString(type);
+	std::string adapterAddress = mAdapter->getAddress();
 
 	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
 	g_variant_builder_add (builder, "{sv}", "Target", g_variant_new_string (typeStr.c_str()));
+	g_variant_builder_add (builder, "{sv}", "Source", g_variant_new_string (adapterAddress.c_str()));
 	arguments = g_variant_builder_end (builder);
 	g_variant_builder_unref(builder);
 

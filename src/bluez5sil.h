@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,8 +30,6 @@ extern "C" {
 
 class Bluez5Adapter;
 class Bluez5Agent;
-class Bluez5Advertise;
-class Bluez5MprisPlayer;
 
 class Bluez5SIL : public BluetoothSIL
 {
@@ -44,6 +42,7 @@ public:
 
 	BluetoothAdapter* getDefaultAdapter();
 	std::vector<BluetoothAdapter*> getAdapters();
+	Bluez5Adapter *getBluez5Adapter(std::string objectPath);
 	Bluez5Adapter* getDefaultBluez5Adapter() { return mDefaultAdapter; }
 	BluetoothPairingIOCapability getCapability() { return mCapability; }
 
@@ -69,8 +68,6 @@ private:
 	void createAgentManager(const std::string &objectPath);
 	void removeAgentManager(const std::string &objectPath);
 	Bluez5Adapter* findAdapterForObjectPath(const std::string &objectPath);
-	void createBleAdvManager(const std::string &objectPath);
-	void removeBleAdvManager(const std::string &objectPath);
 	void createProfileManager(const std::string &objectPath);
 	void removeProfileManager(const std::string &objectPath);
 	void createGattManager(const std::string &objectPath);
@@ -83,15 +80,10 @@ private:
 	std::list<Bluez5Adapter*> mAdapters;
 	Bluez5Adapter *mDefaultAdapter;
 	BluezAgentManager1 *mAgentManager;
-	BluezLEAdvertisingManager1 *mBleAdvManager;
 	BluezProfileManager1 *mProfileManager;
 	BluezGattManager1 *mGattManager;
-	BluezMedia1 *mMediaManager;
 	Bluez5Agent *mAgent;
-	Bluez5Advertise *mBleAdvertise;
-	Bluez5MprisPlayer *mPlayer;
 	BluetoothPairingIOCapability mCapability;
 };
-
 
 #endif // BLUEZ5SIL_H

@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -170,14 +170,16 @@ void Bluez5ObexTransfer::updateFromProperties(GVariant *properties)
 		GVariant *propertyVar = g_variant_get_child_value(properties, n);
 		GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
 		GVariant *valueVar = g_variant_get_child_value(propertyVar, 1);
+		GVariant *realValueVar = g_variant_get_variant(valueVar);
 
 		std::string key = g_variant_get_string(keyVar, NULL);
 
-		changed |= parsePropertyFromVariant(key, g_variant_get_variant(valueVar));
+		changed |= parsePropertyFromVariant(key, realValueVar);
 
 		g_variant_unref(valueVar);
 		g_variant_unref(keyVar);
 		g_variant_unref(propertyVar);
+		g_variant_unref(realValueVar);
 	}
 
 	if (changed)

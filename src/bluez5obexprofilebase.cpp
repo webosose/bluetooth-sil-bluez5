@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,8 +27,9 @@
 
 using namespace std::placeholders;
 
-Bluez5ObexProfileBase::Bluez5ObexProfileBase(Bluez5Adapter *adapter, const std::string &uuid) :
-	Bluez5ProfileBase(adapter, uuid)
+Bluez5ObexProfileBase::Bluez5ObexProfileBase(Bluez5ObexSession::Type type, Bluez5Adapter *adapter, const std::string &uuid) :
+	Bluez5ProfileBase(adapter, uuid),
+	mType(type)
 {
 }
 
@@ -37,8 +38,7 @@ void Bluez5ObexProfileBase::notifySessionStatus(const std::string &address, bool
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, createdOrRemoved));
 
-	std::string lowerAddress = convertAddressToLowerCase(address);
-	getObserver()->propertiesChanged(lowerAddress, properties);
+	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address), properties);
 }
 
 void Bluez5ObexProfileBase::handleFailedToCreateSession(const std::string &address, BluetoothResultCallback callback)
@@ -89,6 +89,23 @@ void Bluez5ObexProfileBase::removeSession(const std::string &address)
 	delete session;
 }
 
+
+void Bluez5ObexProfileBase::updateProperties(GVariant *changedProperties)
+{
+	DEBUG("Bluez5ObexProfileBase::updateProperties");
+
+	return;
+}
+
+void Bluez5ObexProfileBase::handlePropertiesChanged(BluezObexSession1 *, gchar *interface,  GVariant *changedProperties, GVariant *invalidatedProperties, gpointer userData)
+{
+	DEBUG("handlePropertiesChanged Bluez5ObexProfileBase");
+
+	Bluez5ObexProfileBase *profileBase = static_cast<Bluez5ObexProfileBase*>(userData);
+
+	profileBase->updateProperties(changedProperties);
+}
+
 void Bluez5ObexProfileBase::createSession(const std::string &address, Bluez5ObexSession::Type type, BluetoothResultCallback callback)
 {
 	Bluez5ObexClient *obexClient = mAdapter->getObexClient();
@@ -107,6 +124,8 @@ void Bluez5ObexProfileBase::createSession(const std::string &address, Bluez5Obex
 		}
 
 		session->watch(std::bind(&Bluez5ObexProfileBase::handleObexSessionStatus, this, address, _1));
+		DEBUG("createSession g_signal_connect");
+		g_signal_connect(G_OBJECT(session->getObjectPropertiesProxy()), "properties-changed", G_CALLBACK(handlePropertiesChanged), this);
 
 		storeSession(address, session);
 		notifySessionStatus(address, true);
@@ -138,7 +157,7 @@ void Bluez5ObexProfileBase::connect(const std::string &address, BluetoothResultC
 {
 	DEBUG("Connecting with device %s on uuid %s profile", address.c_str(), getProfileUuid().c_str());
 
-	createSession(address, Bluez5ObexSession::Type::OPP, callback);
+	createSession(address, mType, callback);
 }
 
 void Bluez5ObexProfileBase::disconnect(const std::string& address, BluetoothResultCallback callback)

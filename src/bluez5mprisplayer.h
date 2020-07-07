@@ -32,7 +32,7 @@ class Bluez5SIL;
 class Bluez5MprisPlayer
 {
 public:
-	Bluez5MprisPlayer(BluezMedia1* media, Bluez5SIL* sil);
+	Bluez5MprisPlayer(BluezMedia1* media, Bluez5Adapter* adapter);
 
 	~Bluez5MprisPlayer();
 
@@ -65,7 +65,7 @@ public:
 private:
 	guint mBusId;
 	GDBusConnection *mConn;
-	Bluez5SIL *mSIL;
+	Bluez5Adapter *mAdapter;
 	BluezMedia1 *mMediaProxy;
 	BluezOrgMprisMediaPlayer2Player *mPlayerInterface;
 	std::string mTitle;

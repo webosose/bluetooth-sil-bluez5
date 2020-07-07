@@ -30,6 +30,7 @@ public:
 
 	virtual void connect(const std::string& address, BluetoothResultCallback callback);
 	virtual void disconnect(const std::string& address, BluetoothResultCallback callback);
+	virtual void updateConnectionStatus(const std::string &address, bool isConnected, const std::string &uuid);
 	std::string getProfileUuid() { return mUuid; }
 protected:
 	Bluez5Adapter *mAdapter;

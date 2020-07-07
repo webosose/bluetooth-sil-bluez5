@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -60,6 +60,8 @@ public:
 	void getAdapterProperty(BluetoothProperty::Type type, BluetoothPropertyResultCallback callback);
 	void setAdapterProperty(const BluetoothProperty& property, BluetoothResultCallback callback);
 	void setAdapterProperties(const BluetoothPropertiesList& newProperties, BluetoothResultCallback callback);
+	bool setAdapterDelayReport(bool delayReporting);
+	bool getAdapterDelayReport(bool &delayReporting);
 	void getDeviceProperties(const std::string& address, BluetoothPropertiesResultCallback callback);
 	void setDeviceProperty(const std::string& address, const BluetoothProperty& property, BluetoothResultCallback callback);
 	void setDeviceProperties(const std::string& address, const BluetoothPropertiesList& properties, BluetoothResultCallback callback);
@@ -112,8 +114,6 @@ public:
 	void assignProfileManager(BluezProfileManager1* proxy);
 	BluezProfileManager1 *getProfileManager();
 
-	void assingPlayer(Bluez5MprisPlayer* media);
-
 	Bluez5MprisPlayer* getPlayer();
 
 	bool isPairingFor(const std::string &address) const;
@@ -161,10 +161,18 @@ public:
 	virtual void unregisterAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
 	virtual void disableAdvertiser(uint8_t advertiserId, AdvertiserStatusCallback callback);
 	BluezAdapter1* getAdapterProxy() { return mAdapterProxy; }
-	void updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected);
+	std::string getAddress() { return bluez_adapter1_get_address(mAdapterProxy);}
+	void updateProfileConnectionStatus(const std::string PROFILE_ID, std::string address, bool isConnected, const std::string &uuid);
+	void updateAvrcpVolume(std::string address, guint16 volume);
 	void recievePassThroughCommand(std::string address, std::string key, std::string state);
 	void mediaPlayStatusRequest(std::string address);
 	void mediaMetaDataRequest(std::string address);
+	void addMediaManager(std::string objectPath);
+	void removeMediaManager(const std::string &objectPath);
+	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
+	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address);
+	void notifyA2dpRoleChnange (const std::string &uuid );
+	void notifyAvrcpRoleChange(const std::string &uuid);
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);
@@ -198,7 +206,6 @@ private:
 	Bluez5Agent *mAgent;
 	Bluez5Advertise *mAdvertise;
 	BluezProfileManager1 *mProfileManager;
-	Bluez5MprisPlayer *mPlayer;
 	bool mPairing;
 	Bluez5Device *mCurrentPairingDevice;
 	BluetoothResultCallback mCurrentPairingCallback;
@@ -210,6 +217,8 @@ private:
 	BluetoothResultCallback mCancelDiscCallback;
 	bool mAdvertising;
 	std::vector <std::string> mUuids;
+	Bluez5MprisPlayer *mPlayer;
+	BluezMedia1 *mMediaManager;
 };
 
 #endif // BLUEZ5ADAPTER_H

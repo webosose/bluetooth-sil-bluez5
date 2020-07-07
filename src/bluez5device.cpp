@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,8 +21,28 @@
 #include "asyncutils.h"
 
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
+const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
 
+static const std::map<std::string,BluetoothDeviceRole> uuidtoRoleMap ={
+	{"0000111e-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_HFP_HF},
+	{"0000111f-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_HFP_AG},
+	{"0000110a-0000-1000-8000-00805f9b34fb" ,BLUETOOTH_DEVICE_ROLE_A2DP_SRC},
+	{"0000110b-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_A2DP_SINK},
+	{"0000110e-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_AVRCP_RMT},
+	{"0000110c-0000-1000-8000-00805f9b34fb", BLUETOOTH_DEVICE_ROLE_AVRCP_TGT},
+	{}
+};
+
+static const std::map<std::string,std::string> profileIdUuidMap ={
+	{"0000111e-0000-1000-8000-00805f9b34fb", BLUETOOTH_PROFILE_ID_HFP},
+	{"0000111f-0000-1000-8000-00805f9b34fb", BLUETOOTH_PROFILE_ID_HFP},
+	{"0000110a-0000-1000-8000-00805f9b34fb", BLUETOOTH_PROFILE_ID_A2DP},
+	{"0000110b-0000-1000-8000-00805f9b34fb", BLUETOOTH_PROFILE_ID_A2DP},
+	{"0000110e-0000-1000-8000-00805f9b34fb", BLUETOOTH_PROFILE_ID_AVRCP},
+	{"0000110c-0000-1000-8000-00805f9b34fb", BLUETOOTH_PROFILE_ID_AVRCP},
+	{}
+};
 
 Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath) :
 	mAdapter(adapter),
@@ -36,7 +56,8 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	mTxPower(0),
 	mRSSI(0),
 	mDeviceProxy(0),
-	mPropertiesProxy(0)
+	mPropertiesProxy(0),
+	mConnectedRole(BLUETOOTH_DEVICE_ROLE)
 {
 	GError *error = 0;
 	GVariant *propsVar;
@@ -188,6 +209,24 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 		mConnected = g_variant_get_boolean(valueVar);
 		changed = true;
 	}
+	else if (key == "ConnectedUUIDS")
+	{
+		auto prevConnectedUuis = mConnectedUuids;
+
+		mConnectedUuids.clear();
+
+		for (int m = 0; m < g_variant_n_children(valueVar); m++)
+		{
+			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
+
+			std::string uuid = g_variant_get_string(uuidVar, NULL);
+			mConnectedUuids.push_back(uuid);
+			g_variant_unref(uuidVar);
+		}
+		updateConnectedRole();
+		updateProfileConnectionStatus(prevConnectedUuis);
+		changed = true;
+	}
 	else if (key == "UUIDs")
 	{
 		mUuids.clear();
@@ -203,61 +242,6 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 		}
 
 		changed = true;
-	}
-	else if (key == "ConnectedUUIDS")
-	{
-		bool isAvrpOldStateConnected = isUUIDConnected(BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID);
-		bool isA2DPSinkOldStateConnected = isUUIDConnected(BLUETOOTH_PROFILE_A2DP_SINK_UUID);
-		bool isAvrpNewStateConnected = false;
-		bool isA2DPSinkNewStateConnected = false;
-
-		mConnectedUuids.clear();
-
-		for (int m = 0; m < g_variant_n_children(valueVar); m++)
-		{
-			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
-
-			std::string uuid = g_variant_get_string(uuidVar, NULL);
-			mConnectedUuids.push_back(uuid);
-
-			g_variant_unref(uuidVar);
-		}
-
-		for (auto it = mConnectedUuids.begin(); it != mConnectedUuids.end(); it++)
-		{
-			if (*it == BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID)
-			{
-				isAvrpNewStateConnected = true;
-			}
-			else if(*it == BLUETOOTH_PROFILE_A2DP_SINK_UUID)
-			{
-				isA2DPSinkNewStateConnected = true;
-			}
-		}
-
-		//Update avrcp connection status
-		if (!isAvrpOldStateConnected && isAvrpNewStateConnected)
-		{
-			DEBUG("AVRCP target connected");
-			mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, getAddress(), true);
-		}
-		else if (isAvrpOldStateConnected && !isAvrpNewStateConnected)
-		{
-			DEBUG("AVRCP target disconnected");
-			mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_AVRCP, getAddress(), false);
-		}
-
-		//Update a2dp connection status
-		if (!isA2DPSinkOldStateConnected && isA2DPSinkNewStateConnected)
-		{
-			DEBUG("A2DP sink connected");
-			mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_A2DP, getAddress(), true);
-		}
-		else if (isA2DPSinkOldStateConnected && !isA2DPSinkNewStateConnected)
-		{
-			DEBUG("A2DP sink disconnected");
-			mAdapter->updateProfileConnectionStatus(BLUETOOTH_PROFILE_ID_A2DP, getAddress(), false);
-		}
 	}
 	else if (key == "Trusted")
 	{
@@ -368,6 +352,19 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 		g_variant_iter_free(iter);
 		DEBUG("key[%s] and state[%s]", key_code.c_str(), state);
 		mAdapter->recievePassThroughCommand(getAddress(), key, state);
+	}
+	else if(key == "AvrcpCTFeatures")
+	{
+		mAdapter->updateRemoteFeatures(getRemoteControllerFeatures(), "CT", mAddress);
+	}
+	else if (key == "AvrcpTGFeatures")
+	{
+		mAdapter->updateRemoteFeatures(getRemoteTargetFeatures(), "TG", mAddress);
+	}
+	else if (key == "AvrcpCTSupportedEvents")
+	{
+		uint16_t events = g_variant_get_uint16(valueVar);
+		mAdapter->updateSupportedNotificationEvents(events, mAddress);
 	}
 
 	return changed;
@@ -687,6 +684,7 @@ BluetoothPropertiesList Bluez5Device::buildPropertiesList() const
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::SCAN_RECORD, mServiceData.mScanRecord));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::TXPOWER, mTxPower));
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::RSSI, mRSSI));
+	properties.push_back(BluetoothProperty(BluetoothProperty::Type::ROLE, mConnectedRole));
 	return properties;
 }
 
@@ -720,20 +718,6 @@ std::vector<std::string> Bluez5Device::getUuids() const
 	return mUuids;
 }
 
-bool Bluez5Device::isUUIDConnected(const std::string &uuid) const
-{
-	bool isConnected = false;
-	for (auto it = mConnectedUuids.begin(); it != mConnectedUuids.end(); it++)
-	{
-		if (*it == uuid) {
-			isConnected = true;
-			break;
-		}
-	}
-
-	return isConnected;
-}
-
 bool Bluez5Device::getConnected() const
 {
 	return mConnected;
@@ -757,4 +741,49 @@ std::string Bluez5Device::getServiceDataUuid() const
 std::vector<uint8_t> Bluez5Device::getManufactureData() const
 {
 	return mManufacturerData;
+}
+
+void Bluez5Device::updateConnectedRole()
+{
+	mConnectedRole = BLUETOOTH_DEVICE_ROLE;
+	for(auto connectedUuidEntry : mConnectedUuids)
+	{
+		auto it = uuidtoRoleMap.find(connectedUuidEntry);
+		if(it != uuidtoRoleMap.end())
+		{
+			mConnectedRole |= it->second;
+		}
+	}
+}
+
+void Bluez5Device::updateProfileConnectionStatus(std::vector <std::string> prevConnectedUuids)
+{
+	if (prevConnectedUuids.size() < mConnectedUuids.size())
+	{
+		DEBUG("connectedUUID added");
+		for (auto it = mConnectedUuids.begin(); it != mConnectedUuids.end(); it++)
+		{
+			auto uuidIt = std::find(prevConnectedUuids.begin(), prevConnectedUuids.end(), *it);
+			if(uuidIt == prevConnectedUuids.end())
+			{
+				auto mapIt = profileIdUuidMap.find(*it);
+				if (mapIt != profileIdUuidMap.end())
+					mAdapter->updateProfileConnectionStatus(mapIt->second, mAddress, true, *it);
+			}
+		}
+	}
+	else if (prevConnectedUuids.size() > mConnectedUuids.size())
+	{
+		DEBUG("connectedUUID removed");
+		for (auto it = prevConnectedUuids.begin(); it != prevConnectedUuids.end(); it++)
+		{
+			auto uuidIt = std::find(mConnectedUuids.begin(), mConnectedUuids.end(), *it);
+			if (uuidIt == mConnectedUuids.end())
+			{
+				auto mapIt = profileIdUuidMap.find(*it);
+				if (mapIt != profileIdUuidMap.end())
+					mAdapter->updateProfileConnectionStatus(mapIt->second, mAddress, false, *it);
+			}
+		}
+	}
 }

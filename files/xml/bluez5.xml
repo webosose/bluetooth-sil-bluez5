@@ -10,6 +10,7 @@
             <method name="SetDiscoveryFilter">
                     <arg name="properties" type="a{sv}" direction="in"/>
             </method>
+            <property name="Address" type="s" access="read"></property>
     </interface>
     <interface name="org.bluez.Device1">
             <method name="Disconnect"/>
@@ -301,6 +302,7 @@
     </interface>
     <interface name="org.bluez.MediaTransport1">
         <property name="Device" type="o" access="read"></property>
+	<property name="Volume" type="q" access="readwrite"></property>
     </interface>
     <interface name="org.bluez.MediaControl1">
         <property name="Connected" type="b" access="read"></property>
@@ -326,4 +328,68 @@
         <method name="UnregisterPlayer"><arg name="player" type="o" direction="in"/>
         </method>
     </interface>
+    <interface name="org.bluez.obex.PhonebookAccess1">
+      <method name="Select">
+         <arg name="location" type="s" direction="in" />
+         <arg name="phonebook" type="s" direction="in" />
+      </method>
+      <method name="PullAll">
+         <arg name="targetfile" type="s" direction="in" />
+         <arg name="filters" type="a{sv}" direction="in" />
+         <arg name="transfer" type="o" direction="out" />
+         <arg name="properties" type="a{sv}" direction="out" />
+      </method>
+      <method name="Pull">
+         <arg name="vcard" type="s" direction="in" />
+         <arg name="targetfile" type="s" direction="in" />
+         <arg name="filters" type="a{sv}" direction="in" />
+         <arg name="transfer" type="o" direction="out" />
+         <arg name="properties" type="a{sv}" direction="out" />
+      </method>
+      <method name="List">
+         <arg name="filters" type="a{sv}" direction="in" />
+         <arg name="vcard_listing" type="a(ss)" direction="out" />
+      </method>
+      <method name="Search">
+         <arg name="field" type="s" direction="in" />
+         <arg name="value" type="s" direction="in" />
+         <arg name="filters" type="a{sv}" direction="in" />
+         <arg name="vcard_listing" type="a(ss)" direction="out" />
+      </method>
+      <method name="GetSize">
+         <arg name="size" type="q" direction="out" />
+      </method>
+      <method name="ListFilterFields">
+         <arg name="fields" type="as" direction="out" />
+      </method>
+      <method name="UpdateVersion" />
+      <property name="Folder" type="s" access="read" />
+      <property name="DatabaseIdentifier" type="s" access="read" />
+      <property name="PrimaryCounter" type="s" access="read" />
+      <property name="SecondaryCounter" type="s" access="read" />
+      <property name="FixedImageSize" type="b" access="read" />
+   </interface>
+   <interface name="org.bluez.MediaPlayer1">
+      <method name="Play"></method>
+      <method name="Pause"></method>
+      <method name="Stop"></method>
+      <method name="Next"></method>
+      <method name="Previous"></method>
+      <method name="FastForward"></method>
+      <method name="Rewind"></method>
+      <property name="Name" type="s" access="read"></property>
+      <property name="Type" type="s" access="read"></property>
+      <property name="Subtype" type="s" access="read"></property>
+      <property name="Position" type="u" access="read"></property>
+      <property name="Status" type="s" access="read"></property>
+      <property name="Equalizer" type="s" access="readwrite"></property>
+      <property name="Repeat" type="s" access="readwrite"></property>
+      <property name="Shuffle" type="s" access="readwrite"></property>
+      <property name="Scan" type="s" access="readwrite"></property>
+      <property name="Track" type="a{sv}" access="read"></property>
+      <property name="Device" type="o" access="read"></property>
+      <property name="Browsable" type="b" access="read"></property>
+      <property name="Searchable" type="b" access="read"></property>
+      <property name="Playlist" type="o" access="read"></property>
+   </interface>
 </node>

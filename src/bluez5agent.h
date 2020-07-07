@@ -39,10 +39,9 @@ public:
 	Bluez5Agent& operator = (const Bluez5Agent&) = delete;
 
 	bool startPairingForDevice(Bluez5Device *device, bool incoming = false);
-	void stopPairingForDevice(const std::string &address);
 	void stopPairingForDevice(Bluez5Device *device);
 
-	bool supplyPairingConfirmation(const std::string &address, bool accept);
+	bool supplyPairingConfirmation(Bluez5Adapter *adapter,const std::string &address, bool accept);
 	bool supplyPairingSecret(const std::string &address, const std::string &pin);
 	bool supplyPairingSecret(const std::string &address, BluetoothPasskey passkey);
 	bool cancelPairing(const std::string address);

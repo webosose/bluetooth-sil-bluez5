@@ -213,14 +213,14 @@ Bluez5AgentPairingInfo* Bluez5Agent::initiatePairing(GDBusMethodInvocation *invo
 
 		// As we don't have an entry for the device yet we got a
 		// pairing request from a remote device
-		Bluez5Adapter *defaultAdapter = mSIL->getDefaultBluez5Adapter();
-		if (!defaultAdapter)
+		Bluez5Adapter *adapter = mSIL->getBluez5Adapter(objectPath);
+		if (!adapter)
 		{
 			DEBUG ("default adapter is not set");
 			return NULL;
 		}
 
-		Bluez5Device* device = defaultAdapter->findDeviceByObjectPath(objectPath);
+		Bluez5Device* device = adapter->findDeviceByObjectPath(objectPath);
 		if (!device || !startPairingForDevice(device, true))
 		{
 			DEBUG("Failed to handle incoming pairing request");
@@ -255,6 +255,7 @@ gboolean Bluez5Agent::handleCancel(BluezAgent1 *proxy, GDBusMethodInvocation *in
 
 	Bluez5Agent *agent = static_cast<Bluez5Agent*>(user_data);
 
+	//TODO how to handle this? We don't know which adapter pairing cancel
 	Bluez5Adapter *defaultAdapter = agent->mSIL->getDefaultBluez5Adapter();
 	if (defaultAdapter && defaultAdapter->isPairing())
 	{
@@ -431,19 +432,6 @@ bool Bluez5Agent::startPairingForDevice(Bluez5Device *device, bool incoming)
 	return true;
 }
 
-void Bluez5Agent::stopPairingForDevice(const std::string &address)
-{
-	Bluez5Adapter *defaultAdapter = mSIL->getDefaultBluez5Adapter();
-	if (!defaultAdapter)
-		return;
-
-	Bluez5Device *device = defaultAdapter->findDevice(address);
-	if (!device)
-		return;
-
-	stopPairingForDevice(device);
-}
-
 void Bluez5Agent::stopPairingForDevice(Bluez5Device *device)
 {
 	if (!device)
@@ -465,7 +453,7 @@ void Bluez5Agent::stopPairingForDevice(Bluez5Device *device)
 	device->getAdapter()->setPairing(false);
 }
 
-bool Bluez5Agent::supplyPairingConfirmation(const std::string &address, bool accept)
+bool Bluez5Agent::supplyPairingConfirmation(Bluez5Adapter *adapter, const std::string &address, bool accept)
 {
 	auto pairingInfo = findPairingInfoForAddress(address);
 
@@ -492,11 +480,10 @@ bool Bluez5Agent::supplyPairingConfirmation(const std::string &address, bool acc
 	// back from bluez
 	if (pairingInfo->incoming)
 	{
-		Bluez5Adapter *defaultAdapter = mSIL->getDefaultBluez5Adapter();
-		if (!defaultAdapter)
+		if (!adapter)
 			return false;
 
-		Bluez5Device *device = defaultAdapter->findDevice(address);
+		Bluez5Device *device = adapter->findDevice(address);
 		if (!device)
 			return false;
 

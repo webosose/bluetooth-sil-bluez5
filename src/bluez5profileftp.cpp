@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2018 LG Electronics, Inc.
+// Copyright (c) 2014-2019 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -454,9 +454,14 @@ BluetoothFtpTransferId Bluez5ProfileFtp::pullFile(const std::string &address, co
 	}
 
 	BluetoothFtpTransferId transferId = nextTransferId();
+        gchar *dirName = g_path_get_dirname(sourcePath.c_str());
+	gchar *fileName = g_path_get_basename(sourcePath.c_str());
 
-	std::string basePath = g_path_get_dirname(sourcePath.c_str());
-	std::string sourceFileName = g_path_get_basename(sourcePath.c_str());
+	std::string basePath(dirName);
+	std::string sourceFileName(fileName);
+
+	g_free(dirName);
+	g_free(fileName);
 
 	auto changeFolderCallback = [this, fileTransferProxy, sourceFileName, targetPath, transferId, callback](GAsyncResult *result) {
 		GError *error = 0;
@@ -517,8 +522,14 @@ BluetoothFtpTransferId Bluez5ProfileFtp::pushFile(const std::string &address, co
 
 	BluetoothFtpTransferId transferId = nextTransferId();
 
-	std::string basePath = g_path_get_dirname(targetPath.c_str());
-	std::string targetFileName = g_path_get_basename(targetPath.c_str());
+	gchar *dirName = g_path_get_dirname(targetPath.c_str());
+	gchar *fileName = g_path_get_basename(targetPath.c_str());
+
+	std::string basePath(dirName);
+	std::string targetFileName(fileName);
+
+	g_free(dirName);
+	g_free(fileName);
 
 	auto changeFolderCallback = [this, fileTransferProxy, sourcePath, targetFileName, transferId, callback](GAsyncResult *result) {
 		GError *error = 0;

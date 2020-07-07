@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@
 #include "bluez5adapter.h"
 #include "bluez5device.h"
 #include "bluez5agent.h"
-#include "bluez5advertise.h"
 #include "logging.h"
 #include "asyncutils.h"
 #include "dbusutils.h"
@@ -35,14 +34,10 @@ Bluez5SIL::Bluez5SIL(BluetoothPairingIOCapability capability) :
 	mObjectManager(0),
 	mDefaultAdapter(0),
 	mAgentManager(0),
-	mBleAdvManager(0),
 	mProfileManager(0),
 	mAgent(0),
-	mBleAdvertise(0),
 	mCapability(capability),
-	mGattManager(0),
-	mMediaManager(0),
-	mPlayer(0)
+	mGattManager(0)
 {
 }
 
@@ -51,11 +46,12 @@ Bluez5SIL::~Bluez5SIL()
 	if (mAgent)
 		delete mAgent;
 
-	if (mBleAdvertise)
-		delete mBleAdvertise;
-
-	if (mPlayer)
-		delete mPlayer;
+	for (auto iter = mAdapters.begin(); iter != mAdapters.end(); ++iter)
+	{
+		if (*iter)
+		    delete *iter;
+	}
+	mAdapters.clear();
 }
 
 void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *name,
@@ -86,22 +82,25 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 	/*Objects may come in any order, first device object then adapter so
 	 better to traverse all objects to adapter then other interfaces*/
 
-	GDBusObject* adapterObject = findInterface(objects, "org.bluez.Adapter1");
-	if (adapterObject)
+	for (int n = 0; n < g_list_length(objects); n++)
 	{
-		sil->createAdapter(std::string(g_dbus_object_get_object_path(adapterObject)));
+		auto object = static_cast<GDBusObject*>(g_list_nth(objects, n)->data);
+		auto objectPath = g_dbus_object_get_object_path(object);
+
+		auto adapterInterface = g_dbus_object_get_interface(object, "org.bluez.Adapter1");
+		if (adapterInterface)
+		{
+			sil->createAdapter(std::string(objectPath));
+		}
 	}
+
+	if (sil->observer && !sil->mAdapters.empty())
+		sil->observer->adaptersChanged();
 
 	GDBusObject* agentManagerObject = findInterface(objects, "org.bluez.AgentManager1");
 	if (agentManagerObject)
 	{
 		sil->createAgentManager(std::string(g_dbus_object_get_object_path(agentManagerObject)));
-	}
-
-	GDBusObject* advertiseManager = findInterface(objects, "org.bluez.LEAdvertisingManager1");
-	if (advertiseManager)
-	{
-		sil->createBleAdvManager(std::string(g_dbus_object_get_object_path(advertiseManager)));
 	}
 
 	GDBusObject* gattManager = findInterface(objects, "org.bluez.GattManager1");
@@ -116,11 +115,6 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 		sil->createProfileManager(std::string(g_dbus_object_get_object_path(profileManager)));
 	}
 
-	GDBusObject* mediaManager = findInterface(objects, "org.bluez.Media1");
-	if (mediaManager)
-	{
-		sil->createMediaManager(std::string(g_dbus_object_get_object_path(mediaManager)));
-	}
 
 	for (int n = 0; n < g_list_length(objects); n++)
 	{
@@ -135,8 +129,17 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 		}
 	}
 
-	if (sil->observer && !sil->mAdapters.empty())
-		sil->observer->adaptersChanged();
+	for (int n = 0; n < g_list_length(objects); n++)
+	{
+		auto object = static_cast<GDBusObject*>(g_list_nth(objects, n)->data);
+		auto objectPath = g_dbus_object_get_object_path(object);
+
+		auto mediaManager = g_dbus_object_get_interface(object, "org.bluez.Media1");
+		if (mediaManager)
+		{
+			sil->createMediaManager(std::string(objectPath));
+		}
+	}
 
 	for (int n = 0; n < g_list_length(objects); n++)
 	{
@@ -196,6 +199,13 @@ void Bluez5SIL::handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject
 		sil->createDevice(std::string(objectPath));
 		g_object_unref(deviceInterface);
 	}
+
+	auto mediaManagerInterface = g_dbus_object_get_interface(object, "org.bluez.Media1");
+	if (mediaManagerInterface)
+	{
+		sil->createMediaManager(std::string(objectPath));
+		g_object_unref(mediaManagerInterface);
+	}
 }
 
 void Bluez5SIL::handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObject *object, void *user_data)
@@ -224,6 +234,13 @@ void Bluez5SIL::handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObje
 		sil->removeAgentManager(std::string(objectPath));
 		g_object_unref(agentManagerInterface);
 	}
+
+	auto mediaManagerInterface = g_dbus_object_get_interface(object, "org.bluez.Media1");
+	if (mediaManagerInterface)
+	{
+		sil->removeMediaManager(std::string(objectPath));
+		g_object_unref(mediaManagerInterface);
+	}
 }
 
 GDBusObject* Bluez5SIL::findInterface(GList* objects, const gchar *interfaceName)
@@ -244,8 +261,13 @@ GDBusObject* Bluez5SIL::findInterface(GList* objects, const gchar *interfaceName
 
 void Bluez5SIL::assignNewDefaultAdapter()
 {
-	if (!mDefaultAdapter && !mAdapters.empty())
-		mDefaultAdapter = mAdapters.front();
+	for (auto it = mAdapters.begin(); it != mAdapters.end(); it++)
+	{
+		Bluez5Adapter *adapter = *it;
+		std::size_t found = adapter->getObjectPath().find("hci0");
+		if (found != std::string::npos)
+			mDefaultAdapter = adapter;
+	}
 }
 
 void Bluez5SIL::createAdapter(const std::string &objectPath)
@@ -262,9 +284,6 @@ void Bluez5SIL::createAdapter(const std::string &objectPath)
 
 	if (observer)
 		observer->adaptersChanged();
-
-	if (mBleAdvertise)
-		adapter->assignBleAdvertise(mBleAdvertise);
 
 	if (mGattManager)
 		adapter->assignGattManager(mGattManager);
@@ -367,47 +386,6 @@ void Bluez5SIL::removeAgentManager(const std::string &objectPath)
 	mAgentManager = 0;
 }
 
-void Bluez5SIL::createBleAdvManager(const std::string &objectPath)
-{
-	if (mBleAdvManager)
-	{
-		WARNING(MSGID_MULTIPLE_AGENT_MGR, 0, "Tried to create another BleAdvertise manager instance");
-		return;
-	}
-
-	GError *error = 0;
-	mBleAdvManager = bluez_leadvertising_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                                "org.bluez", objectPath.c_str(), NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for agent manager on path %s: %s",
-			  objectPath.c_str(), error->message);
-		g_error_free(error);
-		return;
-	}
-
-	mBleAdvertise = new Bluez5Advertise(mBleAdvManager, this);
-
-	for (auto adapter : mAdapters)
-		adapter->assignBleAdvertise(mBleAdvertise);
-
-}
-
-void Bluez5SIL::removeBleAdvManager(const std::string &objectPath)
-{
-	if (!mBleAdvManager)
-		return;
-
-	g_object_unref(mBleAdvManager);
-	mBleAdvManager = 0;
-
-	for (auto adapter : mAdapters)
-		adapter->assignBleAdvertise(0);
-
-	delete mBleAdvertise;
-	mBleAdvertise = 0;
-}
-
 void Bluez5SIL::createProfileManager(const std::string &objectPath)
 {
 	if (mProfileManager)
@@ -465,43 +443,16 @@ void Bluez5SIL::createGattManager(const std::string &objectPath)
 
 void Bluez5SIL::createMediaManager(const std::string &objectPath)
 {
-	if (mMediaManager)
-	{
-		WARNING(MSGID_MULTIPLE_AGENT_MGR, 0, "Tried to create another media instance");
-		return;
-	}
-
-	GError *error = 0;
-	mMediaManager = bluez_media1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-                                                                "org.bluez", objectPath.c_str(), NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0, "Failed to create dbus proxy for media manager on path %s: %s",
-			  objectPath.c_str(), error->message);
-		g_error_free(error);
-		return;
-	}
-
-	mPlayer = new Bluez5MprisPlayer(mMediaManager, this);
-
-	for (auto adapter : mAdapters)
-		adapter->assingPlayer(mPlayer);
-
+	auto adapter = findAdapterForObjectPath(objectPath);
+	if (adapter)
+		adapter->addMediaManager(objectPath);
 }
 
 void Bluez5SIL::removeMediaManager(const std::string &objectPath)
 {
-	if (!mMediaManager)
-		return;
-
-	g_object_unref(mMediaManager);
-	mMediaManager = 0;
-
-	for (auto adapter : mAdapters)
-		adapter->assingPlayer(0);
-
-	delete mPlayer;
-	mPlayer = 0;
+	auto adapter = findAdapterForObjectPath(objectPath);
+	if (adapter)
+		adapter->removeMediaManager(objectPath);
 }
 
 void Bluez5SIL::connectWithBluez()
@@ -530,6 +481,18 @@ std::vector<BluetoothAdapter*> Bluez5SIL::getAdapters()
 	// here.
 	std::vector<BluetoothAdapter*> adapters(mAdapters.begin(), mAdapters.end());
 	return adapters;
+}
+
+Bluez5Adapter * Bluez5SIL::getBluez5Adapter(std::string objectPath)
+{
+	for (auto adapter: mAdapters)
+	{
+		std::size_t found = objectPath.find(adapter->getObjectPath());
+		if (found != std::string::npos)
+			return adapter;
+	}
+
+	return nullptr;
 }
 
 void Bluez5SIL::checkDbusConnection()

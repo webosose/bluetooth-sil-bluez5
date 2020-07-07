@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,18 +16,16 @@
 
 #include "glib.h"
 #include "bluez5advertise.h"
-#include "bluez5sil.h"
 #include "asyncutils.h"
 #include "logging.h"
 
 #define BLUEZ5_ADVERTISE_BUS_NAME           "com.webos.service.bleadvertise"
 #define BLUEZ5_ADVERTISE_OBJECT_PATH        "/advetise/advId"
 
-Bluez5Advertise::Bluez5Advertise(BluezLEAdvertisingManager1 *advManager, Bluez5SIL *sil):
+Bluez5Advertise::Bluez5Advertise(BluezLEAdvertisingManager1 *advManager):
 	mBusId(0),
 	mTxPower(false),
 	mAdvManager(advManager),
-	mSIL(sil),
 	mConn(nullptr)
 {
 	mBusId = g_bus_own_name(G_BUS_TYPE_SYSTEM, BLUEZ5_ADVERTISE_BUS_NAME,
@@ -47,6 +45,12 @@ Bluez5Advertise::~Bluez5Advertise()
 	if (mBusId)
 	{
 		g_bus_unown_name(mBusId);
+	}
+
+	if (mAdvManager)
+	{
+		g_object_unref(mAdvManager);
+		mAdvManager = NULL;
 	}
 }
 
@@ -391,5 +395,7 @@ std::string Bluez5Advertise::getPath(uint8_t advId)
 
 void Bluez5Advertise::removeAdvertise(uint8_t advId)
 {
-	mAdvertiserMap.erase(advId);
+	auto itr = mAdvertiserMap.find(advId);
+	if (itr != mAdvertiserMap.end())
+		mAdvertiserMap.erase(itr);
 }
