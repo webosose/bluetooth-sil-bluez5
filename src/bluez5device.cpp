@@ -20,6 +20,8 @@
 #include "bluez5agent.h"
 #include "asyncutils.h"
 
+#define SWAP_INT32(x) (((x) >> 24) | (((x) & 0x00FF0000) >> 8) | (((x) & 0x0000FF00) << 8) | ((x) << 24))
+
 const std::string BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID = "0000110e-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
@@ -274,19 +276,18 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 	{
 		mMapSupportedMessageTypes.clear();
 
-		for (int m = 0; m < g_variant_n_children(valueVar); m++)
+		for (int m = 0; m < g_variant_n_children(valueVar) && m < mMapInstancesName.size(); m++)
 		{
 			GVariant *mapInstanceVar = g_variant_get_child_value(valueVar, m);
-			std::uint8_t mapInstance = g_variant_get_byte(mapInstanceVar);
-			if (isLittleEndian())
+			std::uint32_t mapInstance = (std::uint32_t)g_variant_get_int32(mapInstanceVar);
+			if (!isLittleEndian())
 			{
-				mMapSupportedMessageTypes.insert(std::pair<std::string, std::vector<std::string>>(mMapInstancesName.at(m), convertToSupportedtypes(mapInstance & 0x000F)));
+				mapInstance  = SWAP_INT32(mapInstance);
 			}
-			else
-			{
-				mMapSupportedMessageTypes.insert(std::pair<std::string, std::vector<std::string>>(mMapInstancesName.at(m), convertToSupportedtypes((mapInstance & 0xF000) >> 24)));
-			}
-
+			std::uint8_t data = (std::uint8_t)mapInstance;
+			std::vector<std::string> supportedMessageTypesList;
+			convertToSupportedtypes(data & 0x000F ,supportedMessageTypesList);
+			mMapSupportedMessageTypes.insert(std::pair<std::string, std::vector<std::string>>(mMapInstancesName.at(m),supportedMessageTypesList));
 			g_variant_unref(mapInstanceVar);
 		}
 
@@ -449,30 +450,15 @@ std::string Bluez5Device::devPropertyTypeToString(BluetoothProperty::Type type)
 	return propertyName;
 }
 
-std::vector<std::string> Bluez5Device::convertToSupportedtypes(std::uint8_t data)
+void Bluez5Device::convertToSupportedtypes(std::uint8_t data,std::vector<std::string>& supportedMessageTypesList)
 {
-	std::vector<std::string> supportedMessageTypesList;
-	if (isLittleEndian())
+	for (unsigned int j = 0; j < 4; j++)
 	{
-		for (unsigned int j = 0; j < 4; j++)
+		if(data & 1<<j )
 		{
-			if(data & 1<<j )
-			{
-				supportedMessageTypesList.push_back(supportedMessageTypes.at(j));
-			}
+			supportedMessageTypesList.push_back(supportedMessageTypes.at(j));
 		}
 	}
-	else
-	{
-		for (unsigned int j = 3, k = 0; j >= 0; j--, k++)
-		{
-			if(data & 1<<j )
-			{
-				supportedMessageTypesList.push_back(supportedMessageTypes.at(k));
-			}
-		}
-	}
-	return supportedMessageTypesList;
 }
 
 void Bluez5Device::setDevicePropertyAsync(const BluetoothProperty& property, BluetoothResultCallback callback)

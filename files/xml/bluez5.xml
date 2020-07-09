@@ -55,7 +55,7 @@
             <property name="TxPower" type="n" access="read"></property>
             <property name="ServicesResolved" type="b" access="read"></property>
             <property name="MapInstances" type="as" access="read"></property>
-            <property name="MapInstanceProperties" type="ay" access="read"></property>
+            <property name="MapInstanceProperties" type="ai" access="read"></property>
     </interface>
     <interface name="org.bluez.AgentManager1">
         <method name="RegisterAgent">

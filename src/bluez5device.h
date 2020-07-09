@@ -83,7 +83,7 @@ private:
 	std::string devPropertyTypeToString(BluetoothProperty::Type type);
 	void updateConnectedRole();
 	void updateProfileConnectionStatus(std::vector <std::string> prevConnectedUuis);
-	std::vector<std::string> convertToSupportedtypes(std::uint8_t data);
+	void convertToSupportedtypes(std::uint8_t data,std::vector<std::string>& supportedMessageTypesList);
 	bool isLittleEndian();
 private:
 	Bluez5Adapter *mAdapter;
