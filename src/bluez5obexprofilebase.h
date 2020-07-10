@@ -45,6 +45,7 @@ public:
 	virtual void notifySessionStatus(const std::string &address, bool createdOrRemoved);
 
 private:
+
 	std::map<std::string, Bluez5ObexSession*> mSessions;
 	std::map<BluetoothFtpTransferId, Bluez5ObexTransfer*> mTransfers;
 	Bluez5ObexSession::Type mType;
@@ -59,6 +60,7 @@ protected:
 	void updateActiveTransfer(BluetoothFtpTransferId id, Bluez5ObexTransfer *transfer, BluetoothOppTransferResultCallback callback);
 	void removeTransfer(BluetoothFtpTransferId id);
 	Bluez5ObexTransfer* findTransfer(BluetoothFtpTransferId id);
+	void removeFromSessionList(std::string address);
 };
 
 #endif

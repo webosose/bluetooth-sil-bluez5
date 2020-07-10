@@ -35,15 +35,13 @@ public:
     void connect(const std::string &address, const std::string &instanceName, BluetoothMapCallback callback) final;
     void disconnect(const std::string &address, const std::string &sessionId, BluetoothMapCallback callback) final;
     void notifySessionStatus(const std::string &address, bool createdOrRemoved) final;
+
 private:
     Bluez5Adapter *mAdapter;
-    std::map<std::string, std::string> mSessionToAddressMap;
-
-    std::string findSessionKey(const std::string &sessionId);
-    void storeSessionToAddress(const std::string &address, const std::string &sessionId);
-    void createSession(const std::string &address, const std::string &instanceName, BluetoothMapCallback callback);
-    void removeSessionToAddress(const std::string &sessionId);
+    std::string convertSessionKey(const std::string &address);
     std::string getSessionIdFromSessionPath(const std::string &sessionPath);
+    void createSession(const std::string &address, const std::string &instanceName, BluetoothMapCallback callback);
+    void getMessageFilters(const std::string &sessionKey, const std::string &sessionId, BluetoothMapListFiltersResultCallback callback);
 };
 
 #endif

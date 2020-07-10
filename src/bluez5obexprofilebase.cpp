@@ -37,7 +37,6 @@ void Bluez5ObexProfileBase::notifySessionStatus(const std::string &address, bool
 {
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, createdOrRemoved));
-
 	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address), properties);
 }
 
@@ -51,6 +50,22 @@ void Bluez5ObexProfileBase::handleFailedToCreateSession(const std::string &addre
 	};
 
 	disconnect(address, disconnectCallback);
+}
+
+void Bluez5ObexProfileBase::removeFromSessionList(std::string address)
+{
+	auto sessionIter = mSessions.find(address);
+	if (sessionIter == mSessions.end())
+		return;
+
+	Bluez5ObexSession *session = sessionIter->second;
+	if (!session)
+		return;
+
+	mSessions.erase(sessionIter);
+	// This will unregister the session with the obex daemon
+	delete session;
+
 }
 
 void Bluez5ObexProfileBase::removeSession(const std::string &address)
@@ -80,13 +95,12 @@ void Bluez5ObexProfileBase::removeSession(const std::string &address)
 
 		transferIter++;
 	}
-
 	mSessions.erase(sessionIter);
 
 	notifySessionStatus(address, false);
-
 	// This will unregister the session with the obex daemon
 	delete session;
+
 }
 
 
