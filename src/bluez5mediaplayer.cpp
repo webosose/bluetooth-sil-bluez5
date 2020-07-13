@@ -607,3 +607,17 @@ BluetoothAvrcpPlayerType Bluez5MediaPlayer::playerTypeStringToEnum(const std::st
 		return BluetoothAvrcpPlayerType::PLAYER_TYPE_VIDEO_BROADCAST;
 	return BluetoothAvrcpPlayerType::PLAYER_TYPE_AUDIO;
 }
+
+void Bluez5MediaPlayer::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback)
+{
+	if (mMediaFolder)
+	{
+		mMediaFolder->getNumberOfItems(callback);
+	}
+	else
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "MediaFolder interface is not created. Browsing not supported");
+		callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
+	}
+}

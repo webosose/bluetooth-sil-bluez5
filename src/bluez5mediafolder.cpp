@@ -110,3 +110,28 @@ void Bluez5MediaFolder::mediaFolderPropertiesChanged(GVariant* changedProperties
 		g_variant_unref(propertyVar);
 	}
 }
+
+void Bluez5MediaFolder::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback)
+{
+	GError *error = 0;
+	GVariant *var;
+	free_desktop_dbus_properties_call_get_sync(
+		mPropertiesProxy,
+		"org.bluez.MediaFolder1", "NumberOfItems",
+		&var, NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "get numberOfItems failed: %s", error->message);
+		g_error_free(error);
+		callback(BLUETOOTH_ERROR_FAIL, 0);
+		return;
+	}
+
+	GVariant *realPropVar = g_variant_get_variant(var);
+	uint32_t numOfItems = g_variant_get_uint32(realPropVar);
+	DEBUG("Bluez5MediaFolder: Number of items: %d", numOfItems);
+
+	callback(BLUETOOTH_ERROR_NONE, numOfItems);
+
+	return;
+}

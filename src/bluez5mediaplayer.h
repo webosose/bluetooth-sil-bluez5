@@ -49,6 +49,9 @@ public:
 	BluetoothError setPlayerApplicationSettingsProperties(
 			const BluetoothPlayerApplicationSettingsPropertiesList &properties);
 
+	/* AVRCP CT browse APIs called from Bluez5ProfileAvcrp */
+	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
+
 	/* AVRCP CT helper functions called from AVRCP profile class */
 	std::string getPlayerObjPath() const { return mPlayerInfo.getPath(); }
 	bool getAddressed() const { return mPlayerInfo.getAddressed(); }

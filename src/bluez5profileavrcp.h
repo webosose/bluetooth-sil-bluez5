@@ -47,10 +47,7 @@ public:
 	static void handleBluezServiceStopped(GDBusConnection* conn, const gchar* name, gpointer user_data);
 	static void handleObjectAdded(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
 	static void handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
-	static void handlePropertiesChangedControl(
-		BluezMediaControl1 *controlInterface, gchar *interface,
-		GVariant *changedProperties, GVariant *invalidatedProperties,
-		gpointer userData);
+
 	void disconnect(const std::string& address, BluetoothResultCallback callback) override;
 	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
 	void disable(const std::string &uuid, BluetoothResultCallback callback) override;
@@ -77,9 +74,10 @@ public:
 	std::string getConnectedDeviceAddress() { return mConnectedDeviceAddress ; }
 	std::string getAdapterAddress();
 	BluetoothAvrcpStatusObserver* getAvrcpObserver() { return BluetoothAvrcpProfile::getAvrcpObserver(); }
-	void mediaControlInterfacePresent(const std::string &deviceObjPath);
 	void updatePlayerInfo();
 
+	/*AVRCP CT Browse APIs */
+	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }
@@ -95,11 +93,9 @@ private:
 	/* TRUE if either of the roles is connected. FALSE if both the roles are disconnected*/
 	bool mConnected;
 	std::string mConnectedDeviceAddress;
-	std::string mAddressedPlayerPath;
 	GDBusObjectManager *mObjectManager;
 	std::list<Bluez5MediaPlayer *> mMediaPlayerList;
 	Bluez5MediaPlayer *mAddressedMediaPlayer;
-	FreeDesktopDBusProperties* mPropertiesProxyControl;
 };
 
 #endif

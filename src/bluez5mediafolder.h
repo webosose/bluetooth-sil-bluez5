@@ -33,6 +33,10 @@ public:
 	Bluez5MediaFolder(Bluez5ProfileAvcrp *avrcp, const std::string &playerPath);
 	~Bluez5MediaFolder();
 
+	/* AVRCP CT Browse APIs, called from Bluez5MediaPlayer */
+	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
+
+
 private:
 	std::string mPlayerObjPath;
 	Bluez5ProfileAvcrp *mAvrcp;
