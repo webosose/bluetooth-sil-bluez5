@@ -155,3 +155,73 @@ void Bluez5ProfileMap::getMessageFilters(const std::string &sessionKey, const st
     bluez_obex_message_access1_call_list_filter_fields(objectMessageProxy, NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getFilterListCallback));
 
  }
+
+void Bluez5ProfileMap::getFolderList(const std::string &sessionKey, const std::string &sessionId, const uint16_t &startOffset, const uint16_t &maxCount, BluetoothMapGetFoldersCallback callback)
+{
+    DEBUG("%s", __FUNCTION__);
+    std::vector<std::string> folderList;
+    const Bluez5ObexSession *session = findSession(sessionKey);
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID,folderList);
+        return;
+    }
+
+    BluezObexMessageAccess1 *tObjectMapProxy = session->getObjectMessageProxy();
+    if (!tObjectMapProxy)
+    {
+        callback(BLUETOOTH_ERROR_FAIL,folderList);
+        return;
+    }
+    bluez_obex_message_access1_call_list_folders(tObjectMapProxy ,buildGetFolderListParam(startOffset,maxCount),
+                                                 NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(std::bind(&Bluez5ProfileMap::getFolderListCb,
+                                                 this,tObjectMapProxy,callback,_1)));
+}
+
+void Bluez5ProfileMap::getFolderListCb(BluezObexMessageAccess1* tObjectMapProxy, BluetoothMapGetFoldersCallback callback, GAsyncResult *result)
+{
+    DEBUG("%s", __FUNCTION__);
+    std::vector<std::string> folderList;
+    GError *error = 0;
+    GVariant *outFolderList = 0;
+    bluez_obex_message_access1_call_list_folders_finish(tObjectMapProxy, &outFolderList, result, &error);
+    if (error)
+    {
+        callback(BLUETOOTH_ERROR_FAIL,folderList);
+        g_error_free(error);
+        return;
+    }
+    parseGetFolderListResponse(outFolderList,folderList);
+    callback(BLUETOOTH_ERROR_NONE,folderList);
+}
+
+void Bluez5ProfileMap::parseGetFolderListResponse(GVariant *outFolderList,std::vector<std::string> &folders)
+{
+    DEBUG("%s", __FUNCTION__);
+    g_autoptr(GVariantIter) iter = NULL;
+    g_autoptr(GVariantIter) iter1 = NULL;
+    g_variant_get (outFolderList, "aa{sv}", &iter);
+    while (g_variant_iter_loop (iter, "a{sv}", &iter1))
+    {
+        gchar *keyVar;
+        GVariant *valueVar;
+        while (g_variant_iter_loop (iter1, "{sv}", &keyVar, &valueVar))
+            folders.push_back(g_variant_get_string(valueVar, NULL));
+    }
+}
+
+GVariant * Bluez5ProfileMap::buildGetFolderListParam(const uint16_t &startOffset, const uint16_t &maxCount)
+{
+    DEBUG("%s", __FUNCTION__);
+    GVariant *startIndexValue = g_variant_new_uint16(startOffset);
+    GVariant *maxCountValue = g_variant_new_uint16(maxCount);
+
+    GVariantBuilder *builder = 0;
+    GVariant *params = 0;
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    g_variant_builder_add (builder, "{sv}","Offset" , startIndexValue);
+    g_variant_builder_add (builder, "{sv}","MaxCount" , maxCountValue);
+    params = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+    return params;
+}

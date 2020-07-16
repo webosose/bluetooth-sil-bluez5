@@ -35,13 +35,16 @@ public:
     void connect(const std::string &address, const std::string &instanceName, BluetoothMapCallback callback) final;
     void disconnect(const std::string &address, const std::string &sessionId, BluetoothMapCallback callback) final;
     void notifySessionStatus(const std::string &address, bool createdOrRemoved) final;
-
+    void getFolderList(const std::string &sessionKey, const std::string &sessionId, const uint16_t &startOffset, const uint16_t &maxCount, BluetoothMapGetFoldersCallback callback);
 private:
     Bluez5Adapter *mAdapter;
     std::string convertSessionKey(const std::string &address);
     std::string getSessionIdFromSessionPath(const std::string &sessionPath);
     void createSession(const std::string &address, const std::string &instanceName, BluetoothMapCallback callback);
     void getMessageFilters(const std::string &sessionKey, const std::string &sessionId, BluetoothMapListFiltersResultCallback callback);
+    void getFolderListCb(BluezObexMessageAccess1* tObjectMapProxy, BluetoothMapGetFoldersCallback callback, GAsyncResult *result);
+    void parseGetFolderListResponse(GVariant *outFolderList,std::vector<std::string> &folders);
+    GVariant * buildGetFolderListParam(const uint16_t &startOffset, const uint16_t &maxCount);
 };
 
 #endif
