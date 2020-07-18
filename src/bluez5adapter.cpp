@@ -67,6 +67,10 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mAdvertising(false),
 	mMediaManager(nullptr),
 	mPlayer(nullptr)
+#ifdef WEBOS_AUTO
+	,mBlockCancel(false),
+	mCancelTriggered(false)
+#endif
 {
 	GError *error = 0;
 
@@ -775,11 +779,24 @@ gboolean Bluez5Adapter::handleDiscoveryTimeout(gpointer user_data)
 	Bluez5Adapter *self = static_cast<Bluez5Adapter*>(user_data);
 
 	DEBUG("Discovery has timed out. Stopping it.");
-
 	self->cancelDiscovery([](BluetoothError error) { });
-
 	return FALSE;
 }
+
+#ifdef WEBOS_AUTO
+gboolean Bluez5Adapter::handleMinimalTimeout(gpointer user_data)
+{
+	Bluez5Adapter *self = static_cast<Bluez5Adapter*>(user_data);
+
+	DEBUG("Discovery has timed out. Stopping it.");
+	self->mBlockCancel = false;
+	if(self->mCancelTriggered)
+	{
+		self->cancelDiscovery([](BluetoothError error) { });
+	}
+	return FALSE;
+}
+#endif
 
 void Bluez5Adapter::startDiscoveryTimeout()
 {
@@ -790,6 +807,13 @@ void Bluez5Adapter::startDiscoveryTimeout()
 		DEBUG("Starting discovery timeout with %d seconds", mDiscoveryTimeout);
 		mDiscoveryTimeoutSource = g_timeout_add_seconds(mDiscoveryTimeout, Bluez5Adapter::handleDiscoveryTimeout, this);
 	}
+#ifdef WEBOS_AUTO
+	else
+	{
+		mBlockCancel = true;
+		mDiscoveryTimeoutSource = g_timeout_add_seconds(15, Bluez5Adapter::handleMinimalTimeout, this);
+	}
+#endif
 }
 
 BluetoothError Bluez5Adapter::startDiscovery()
@@ -805,9 +829,19 @@ BluetoothError Bluez5Adapter::startDiscovery()
 	if (mDiscovering)
 		return BLUETOOTH_ERROR_NONE;
 
+	GError *error = 0;
+#ifdef WEBOS_AUTO
+
+	DEBUG("Set device discovery Filter");
+	bluez_adapter1_call_set_discovery_filter_sync(mAdapterProxy, buildDiscoveryFilterParam("bredr"), NULL, &error);
+	if (error)
+	{
+		DEBUG("%s Error: %s",__FUNCTION__,error->message);
+	}
+
+#endif
 	DEBUG("Starting device discovery");
 
-	GError *error = 0;
 	bluez_adapter1_call_start_discovery_sync(mAdapterProxy, NULL, &error);
 	if (error)
 	{
@@ -819,6 +853,22 @@ BluetoothError Bluez5Adapter::startDiscovery()
 
 	return BLUETOOTH_ERROR_NONE;
 }
+
+#ifdef WEBOS_AUTO
+GVariant* Bluez5Adapter::buildDiscoveryFilterParam(const std::string& transportType)
+{
+	DEBUG("%s", __FUNCTION__);
+	GVariant *transportValue = g_variant_new_string(transportType.c_str());
+
+	GVariantBuilder *builder = 0;
+	GVariant *params = 0;
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	g_variant_builder_add (builder, "{sv}","Transport" , transportValue);
+	params = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+	return params;
+}
+#endif
 
 void Bluez5Adapter::resetDiscoveryTimeout()
 {
@@ -838,12 +888,23 @@ void Bluez5Adapter::cancelDiscovery(BluetoothResultCallback callback)
 		return;
 	}
 
+#ifdef WEBOS_AUTO
+	if(mBlockCancel)
+	{
+		mCancelTriggered = true;
+		callback(BLUETOOTH_ERROR_NONE);
+		return;
+	}
+	mCancelTriggered = false;
+#endif
 	mLegacyScan = false;
 	if (mLeScanFilters.size() == 0)
 	{
 		mSILDiscovery = false;
 		resetDiscoveryTimeout();
-
+#ifdef WEBOS_AUTO
+		mBlockCancel = false;
+#endif
 		GError *error = 0;
 		bluez_adapter1_call_stop_discovery_sync(mAdapterProxy, NULL, &error);
 		if (error)
@@ -861,6 +922,17 @@ void Bluez5Adapter::cancelDiscovery(BluetoothResultCallback callback)
 			}
 			mUseBluezFilter = false;
 		}
+#ifdef WEBOS_AUTO
+		else
+		{
+			GError *error = 0;
+			bluez_adapter1_call_set_discovery_filter_sync(mAdapterProxy, buildDiscoveryFilterParam("auto"), NULL, &error);
+			if (error)
+			{
+				DEBUG("%s Error: %s",__FUNCTION__,error->message);
+			}
+		}
+#endif
 		mCancelDiscCallback = callback;
 	}
 	else
