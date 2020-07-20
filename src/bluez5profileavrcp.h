@@ -77,7 +77,9 @@ public:
 	void updatePlayerInfo();
 
 	/*AVRCP CT Browse APIs */
-	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
+	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback) override;
+	void getFolderItems(uint32_t startIndex, uint32_t endIndex,
+						BluetoothAvrcpBrowseFolderItemsCallback callback) override;
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }

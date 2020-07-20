@@ -51,6 +51,8 @@ public:
 
 	/* AVRCP CT browse APIs called from Bluez5ProfileAvcrp */
 	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
+	void getFolderItems(uint32_t startIndex, uint32_t endIndex,
+						BluetoothAvrcpBrowseFolderItemsCallback callback);
 
 	/* AVRCP CT helper functions called from AVRCP profile class */
 	std::string getPlayerObjPath() const { return mPlayerInfo.getPath(); }

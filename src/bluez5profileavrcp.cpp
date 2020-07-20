@@ -472,7 +472,7 @@ void Bluez5ProfileAvcrp::setPlayerApplicationSettingsProperties(
 		}
 		else
 		{
-			ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Addressed player is not there");
+			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Addressed player is not there");
 			callback(BLUETOOTH_ERROR_NOT_ALLOWED);
 		}
 	}
@@ -504,7 +504,7 @@ BluetoothError Bluez5ProfileAvcrp::sendPassThroughCommand(
 		}
 		else
 		{
-			ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Addressed player is not there");
+			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Addressed player is not there");
 			return BLUETOOTH_ERROR_NOT_ALLOWED;
 		}
 	}
@@ -581,6 +581,12 @@ void Bluez5ProfileAvcrp::addressedPlayerChanged(const std::string &playerPath)
 			(*player)->setAddressed(false);
 		}
 	}
+
+	updatePlayerInfo();
+	getAvrcpObserver()->currentFolderReceived(
+		"",
+		convertAddressToLowerCase(mAdapter->getAddress()),
+		convertAddressToLowerCase(mConnectedDeviceAddress));
 }
 
 void Bluez5ProfileAvcrp::updatePlayerInfo()
@@ -612,7 +618,7 @@ void Bluez5ProfileAvcrp::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItems
 			}
 			else
 			{
-				ERROR("MSGID_AVRCP_PROFILE_ERROR", 0, "Addressed player is not there");
+				ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Addressed player is not there");
 				callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
 			}
 		}
@@ -624,3 +630,29 @@ void Bluez5ProfileAvcrp::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItems
 	}
 }
 
+void Bluez5ProfileAvcrp::getFolderItems(uint32_t startIndex, uint32_t endIndex,
+										BluetoothAvrcpBrowseFolderItemsCallback callback)
+{
+	if (callback)
+	{
+		BluetoothFolderItemList itemList;
+		if (mConnectedController)
+		{
+			if (mAddressedMediaPlayer)
+			{
+				mAddressedMediaPlayer->getFolderItems(startIndex, endIndex, callback);
+			}
+			else
+			{
+				ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Addressed player is not there");
+				callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
+			}
+		}
+		else
+		{
+			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Not connected as controller");
+			callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
+		}
+	}
+	return;
+}

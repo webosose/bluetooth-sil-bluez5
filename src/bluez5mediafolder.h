@@ -35,7 +35,8 @@ public:
 
 	/* AVRCP CT Browse APIs, called from Bluez5MediaPlayer */
 	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
-
+	void getFolderItems(uint32_t startIndex, uint32_t endIndex,
+						BluetoothAvrcpBrowseFolderItemsCallback callback);
 
 private:
 	std::string mPlayerObjPath;
@@ -48,6 +49,8 @@ private:
 			GVariant *changedProperties, GVariant *invalidatedProperties,
 			gpointer userData);
 	void mediaFolderPropertiesChanged(GVariant* changedProperties);
+	BluetoothAvrcpItemType itemTypeStringToEnum(const std::string type);
+
 
 };
 #endif //BLUEZ5MEDIAFOLDER_H

@@ -163,14 +163,18 @@ void Bluez5MediaPlayer::mediaPlayerPropertiesChanged(
 		std::string key = g_variant_get_string(keyVar, NULL);
 		if ("Position" == key)
 		{
-			mMediaPlayStatus.setPosition(g_variant_get_uint32(valueVar));
-			DEBUG("Bluez5MediaPlayer::Position: %ld", mMediaPlayStatus.getPosition());
-			if (!mAvrcp->getConnectedDeviceAddress().empty())
+			uint32_t position = g_variant_get_uint32(valueVar);
+			if (mMediaPlayStatus.getPosition() != position)
 			{
-				mAvrcp->getAvrcpObserver()->mediaPlayStatusReceived(
-					mMediaPlayStatus,
-					convertAddressToLowerCase(mAvrcp->getAdapterAddress()),
-					convertAddressToLowerCase(mAvrcp->getConnectedDeviceAddress()));
+				mMediaPlayStatus.setPosition(position);
+				DEBUG("Bluez5MediaPlayer::Position: %ld", mMediaPlayStatus.getPosition());
+				if (!mAvrcp->getConnectedDeviceAddress().empty())
+				{
+					mAvrcp->getAvrcpObserver()->mediaPlayStatusReceived(
+						mMediaPlayStatus,
+						convertAddressToLowerCase(mAvrcp->getAdapterAddress()),
+						convertAddressToLowerCase(mAvrcp->getConnectedDeviceAddress()));
+				}
 			}
 		}
 		else if ("Status" == key)
@@ -178,15 +182,18 @@ void Bluez5MediaPlayer::mediaPlayerPropertiesChanged(
 			auto playStatusIt = mPlayStatus.find(g_variant_get_string(valueVar, NULL));
 			if (playStatusIt != mPlayStatus.end())
 			{
-				mMediaPlayStatus.setStatus(playStatusIt->second);
-			}
-			DEBUG("Bluez5MediaPlayer::Play status: %d", mMediaPlayStatus.getStatus());
-			if (!mAvrcp->getConnectedDeviceAddress().empty())
-			{
-				mAvrcp->getAvrcpObserver()->mediaPlayStatusReceived(
-					mMediaPlayStatus,
-					convertAddressToLowerCase(mAvrcp->getAdapterAddress()),
-					convertAddressToLowerCase(mAvrcp->getConnectedDeviceAddress()));
+				if (playStatusIt->second != mMediaPlayStatus.getStatus())
+				{
+					mMediaPlayStatus.setStatus(playStatusIt->second);
+					if (!mAvrcp->getConnectedDeviceAddress().empty())
+					{
+						mAvrcp->getAvrcpObserver()->mediaPlayStatusReceived(
+							mMediaPlayStatus,
+							convertAddressToLowerCase(mAvrcp->getAdapterAddress()),
+							convertAddressToLowerCase(mAvrcp->getConnectedDeviceAddress()));
+					}
+				}
+				DEBUG("Bluez5MediaPlayer::Play status: %d", mMediaPlayStatus.getStatus());
 			}
 		}
 		else if ("Track" == key)
@@ -203,15 +210,19 @@ void Bluez5MediaPlayer::mediaPlayerPropertiesChanged(
 				DEBUG("Bluez5MediaPlayer:: Track Key: %s", keyTrack.c_str());
 				if ("Duration" == keyTrack)
 				{
-					mMediaPlayStatus.setDuration(g_variant_get_uint32(valueTrack));
-					mediaMetadata.setDuration(mMediaPlayStatus.getDuration());
-					if (!mAvrcp->getConnectedDeviceAddress().empty())
+					uint32_t duration = g_variant_get_uint32(valueTrack);
+					if (mMediaPlayStatus.getDuration() != duration)
 					{
-						mAvrcp->getAvrcpObserver()->mediaPlayStatusReceived(
-							mMediaPlayStatus,
-							convertAddressToLowerCase(mAvrcp->getAdapterAddress()),
-							convertAddressToLowerCase(mAvrcp->getConnectedDeviceAddress()));
+						mMediaPlayStatus.setDuration(duration);
+						if (!mAvrcp->getConnectedDeviceAddress().empty())
+						{
+							mAvrcp->getAvrcpObserver()->mediaPlayStatusReceived(
+								mMediaPlayStatus,
+								convertAddressToLowerCase(mAvrcp->getAdapterAddress()),
+								convertAddressToLowerCase(mAvrcp->getConnectedDeviceAddress()));
+						}
 					}
+					mediaMetadata.setDuration(duration);
 				}
 				else if ("Title" == keyTrack)
 				{
@@ -619,5 +630,21 @@ void Bluez5MediaPlayer::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsC
 		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 			  "MediaFolder interface is not created. Browsing not supported");
 		callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
+	}
+}
+
+void Bluez5MediaPlayer::getFolderItems(uint32_t startIndex, uint32_t endIndex,
+									   BluetoothAvrcpBrowseFolderItemsCallback callback)
+{
+	BluetoothFolderItemList itemList;
+	if (mMediaFolder)
+	{
+		mMediaFolder->getFolderItems(startIndex, endIndex, callback);
+	}
+	else
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "MediaFolder interface is not created. Browsing not supported");
+		callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
 	}
 }
