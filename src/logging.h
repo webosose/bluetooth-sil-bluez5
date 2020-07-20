@@ -66,5 +66,7 @@ extern PmLogContext bluez5LogContext;
 #define MSGID_MEDIA_CONTROL_ERROR                      "MEDIA_CONTROL_ERROR"
 #define MSGID_DBUS_METHOD_CALL_FAILED                  "DBUS METHOD CALL FAILED"
 #define MSGID_AVRCP_PROFILE_ERROR                      "AVRCP_PROFILE_ERROR"
+#define MSGID_MAP_PROFILE_ERROR                        "MAP_PROFILE_ERROR"
+
 
 #endif // LOGGING_H

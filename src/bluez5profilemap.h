@@ -36,6 +36,7 @@ public:
     void disconnect(const std::string &address, const std::string &sessionId, BluetoothMapCallback callback) final;
     void notifySessionStatus(const std::string &address, bool createdOrRemoved) final;
     void getFolderList(const std::string &sessionKey, const std::string &sessionId, const uint16_t &startOffset, const uint16_t &maxCount, BluetoothMapGetFoldersCallback callback);
+    void setFolder(const std::string &sessionKey, const std::string &sessionId, const std::string &folder, BluetoothResultCallback callback);
 private:
     Bluez5Adapter *mAdapter;
     std::string convertSessionKey(const std::string &address);

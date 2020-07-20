@@ -114,7 +114,7 @@ std::string Bluez5ProfileMap::getSessionIdFromSessionPath(const std::string &ses
 }
 
 void Bluez5ProfileMap::getMessageFilters(const std::string &sessionKey, const std::string &sessionId, BluetoothMapListFiltersResultCallback callback)
- {
+{
 
     const Bluez5ObexSession *session = findSession(sessionKey);
     std::list<std::string> emptyFilterList;
@@ -224,4 +224,46 @@ GVariant * Bluez5ProfileMap::buildGetFolderListParam(const uint16_t &startOffset
     params = g_variant_builder_end(builder);
     g_variant_builder_unref(builder);
     return params;
+}
+
+void Bluez5ProfileMap::setFolder(const std::string &sessionKey, const std::string &sessionId, const std::string &folder, BluetoothResultCallback callback)
+{
+    DEBUG("%s", __FUNCTION__);
+    const Bluez5ObexSession *session = findSession(sessionKey);
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID);
+        return;
+    }
+
+    BluezObexMessageAccess1 *tObjectMapProxy = session->getObjectMessageProxy();
+    if (!tObjectMapProxy)
+    {
+        callback(BLUETOOTH_ERROR_FAIL);
+        return;
+    }
+
+    auto setFolderCallback = [this, tObjectMapProxy, callback](GAsyncResult *result) {
+
+    GError *error = 0;
+    gboolean ret;
+    ret = bluez_obex_message_access1_call_set_folder_finish(tObjectMapProxy, result, &error);
+    if (error)
+    {
+        ERROR(MSGID_MAP_PROFILE_ERROR, 0, "Failed to set folder error:%s",error->message);
+        if (strstr(error->message, "Not Found"))
+        {
+            callback(BLUETOOTH_ERROR_MAP_FOLDER_NOT_FOUND);
+        }
+        else
+        {
+            callback(BLUETOOTH_ERROR_FAIL);
+        }
+        g_error_free(error);
+        return;
+    }
+    callback(BLUETOOTH_ERROR_NONE);
+    };
+    bluez_obex_message_access1_call_set_folder(tObjectMapProxy , folder.c_str(),
+                                                 NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(setFolderCallback));
 }
