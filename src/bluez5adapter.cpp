@@ -96,6 +96,12 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 
 	DEBUG("Successfully created proxy for adapter on path %s", objectPath.c_str());
 
+	std::size_t found = mObjectPath.find("hci");
+	if (found != std::string::npos)
+	{
+		mInterfaceName = mObjectPath.substr(found);
+	}
+
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handleAdapterPropertiesChanged), this);
 
 	mObexClient = new Bluez5ObexClient(this);
@@ -269,6 +275,7 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 			mName = g_variant_get_string(valueVar, NULL);
 			DEBUG ("%s: Since alias is empty, get name property as %s", __func__, mName.c_str());
 			properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mName));
+			properties.push_back(BluetoothProperty(BluetoothProperty::Type::INTERFACE_NAME, mInterfaceName));
 			changed = true;
 		}
 	}
@@ -287,6 +294,7 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 		}
 #endif
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mAlias));
+		properties.push_back(BluetoothProperty(BluetoothProperty::Type::INTERFACE_NAME, mInterfaceName));
 		changed = true;
 	}
 	else if (key == "Address")

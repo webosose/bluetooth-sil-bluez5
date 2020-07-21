@@ -189,7 +189,7 @@ private:
 	bool isDiscoveryTimeoutRunning();
 	uint32_t nextScanId();
 #ifdef WEBOS_AUTO
-GVariant* buildDiscoveryFilterParam(const std::string& transportType);
+	GVariant* buildDiscoveryFilterParam(const std::string& transportType);
 #endif
 
 private:
@@ -224,6 +224,7 @@ private:
 	Bluez5ObexAgent *mObexAgent;
 	std::string mName;
 	std::string mAlias;
+	std::string mInterfaceName;
 	BluetoothResultCallback mCancelDiscCallback;
 	bool mAdvertising;
 	std::vector <std::string> mUuids;
