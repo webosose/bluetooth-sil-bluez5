@@ -20,6 +20,7 @@
 #include "bluez5obexclient.h"
 #include "asyncutils.h"
 #include "utils.h"
+#include "bluez5busconfig.h"
 
 const std::string BLUETOOTH_PROFILE_MAS_UUID = "00001132-0000-1000-8000-00805f9b34fb";
 using namespace std::placeholders;
@@ -470,4 +471,113 @@ void Bluez5ProfileMap::addMessageProperties(std::string& key , GVariant* value ,
                 break;
         }
     }
+}
+
+void Bluez5ProfileMap::getMessage(const std::string &sessionKey, const std::string &messageHandle, bool attachment, const std::string &destinationFile, BluetoothResultCallback callback)
+{
+    DEBUG("%s", __FUNCTION__);
+    const Bluez5ObexSession *session = findSession(sessionKey);
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID);
+        return;
+    }
+
+    std::string objectPath = session->getObjectPath() + "/" + messageHandle;
+
+    BluezObexMessage1 *objectMessageProxy = createMessageHandleProxyUsingPath(objectPath);
+
+    if (!objectMessageProxy)
+    {
+        callback(BLUETOOTH_ERROR_MAP_MESSAGE_HANDLE_NOT_FOUND);
+        return;
+    }
+
+    auto getMessageCallback = [this, objectMessageProxy, callback](GAsyncResult *result) {
+
+        GError *error = 0;
+        gboolean ret;
+        gchar *objectPath = 0;
+
+        ret = bluez_obex_message1_call_get_finish(objectMessageProxy, &objectPath, NULL, result, &error);
+
+        if(objectMessageProxy)
+            g_object_unref(objectMessageProxy);
+
+        if (error)
+        {
+            ERROR(MSGID_MAP_PROFILE_ERROR, 0, "Failed to get message error:%s",error->message);
+            if (strstr(error->message, "UnknownObject"))
+            {
+                callback(BLUETOOTH_ERROR_MAP_MESSAGE_HANDLE_NOT_FOUND);
+            }
+            else
+            {
+                callback(BLUETOOTH_ERROR_FAIL);
+            }
+            g_error_free(error);
+            return;
+        }
+
+        startTransfer(std::string(objectPath), callback, Bluez5ObexTransfer::TransferType::RECEIVING);
+    };
+    bluez_obex_message1_call_get(objectMessageProxy , destinationFile.c_str(), attachment,
+                                                 NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(getMessageCallback));
+
+}
+
+BluezObexMessage1* Bluez5ProfileMap::createMessageHandleProxyUsingPath(const std::string &objectPath)
+{
+    GError *error = 0;
+    BluezObexMessage1 *objectMessageProxy = NULL;
+    objectMessageProxy = bluez_obex_message1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
+                                                                        "org.bluez.obex", objectPath.c_str(), NULL, &error);
+    if (error)
+    {
+        ERROR(MSGID_FAILED_TO_CREATE_OBEX_MESSAGE_PROXY, 0,
+            "Failed to create dbus proxy for obex message on path %s",
+            objectPath.c_str());
+        g_error_free(error);
+    }
+    return objectMessageProxy;
+}
+
+void Bluez5ProfileMap::startTransfer(const std::string &objectPath, BluetoothResultCallback callback, Bluez5ObexTransfer::TransferType type)
+{
+    // NOTE: ownership of the transfer object is passed to updateActiveTransfer which
+    // will delete it once there is nothing to left to do with it
+    Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
+    mTransfersMap.insert({std::string(objectPath), transfer});
+    transfer->watch(std::bind(&Bluez5ProfileMap::updateActiveTransfer, this, objectPath, transfer, callback));
+}
+
+void Bluez5ProfileMap::removeTransfer(const std::string &objectPath)
+{
+    auto transferIter = mTransfersMap.find(objectPath);
+    if (transferIter == mTransfersMap.end())
+        return;
+
+    Bluez5ObexTransfer *transfer = transferIter->second;
+    mTransfersMap.erase(transferIter);
+    delete transfer;
+}
+
+void Bluez5ProfileMap::updateActiveTransfer(const std::string &objectPath, Bluez5ObexTransfer *transfer, BluetoothResultCallback callback)
+{
+    bool cleanup = false;
+
+    if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE)
+    {
+        callback(BLUETOOTH_ERROR_NONE);
+        cleanup = true;
+    }
+    else if (transfer->getState() == Bluez5ObexTransfer::State::ERROR)
+    {
+        DEBUG("File transfer failed");
+        callback(BLUETOOTH_ERROR_FAIL);
+        cleanup = true;
+    }
+
+    if (cleanup)
+        removeTransfer(objectPath);
 }

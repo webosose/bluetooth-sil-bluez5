@@ -88,7 +88,7 @@ Bluez5ObexSession::Bluez5ObexSession(Bluez5ObexClient *client, Type type, const 
 
 	if (error)
 	{
-		ERROR(MSGID_FAILED_TO_CREATE_OBEX_PHONEBOOK_PROXY, 0,
+		ERROR(MSGID_FAILED_TO_CREATE_OBEX_MESSAGE_PROXY, 0,
 			  "Failed to create dbus proxy for obex message on path %s",
 			  mObjectPath.c_str());
 		g_error_free(error);
