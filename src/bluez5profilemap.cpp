@@ -24,6 +24,25 @@
 const std::string BLUETOOTH_PROFILE_MAS_UUID = "00001132-0000-1000-8000-00805f9b34fb";
 using namespace std::placeholders;
 
+std::unordered_map<std::string,BluetoothMapProperty::Type> propertyMap = {
+    {"Folder",BluetoothMapProperty::Type::FOLDER},
+    {"Subject",BluetoothMapProperty::Type::SUBJECT},
+    {"Timestamp",BluetoothMapProperty::Type::TIMESTAMP},
+    {"Sender",BluetoothMapProperty::Type::SENDER},
+    {"SenderAddress",BluetoothMapProperty::Type::SENDERADDRESS},
+    {"ReplyTo",BluetoothMapProperty::Type::REPLYTO},
+    {"Recipient",BluetoothMapProperty::Type::RECIPIENT},
+    {"RecipientAddress",BluetoothMapProperty::Type::RECIPIENTADDRESS},
+    {"Type",BluetoothMapProperty::Type::MESSAGETYPES},
+    {"Status",BluetoothMapProperty::Type::STATUS},
+    {"Size",BluetoothMapProperty::Type::SIZE},
+    {"AttachmentSize",BluetoothMapProperty::Type::ATTACHMENTSIZE},
+    {"Priority",BluetoothMapProperty::Type::PRIORITY},
+    {"Read",BluetoothMapProperty::Type::READ},
+    {"Sent",BluetoothMapProperty::Type::SENT},
+    {"Protected",BluetoothMapProperty::Type::PROTECTED},
+    {"Text",BluetoothMapProperty::Type::TEXTTYPE}};
+
 Bluez5ProfileMap::Bluez5ProfileMap(Bluez5Adapter *adapter) :
     Bluez5ObexProfileBase(Bluez5ObexSession::Type::MAP, adapter, BLUETOOTH_PROFILE_MAS_UUID),
     mAdapter(adapter)
@@ -266,4 +285,189 @@ void Bluez5ProfileMap::setFolder(const std::string &sessionKey, const std::strin
     };
     bluez_obex_message_access1_call_set_folder(tObjectMapProxy , folder.c_str(),
                                                  NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(setFolderCallback));
+}
+
+void Bluez5ProfileMap::getMessageList(const std::string &sessionKey, const std::string &sessionId, const std::string &folder, const BluetoothMapPropertiesList &filters, BluetoothMapGetMessageListCallback callback)
+{
+    DEBUG("%s", __FUNCTION__);
+    BluetoothMessageList messageList;
+    const Bluez5ObexSession *session = findSession(sessionKey);
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID,messageList);
+        return;
+    }
+
+    BluezObexMessageAccess1 *tObjectMapProxy = session->getObjectMessageProxy();
+    if (!tObjectMapProxy)
+    {
+        callback(BLUETOOTH_ERROR_FAIL,messageList);
+        return;
+    }
+
+    bluez_obex_message_access1_call_list_messages(tObjectMapProxy ,folder.c_str(),buildGetMessageListParam(filters),
+                                                 NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(std::bind(&Bluez5ProfileMap::getMessageListCb,
+                                                 this,tObjectMapProxy,callback,_1)));
+}
+
+void Bluez5ProfileMap::getMessageListCb(BluezObexMessageAccess1* tObjectMapProxy, BluetoothMapGetMessageListCallback callback, GAsyncResult *result)
+{
+    DEBUG("%s", __FUNCTION__);
+    BluetoothMessageList messageList;
+    GError *error = nullptr;
+    GVariant *outMessageList = nullptr;
+    bluez_obex_message_access1_call_list_messages_finish(tObjectMapProxy, &outMessageList, result, &error);
+    if (error)
+    {
+        ERROR(MSGID_MAP_PROFILE_ERROR, 0, "Failed to get message list due to :%s",error->message);
+        callback(BLUETOOTH_ERROR_FAIL,messageList);
+        g_error_free(error);
+        return;
+    }
+    parseGetMessageListResponse(outMessageList,messageList);
+    callback(BLUETOOTH_ERROR_NONE,messageList);
+}
+
+GVariant * Bluez5ProfileMap::buildGetMessageListParam(const BluetoothMapPropertiesList &filters)
+{
+    DEBUG("%s", __FUNCTION__);
+    GVariantBuilder *builder = 0;
+    GVariant *params = 0;
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    for (auto filter:filters)
+    {
+        switch (filter.getType())
+        {
+            case BluetoothMapProperty::Type::STARTOFFSET:
+                g_variant_builder_add (builder, "{sv}","Offset" ,g_variant_new_uint16(filter.getValue<uint16_t>()));
+                break;
+            case BluetoothMapProperty::Type::MAXCOUNT:
+                g_variant_builder_add (builder, "{sv}","MaxCount" ,g_variant_new_uint16(filter.getValue<uint16_t>()));
+                break;
+            case BluetoothMapProperty::Type::SUBJECTLENGTH:
+                g_variant_builder_add (builder, "{sv}","SubjectLength" ,g_variant_new_byte(filter.getValue<uint8_t>()));
+                break;
+            case BluetoothMapProperty::Type::PERIODBEGIN:
+                g_variant_builder_add (builder, "{sv}","PeriodBegin" ,g_variant_new_string(filter.getValue<std::string>().c_str()));
+                break;
+            case BluetoothMapProperty::Type::PERIODEND:
+                g_variant_builder_add (builder, "{sv}","PeriodEnd" ,g_variant_new_string(filter.getValue<std::string>().c_str()));
+                break;
+            case BluetoothMapProperty::Type::RECIPIENT:
+                g_variant_builder_add (builder, "{sv}","Recipient" ,g_variant_new_string(filter.getValue<std::string>().c_str()));
+                break;
+            case BluetoothMapProperty::Type::SENDER:
+                g_variant_builder_add (builder, "{sv}","Sender" ,g_variant_new_string(filter.getValue<std::string>().c_str()));
+                break;
+            case BluetoothMapProperty::Type::PRIORITY:
+                g_variant_builder_add (builder, "{sv}","Priority" , g_variant_new_boolean(filter.getValue<bool>()));
+                break;
+            case BluetoothMapProperty::Type::READ:
+                g_variant_builder_add (builder, "{sv}","Read" , g_variant_new_boolean(filter.getValue<bool>()));
+                break;
+            case BluetoothMapProperty::Type::MESSAGETYPES:
+                {
+                    GVariant *messageFilters = nullptr;
+                    GVariantBuilder *builderMessageTypes = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+                    std::vector<std::string> messageTypes = filter.getValue<std::vector<std::string>>();
+                    for(auto messageType : messageTypes)
+                        g_variant_builder_add(builderMessageTypes, "s", messageType.c_str());
+                    messageFilters = g_variant_builder_end(builderMessageTypes);
+                    g_variant_builder_add (builder, "{sv}","Types" , messageFilters);
+                    g_variant_builder_unref(builderMessageTypes);
+                    break;
+                }
+            case BluetoothMapProperty::Type::FIELDS:
+                {
+                    GVariant *fieldFilters = nullptr;
+                    GVariantBuilder *builderFields = g_variant_builder_new (G_VARIANT_TYPE ("as"));
+                    std::vector<std::string> fields = filter.getValue<std::vector<std::string>>();
+                    for(auto field : fields)
+                        g_variant_builder_add(builderFields, "s", field.c_str());
+                    fieldFilters = g_variant_builder_end(builderFields);
+                    g_variant_builder_add (builder, "{sv}","Fields" , builderFields);
+                    g_variant_builder_unref(builderFields);
+                    break;
+                }
+            default:
+                break;
+        }
+    }
+    params = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+    return params;
+}
+
+void Bluez5ProfileMap::parseGetMessageListResponse(GVariant *outMessageList,BluetoothMessageList &messageList)
+{
+    DEBUG("%s", __FUNCTION__);
+
+    g_autoptr(GVariantIter) iter1 = NULL;
+    g_variant_get (outMessageList, "a{oa{sv}}", &iter1);
+
+    const gchar *objectPath;
+    g_autoptr(GVariantIter) iter2 = NULL;
+    while (g_variant_iter_loop (iter1, "{oa{sv}}", &objectPath, &iter2))
+    {
+        const gchar *key;
+        g_autoptr(GVariant) value = NULL;
+        BluetoothMapPropertiesList messageProperties;
+        while (g_variant_iter_loop (iter2, "{sv}", &key, &value))
+        {
+            std::string keyValue(key);
+            addMessageProperties(keyValue,value,messageProperties);
+        }
+        std::string tObjectPath(objectPath);
+        std::size_t found = tObjectPath.find("message");
+        if (found != std::string::npos)
+        {
+            std::string messageHandle = tObjectPath.substr(found);
+            messageList.push_back(std::make_pair(messageHandle,messageProperties));
+        }
+    }
+}
+
+void Bluez5ProfileMap::addMessageProperties(std::string& key , GVariant* value , BluetoothMapPropertiesList &messageProperties)
+{
+    auto it = propertyMap.find(key);
+    if(it != propertyMap.end())
+    {
+        switch(it->second)
+        {
+            case BluetoothMapProperty::Type::FOLDER:
+            case BluetoothMapProperty::Type::SUBJECT:
+            case BluetoothMapProperty::Type::TIMESTAMP:
+            case BluetoothMapProperty::Type::SENDER:
+            case BluetoothMapProperty::Type::SENDERADDRESS:
+            case BluetoothMapProperty::Type::REPLYTO:
+            case BluetoothMapProperty::Type::RECIPIENT:
+            case BluetoothMapProperty::Type::RECIPIENTADDRESS:
+            case BluetoothMapProperty::Type::MESSAGETYPES:
+            case BluetoothMapProperty::Type::STATUS:
+                {
+                    std::string parsedStringVal = g_variant_get_string(value, NULL);
+                    messageProperties.push_back(BluetoothMapProperty(it->second,parsedStringVal));
+                    break;
+                }
+            case BluetoothMapProperty::Type::SIZE:
+            case BluetoothMapProperty::Type::ATTACHMENTSIZE:
+                {
+                    uint64_t parsedUint64Val = g_variant_get_uint64(value);
+                    messageProperties.push_back(BluetoothMapProperty(it->second,parsedUint64Val));
+                    break;
+                }
+            case BluetoothMapProperty::Type::TEXTTYPE:
+            case BluetoothMapProperty::Type::PRIORITY:
+            case BluetoothMapProperty::Type::READ:
+            case BluetoothMapProperty::Type::SENT:
+            case BluetoothMapProperty::Type::PROTECTED:
+                {
+                    bool parsedBoolVal = g_variant_get_boolean(value);
+                    messageProperties.push_back(BluetoothMapProperty(it->second,parsedBoolVal));
+                    break;
+                }
+            default:
+                break;
+        }
+    }
 }
