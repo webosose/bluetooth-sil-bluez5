@@ -32,7 +32,7 @@ const std::string BLUETOOTH_PROFILE_GATT_UUID = "00001801-0000-1000-8000-00805f9
 
 #define CLIENT_PATH "/client"
 #define SERVER_PATH "/server"
-
+#define GATT_RECONN_TIMEOUT (30 * 1000)
 #define BLUEZ5_GATT_OBJECT_CLIENT_PATH BLUEZ5_GATT_OBJECT_PATH CLIENT_PATH
 #define BLUEZ5_GATT_OBJECT_SERVER_PATH BLUEZ5_GATT_OBJECT_PATH SERVER_PATH
 
@@ -409,6 +409,7 @@ void Bluez5ProfileGatt::removeRemoteGattService(const std::string &serviceObject
 		return;
 
 	std::string deviceAddress = device->getAddress();
+	handleAutoConnectDevRem(deviceAddress);
 	std::string lowerCaseAddress = convertAddressToLowerCase(deviceAddress);
 
 	auto deviceServicesIter = mDeviceServicesMap.find(lowerCaseAddress);
@@ -471,6 +472,11 @@ void Bluez5ProfileGatt::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 		pThis->createRemoteGattDescriptor(std::string(objectPath));
 		g_object_unref(descriptorInterface);
 	}
+	else
+	{
+		auto objectPath = g_dbus_object_get_object_path(object);
+		pThis->handleAutoConnectDevAdd(std::string(objectPath));
+	}
 }
 
 void Bluez5ProfileGatt::handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObject *object,
@@ -510,8 +516,10 @@ void Bluez5ProfileGatt::updateDeviceProperties(std::string deviceAddress)
 {
 	std::string lowerCaseAddress = convertAddressToLowerCase(deviceAddress);
 	int connectId = getConnectId(lowerCaseAddress);
-	if (mConnectedDevices.find(connectId) != mConnectedDevices.end())
-		mConnectedDevices.erase(connectId);
+	if (mAutoConnDevMap.find(convertAddressToUpperCase(deviceAddress)) == mAutoConnDevMap.end())
+		if (mConnectedDevices.find(connectId) != mConnectedDevices.end())
+			mConnectedDevices.erase(connectId);
+
 	auto deviceServicesIter = mDeviceServicesMap.find(lowerCaseAddress);
 	if (deviceServicesIter != mDeviceServicesMap.end())
 		mDeviceServicesMap.erase(deviceServicesIter);
@@ -529,8 +537,8 @@ void Bluez5ProfileGatt::registerSignalHandlers()
 	GError *error = 0;
 
 	mObjectManager = g_dbus_object_manager_client_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
-											G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-											"org.bluez", "/", NULL, NULL, NULL, NULL, &error);
+					G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
+					"org.bluez", "/", NULL, NULL, NULL, NULL, &error);
 
 	if (error)
 	{
@@ -543,10 +551,104 @@ void Bluez5ProfileGatt::registerSignalHandlers()
 	g_signal_connect(mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), this);
 }
 
+void Bluez5ProfileGatt::handleAutoConnectDevAdd(const std::string & objPath)
+{
+	Bluez5Device* device = mAdapter->findDeviceByObjectPath(objPath);
+	if (!device)
+	{
+		DEBUG("%s NO_DEVICE_FOUND for %s", __FUNCTION__, objPath.c_str());
+		return;
+	}
+	std::string address = device->getAddress();
+	DEBUG("%s:%s", __FUNCTION__, address.c_str());
+	std::string devAddress = convertAddressToUpperCase(address);
+	auto iter = mAutoConnDevMap.find(devAddress);
+	if (iter != mAutoConnDevMap.end())
+	{
+		if (iter->second.first != 0)
+			g_source_remove(iter->second.first);
+		uint16_t appId = iter->second.second;
+		mAutoConnDevMap[devAddress] = {0, appId};
+
+		Bluez5Device *device = mAdapter->findDevice(devAddress);
+		if (device)
+		{
+			devAddress = convertAddressToLowerCase(devAddress);
+			auto gattConnCallBack = [devAddress, appId, this](BluetoothError error)
+			{
+				DEBUG("gattConnCallBack error : %d", error);
+				if (error != BLUETOOTH_ERROR_NONE)
+				{
+					mConnectedDevices[appId] = devAddress;
+				}
+			};
+			DEBUG("Trigger reconnection connectGatt %s", devAddress.c_str());
+			device->connectGatt(gattConnCallBack);
+		}
+	}
+
+}
+
+void Bluez5ProfileGatt::handleAutoConnectDevRem(const std::string & address)
+{
+	DEBUG("%s:%s", __FUNCTION__, address.c_str());
+	std::string devAddress = convertAddressToUpperCase(address);
+	auto iter = mAutoConnDevMap.find(devAddress);
+	if (iter != mAutoConnDevMap.end())
+	{
+		if (iter->second.first != 0)
+			g_source_remove(iter->second.first);
+		std::pair<std::string, Bluez5ProfileGatt*> userData = {devAddress, this};
+		guint autoConnectTimeoutSource = g_timeout_add_seconds(GATT_RECONN_TIMEOUT,
+							Bluez5ProfileGatt::autoConnTimeoutHandler, &userData);
+		DEBUG("autoConnectTimeoutSource %d", autoConnectTimeoutSource);
+
+		mAutoConnDevMap[devAddress] = {autoConnectTimeoutSource, iter->second.second};
+	}
+}
+
+void Bluez5ProfileGatt::handleAutoConnTimeout(const std::string & address)
+{
+	DEBUG("%s:%s", __FUNCTION__, address.c_str());
+	std::string devAddress = convertAddressToUpperCase(address);
+	auto iter = mAutoConnDevMap.find(devAddress);
+	if ((iter != mAutoConnDevMap.end()) && (iter->second.first != 0))
+	{
+		mAutoConnDevMap.erase(devAddress);
+		mConnectedDevices.erase(iter->second.second);
+	}
+}
+
+gboolean Bluez5ProfileGatt::autoConnTimeoutHandler(gpointer user_data)
+{
+	DEBUG("%s", __FUNCTION__);
+	std::pair<std::string, Bluez5ProfileGatt*> *userData =
+		static_cast<std::pair<std::string, Bluez5ProfileGatt*>*>(user_data);
+	std::string address = userData->first;
+	Bluez5ProfileGatt *ptr = userData->second;
+	ptr->handleAutoConnTimeout(address);
+	return true;
+}
+
+void Bluez5ProfileGatt::handleAutoConnectReq(const bool& autoConnection, const std::string & address, const uint16_t& appId)
+{
+	DEBUG("%s:%s autoCon=%d, appId=%d", __FUNCTION__, address.c_str(), autoConnection, appId);
+	std::string devAddress = convertAddressToUpperCase(address);
+	auto iter = mAutoConnDevMap.find(devAddress);
+	if ((iter != mAutoConnDevMap.end()) && (iter->second.first != 0))
+		g_source_remove(iter->second.first);
+
+	if (autoConnection)
+		mAutoConnDevMap[devAddress] = {0, appId};
+	else
+		mAutoConnDevMap.erase(devAddress);
+}
+
 void Bluez5ProfileGatt::connectGatt(const uint16_t & appId, bool autoConnection, const std::string & address, BluetoothConnectCallback callback)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-	Bluez5Device *device = mAdapter->findDevice(address);
+	std::string devAddress = convertAddressToUpperCase(address);
+	Bluez5Device *device = mAdapter->findDevice(devAddress);
 	if (!device)
 	{
 		callback(BLUETOOTH_ERROR_PARAM_INVALID, -1);
@@ -554,18 +656,31 @@ void Bluez5ProfileGatt::connectGatt(const uint16_t & appId, bool autoConnection,
 	}
 	std::string deviceAddress = device->getAddress();
 	std::string lowerCaseAddress = convertAddressToLowerCase(deviceAddress);
-	auto isConnectCallback = [this, lowerCaseAddress, callback, appId](BluetoothError error) {
+	uint16_t pAppId = appId;
+	for (auto connDev : mConnectedDevices)
+	{
+		if (connDev.second == lowerCaseAddress)
+		{
+			pAppId = connDev.first;
+			auto iter = mAutoConnDevMap.find(devAddress);
+			if ((iter != mAutoConnDevMap.end()) && (iter->second.first == 0))
+			{
+				callback(BLUETOOTH_ERROR_NONE, pAppId);
+				return;
+			}
+		}
+	}
+	auto isConnectCallback = [this, lowerCaseAddress, callback, pAppId, autoConnection](BluetoothError error) {
 		if (error != BLUETOOTH_ERROR_NONE)
 		{
 			callback(error, -1);
 			return;
 		}
 
-		if (mConnectedDevices.find(appId) == mConnectedDevices.end())
-		{
-			mConnectedDevices.insert({ appId, lowerCaseAddress});
-			callback(BLUETOOTH_ERROR_NONE, appId);
-		}
+		handleAutoConnectReq(autoConnection, lowerCaseAddress, pAppId);
+
+		mConnectedDevices.insert({ pAppId, lowerCaseAddress});
+		callback(BLUETOOTH_ERROR_NONE, pAppId);
 	};
 	device->connectGatt(isConnectCallback);
 }
@@ -585,6 +700,7 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 		deviceAddress = deviceInfo->second;
 	}
 
+	deviceAddress = convertAddressToUpperCase(deviceAddress);
 	Bluez5Device *device = mAdapter->findDevice(deviceAddress);
 	if (!device)
 	{
@@ -593,7 +709,7 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 		return;
 	}
 
-	auto isDisconnectCallback = [this, deviceInfo, deviceAddress, callback](BluetoothError error)
+	auto isDisconnectCallback = [this, deviceInfo, deviceAddress, appId, callback](BluetoothError error)
 	{
 		if (error != BLUETOOTH_ERROR_NONE)
 		{
@@ -612,6 +728,8 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 				g_error_free(err);
 			}
 		}
+
+		handleAutoConnectReq(false, deviceAddress, appId);
 
 		callback(BLUETOOTH_ERROR_NONE);
 	};

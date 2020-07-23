@@ -17,6 +17,8 @@
 #ifndef BLUEZ5PROFILEGATT_H
 #define BLUEZ5PROFILEGATT_H
 
+#include <unistd.h>
+#include <glib.h>
 #include <gio/gio.h>
 #include <string>
 #include <unordered_map>
@@ -120,6 +122,7 @@ public:
 
 	static gboolean handleRelease(BluezGattProfile1 *proxy, GDBusMethodInvocation *invocation, gpointer user_data);
 	static void handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data);
+	static gboolean autoConnTimeoutHandler(gpointer user_data);
 
 private:
 
@@ -192,6 +195,11 @@ private:
 	GattLocalDescriptorsMap* getLocalDescriptorList(uint16_t appId, uint16_t serviceId, uint16_t charId);
 	void updatePropertyFlags(const BluetoothGattCharacteristic &characteristic, const char **propertyflags);
 	void updatePermissionFlags(const BluetoothGattDescriptor &descriptor, const char **permissionflags);
+	void handleAutoConnectDevAdd(const std::string & objPath);
+	void handleAutoConnectDevRem(const std::string & address);
+	void handleAutoConnectReq(const bool& autoConnection, const std::string& address, const uint16_t& appId);
+	void handleAutoConnTimeout(const std::string& address);
+	std::unordered_map<std::string, std::pair<guint, uint16_t>> mAutoConnDevMap;
 
 	id_type nextAppId();
 	id_type nextServiceId();
