@@ -33,6 +33,7 @@
 #include "bluez5profilehfp.h"
 #include "bluez5mprisplayer.h"
 #include "bluez5profilemap.h"
+#include <fstream>
 
 const std::string BASEUUID = "-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_AVRCP_TARGET_UUID = "0000110c-0000-1000-8000-00805f9b34fb";
@@ -41,6 +42,8 @@ const std::string BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID = "0000111e-0000-1000-800
 const std::string BLUETOOTH_PROFILE_REMOTE_HFP_AG_UUID = "0000111f-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_A2DP_SOURCE_UUID	= "0000110a-0000-1000-8000-00805f9b34fb";
 const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00805f9b34fb";
+
+#define CONFIG "/var/lib/bluetooth/adaptersAssignment.json"
 
 Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObjectPath(objectPath),
@@ -280,13 +283,17 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 		mAlias = g_variant_get_string(valueVar, NULL);
 		DEBUG ("%s: Got alias property as %s", __func__, mAlias.c_str());
 #ifdef WEBOS_AUTO
-		std::size_t found = mObjectPath.find("hci");
-
-		if (found != std::string::npos)
+		std::ifstream ifile(CONFIG);
+		if (!ifile)
 		{
-			mAlias = std::string("sa8155") + " "+ std::string("Bluetooth ") + mObjectPath.substr(found);
-			BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
-			setAdapterPropertySync(alias);
+			std::size_t found = mObjectPath.find("hci");
+
+			if (found != std::string::npos)
+			{
+				mAlias = std::string("sa8155") + " "+ std::string("Bluetooth ") + mObjectPath.substr(found);
+				BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
+				setAdapterPropertySync(alias);
+			}
 		}
 #endif
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::NAME, mAlias));
@@ -616,7 +623,8 @@ void Bluez5Adapter::setAdapterProperty(const BluetoothProperty& property, Blueto
 		return;
 	}
 
-	callback(BLUETOOTH_ERROR_NONE);
+	if (callback)
+		callback(BLUETOOTH_ERROR_NONE);
 }
 
 void Bluez5Adapter::setAdapterProperties(const BluetoothPropertiesList& properties, BluetoothResultCallback callback)
