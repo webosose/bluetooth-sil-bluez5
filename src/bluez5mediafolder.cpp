@@ -167,6 +167,7 @@ void Bluez5MediaFolder::getFolderItems(uint32_t startIndex, uint32_t endIndex,
 		if (items)
 		{
 			g_autoptr(GVariantIter) iter1 = NULL;
+			g_autoptr(GVariantIter) iter2 = NULL;
 			const gchar *itemObject = NULL;
 			g_variant_get(items, "a{oa{sv}}", &iter1);
 
@@ -185,7 +186,6 @@ void Bluez5MediaFolder::getFolderItems(uint32_t startIndex, uint32_t endIndex,
 				}
 				DEBUG("Object: %s", itemPath.c_str());
 				item.setPath(itemPath);
-				g_autoptr(GVariantIter) iter2 = NULL;
 				while (g_variant_iter_loop(iter2, "{sv}", &key, &value))
 				{
 					std::string keyString(key);
