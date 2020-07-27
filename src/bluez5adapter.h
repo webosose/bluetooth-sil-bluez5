@@ -135,10 +135,6 @@ public:
 
 	static gboolean handleDiscoveryTimeout(gpointer user_data);
 
-#ifdef WEBOS_AUTO
-	static gboolean handleMinimalTimeout(gpointer user_data);
-#endif
-
 	virtual void configureAdvertisement(bool connectable, bool includeTxPower, bool includeName,
 	                                    BluetoothLowEnergyData manufacturerData, BluetoothLowEnergyServiceList services,
 	                                    BluetoothResultCallback callback, uint8_t TxPower, BluetoothUuid solicitedService128);
@@ -188,9 +184,6 @@ private:
 	void startDiscoveryTimeout();
 	bool isDiscoveryTimeoutRunning();
 	uint32_t nextScanId();
-#ifdef WEBOS_AUTO
-	GVariant* buildDiscoveryFilterParam(const std::string& transportType);
-#endif
 
 private:
 	std::string mObjectPath;
@@ -208,10 +201,6 @@ private:
 	std::unordered_map<uint32_t, unsigned char> mLeScanFilterTypes;
 	std::unordered_map<uint32_t, std::unordered_map<std::string, Bluez5Device*>> mLeDevicesByScanId;
 	uint32_t mDiscoveryTimeout;
-#ifdef WEBOS_AUTO
-	bool mBlockCancel;
-	bool mCancelTriggered;
-#endif
 	guint mDiscoveryTimeoutSource;
 	Bluez5Agent *mAgent;
 	Bluez5Advertise *mAdvertise;
