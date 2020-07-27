@@ -621,30 +621,46 @@ BluetoothAvrcpPlayerType Bluez5MediaPlayer::playerTypeStringToEnum(const std::st
 
 void Bluez5MediaPlayer::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback)
 {
-	if (mMediaFolder)
-	{
-		mMediaFolder->getNumberOfItems(callback);
-	}
-	else
+	if (!mMediaFolder)
 	{
 		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 			  "MediaFolder interface is not created. Browsing not supported");
 		callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
 	}
+
+	mMediaFolder->getNumberOfItems(callback);
 }
 
 void Bluez5MediaPlayer::getFolderItems(uint32_t startIndex, uint32_t endIndex,
 									   BluetoothAvrcpBrowseFolderItemsCallback callback)
 {
 	BluetoothFolderItemList itemList;
-	if (mMediaFolder)
-	{
-		mMediaFolder->getFolderItems(startIndex, endIndex, callback);
-	}
-	else
+	if (!mMediaFolder)
 	{
 		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 			  "MediaFolder interface is not created. Browsing not supported");
 		callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
 	}
+
+	mMediaFolder->getFolderItems(startIndex, endIndex, callback);
+}
+
+BluetoothError Bluez5MediaPlayer::changePath(const std::string &itemPath)
+{
+	if (!mMediaFolder)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "MediaFolder interface is not created. Browsing not supported");
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	std::string playerPath = mPlayerInfo.getPath();
+	size_t pos = playerPath.find("player");
+	if (pos != std::string::npos)
+	{
+		playerPath.erase(pos, strlen("player") + 1);
+	}
+	std::string finalItemPath = playerPath + itemPath;
+	DEBUG("ItemPath : %s", finalItemPath.c_str());
+	return mMediaFolder->changePath(finalItemPath);
 }

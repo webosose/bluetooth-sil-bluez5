@@ -290,3 +290,45 @@ BluetoothAvrcpItemType Bluez5MediaFolder::itemTypeStringToEnum(const std::string
 	}
 	return BluetoothAvrcpItemType::ITEM_TYPE_AUDIO;
 }
+
+BluetoothError Bluez5MediaFolder::changePath(const std::string &itemPath)
+{
+	GError *error = 0;
+	BluezMediaItem1 *mediaItem = bluez_media_item1_proxy_new_for_bus_sync(
+		G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE, "org.bluez", itemPath.c_str(), NULL, &error);
+	if (error)
+	{
+		DEBUG("Not able to get media item interface: %s", error->message);
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	if (!mediaItem)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "MediaItem is NULL");
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	const gchar *type = bluez_media_item1_get_type_(mediaItem);
+	DEBUG("MediaItem type : %s", type);
+	if (!type)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "MediaItem type is NULL");
+		return BLUETOOTH_ERROR_FAIL;
+	}
+
+	if (strcmp(type, "folder"))
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Not a folder: %s", itemPath.c_str());
+		return BLUETOOTH_ERROR_AVRCP_NOT_A_FOLDER;
+	}
+
+	bluez_media_folder1_call_change_folder_sync(
+		mFolderInterface, itemPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Not able to change folder: %s", error->message);
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+
+	return BLUETOOTH_ERROR_NONE;
+}

@@ -37,6 +37,7 @@ public:
 	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback);
 	void getFolderItems(uint32_t startIndex, uint32_t endIndex,
 						BluetoothAvrcpBrowseFolderItemsCallback callback);
+	BluetoothError changePath(const std::string &itemPath);
 
 private:
 	std::string mPlayerObjPath;

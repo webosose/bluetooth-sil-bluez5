@@ -610,24 +610,15 @@ void Bluez5ProfileAvcrp::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItems
 {
 	if (callback)
 	{
-		if (mConnectedController)
+		if (!mConnectedController || !mAddressedMediaPlayer)
 		{
-			if (mAddressedMediaPlayer)
-			{
-				mAddressedMediaPlayer->getNumberOfItems(callback);
-			}
-			else
-			{
-				ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Addressed player is not there");
-				callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
-			}
-		}
-		else
-		{
-			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Not connected as controller");
+			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+				  "Not connected as controller/addressed player not there");
 			callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
 		}
+		mAddressedMediaPlayer->getNumberOfItems(callback);
 	}
+	return;
 }
 
 void Bluez5ProfileAvcrp::getFolderItems(uint32_t startIndex, uint32_t endIndex,
@@ -636,23 +627,26 @@ void Bluez5ProfileAvcrp::getFolderItems(uint32_t startIndex, uint32_t endIndex,
 	if (callback)
 	{
 		BluetoothFolderItemList itemList;
-		if (mConnectedController)
+
+		if (!mConnectedController || !mAddressedMediaPlayer)
 		{
-			if (mAddressedMediaPlayer)
-			{
-				mAddressedMediaPlayer->getFolderItems(startIndex, endIndex, callback);
-			}
-			else
-			{
-				ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Addressed player is not there");
-				callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
-			}
-		}
-		else
-		{
-			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Not connected as controller");
+			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+				  "Not connected as controller/addressed player not there");
 			callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
 		}
+		mAddressedMediaPlayer->getFolderItems(startIndex, endIndex, callback);
 	}
 	return;
+}
+
+BluetoothError Bluez5ProfileAvcrp::changePath(const std::string &itemPath)
+{
+	if (!mConnectedController || !mAddressedMediaPlayer)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "Not connected as controller/addressed player not there");
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	return mAddressedMediaPlayer->changePath(itemPath);
 }
