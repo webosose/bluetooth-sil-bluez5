@@ -182,11 +182,22 @@ BluetoothError Bluez5ProfileA2dp::getDelayReportingState(bool &state)
 	return BLUETOOTH_ERROR_NONE;
 }
 
-void Bluez5ProfileA2dp::updateConnectionStatus(const std::string &address, bool status)
+void Bluez5ProfileA2dp::updateConnectionStatus(const std::string &address,
+											   bool status, const std::string &uuid)
 {
+	DEBUG("Bluez5ProfileA2dp::updateConnectionStatus: %s = %d", uuid.c_str(), status);
 	mConnected = status;
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, status));
+
+	if (mState == PLAYING && !status)
+	{
+		DEBUG("Sending notplaying");
+		mState = NOT_PLAYING;
+		getA2dpObserver()->stateChanged(convertAddressToLowerCase(
+											mAdapter->getAddress()),
+										convertAddressToLowerCase(address), mState);
+	}
 
 	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address), properties);
 }
@@ -226,17 +237,6 @@ void Bluez5ProfileA2dp::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 		g_signal_connect(G_OBJECT(a2dp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 
 		updateTransportProperties(a2dp);
-		const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
-		if (deviceObjectPath)
-		{
-			Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
-			if (device)
-			{
-				a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), true);
-				a2dp->mAdapter->handleDevicePropertiesChanged(device);
-			}
-		}
-
 		g_object_unref(mediaTransportInterface);
 	}
 }
@@ -254,25 +254,7 @@ void Bluez5ProfileA2dp::handleObjectRemoved(GDBusObjectManager *objectManager, G
 		if (objectPath.compare(0, adapterPath.length(), adapterPath))
 			return;
 
-		std::size_t pos = objectPath.find("/fd");
-		std::string devicePath = objectPath.substr (0, pos);
-
-		Bluez5Device *device = a2dp->mAdapter->findDeviceByObjectPath(devicePath);
-		if (!device)
-		{
-			ERROR(MSGID_PROFILE_MANAGER_ERROR, 0, "A2DP device null");
-			return;
-		}
-
-		if (a2dp->mState == PLAYING)
-		{
-			a2dp->mState = NOT_PLAYING;
-			a2dp->getA2dpObserver()->stateChanged(convertAddressToLowerCase(a2dp->mAdapter->getAddress()), convertAddressToLowerCase(device->getAddress()), a2dp->mState);
-		}
 		a2dp->mTransportUuid = "";
-		a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), false);
-		a2dp->mAdapter->handleDevicePropertiesChanged(device);
-
 		g_object_unref(a2dp->mInterface);
 		g_object_unref(mediaTransportInterface);
 		a2dp->mInterface = 0;
@@ -429,17 +411,6 @@ void Bluez5ProfileA2dp::handleBluezServiceStarted(GDBusConnection *conn, const g
 
 			g_signal_connect(G_OBJECT(a2dp->mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), a2dp);
 			updateTransportProperties(a2dp);
-			const char* deviceObjectPath = bluez_media_transport1_get_device(a2dp->mInterface);
-			if (deviceObjectPath)
-			{
-				Bluez5Device* device = a2dp->mAdapter->findDeviceByObjectPath(deviceObjectPath);
-				if (device)
-				{
-					a2dp->updateConnectionStatus(convertAddressToLowerCase(device->getAddress()), true);
-					a2dp->mAdapter->handleDevicePropertiesChanged(device);
-				}
-			}
-
 			g_object_unref(mediaTransportInterface);
 		}
 		g_object_unref(object);

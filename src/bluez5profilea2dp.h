@@ -42,7 +42,8 @@ public:
 	void updateA2dpUuid(const std::string &address, BluetoothResultCallback callback);
 	void enable(const std::string &uuid, BluetoothResultCallback callback) override;
 	void disable(const std::string &uuid, BluetoothResultCallback callback) override;
-	void updateConnectionStatus(const std::string &address, bool status);
+	void updateConnectionStatus(const std::string &address, bool status,
+								const std::string &uuid) override;
 	BluetoothError setDelayReportingState(bool state);
 	BluetoothError getDelayReportingState(bool &state);
 
