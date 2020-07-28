@@ -40,6 +40,7 @@ public:
     void setFolder(const std::string &sessionKey, const std::string &sessionId, const std::string &folder, BluetoothResultCallback callback);
     void getMessageList(const std::string &sessionKey, const std::string &sessionId, const std::string &folder, const BluetoothMapPropertiesList &filters, BluetoothMapGetMessageListCallback callback);
     void getMessage(const std::string &sessionKey, const std::string &messageHandle, bool attachment, const std::string &destinationFile, BluetoothResultCallback callback);
+    void setMessageStatus(const std::string &sessionKey, const std::string &messageHandle, const std::string &statusIndicator, bool statusValue, BluetoothResultCallback callback);
 private:
     Bluez5Adapter *mAdapter;
     std::map <std::string, Bluez5ObexTransfer*> mTransfersMap;

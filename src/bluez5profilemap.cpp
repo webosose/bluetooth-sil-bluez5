@@ -581,3 +581,43 @@ void Bluez5ProfileMap::updateActiveTransfer(const std::string &objectPath, Bluez
     if (cleanup)
         removeTransfer(objectPath);
 }
+
+void Bluez5ProfileMap::setMessageStatus(const std::string &sessionKey, const std::string &messageHandle, const std::string &statusIndicator, bool statusValue, BluetoothResultCallback callback)
+{
+    DEBUG("%s", __FUNCTION__);
+    const Bluez5ObexSession *session = findSession(sessionKey);
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID);
+        return;
+    }
+
+    std::string objectPath = session->getObjectPath() + "/" + messageHandle;
+
+    BluezObexMessage1 *objectMessageProxy = createMessageHandleProxyUsingPath(objectPath);
+
+    if (!objectMessageProxy)
+    {
+        callback(BLUETOOTH_ERROR_MAP_MESSAGE_HANDLE_NOT_FOUND);
+        return;
+    }
+
+    if (statusIndicator == "read")
+    {
+        bluez_obex_message1_set_read(objectMessageProxy, statusValue);
+        callback(BLUETOOTH_ERROR_NONE);
+    }
+    else if (statusIndicator == "delete")
+    {
+        bluez_obex_message1_set_deleted(objectMessageProxy, statusValue);
+        callback(BLUETOOTH_ERROR_NONE);
+    }
+    else
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID);
+    }
+
+    if(objectMessageProxy)
+        g_object_unref(objectMessageProxy);
+
+}
