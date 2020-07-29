@@ -615,6 +615,7 @@ void Bluez5ProfileAvcrp::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItems
 			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 				  "Not connected as controller/addressed player not there");
 			callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
+			return;
 		}
 		mAddressedMediaPlayer->getNumberOfItems(callback);
 	}
@@ -633,6 +634,7 @@ void Bluez5ProfileAvcrp::getFolderItems(uint32_t startIndex, uint32_t endIndex,
 			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 				  "Not connected as controller/addressed player not there");
 			callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
+			return;
 		}
 		mAddressedMediaPlayer->getFolderItems(startIndex, endIndex, callback);
 	}

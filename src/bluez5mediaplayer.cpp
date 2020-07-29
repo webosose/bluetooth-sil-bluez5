@@ -626,6 +626,7 @@ void Bluez5MediaPlayer::getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsC
 		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 			  "MediaFolder interface is not created. Browsing not supported");
 		callback(BLUETOOTH_ERROR_NOT_ALLOWED, 0);
+		return;
 	}
 
 	mMediaFolder->getNumberOfItems(callback);
@@ -640,6 +641,7 @@ void Bluez5MediaPlayer::getFolderItems(uint32_t startIndex, uint32_t endIndex,
 		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
 			  "MediaFolder interface is not created. Browsing not supported");
 		callback(BLUETOOTH_ERROR_NOT_ALLOWED, itemList);
+		return;
 	}
 
 	mMediaFolder->getFolderItems(startIndex, endIndex, callback);
