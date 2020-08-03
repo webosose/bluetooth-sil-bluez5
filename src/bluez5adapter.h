@@ -210,7 +210,6 @@ private:
 	BluetoothResultCallback mCurrentPairingCallback;
 	std::map<std::string, BluetoothProfile*> mProfiles;
 	Bluez5ObexClient *mObexClient;
-	Bluez5ObexAgent *mObexAgent;
 	std::string mName;
 	std::string mAlias;
 	std::string mInterfaceName;

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,12 +26,13 @@ extern "C" {
 }
 
 class Bluez5ProfileOpp;
+class Bluez5SIL;
 class Bluez5Adapter;
 
 class Bluez5ObexAgent
 {
 public:
-	Bluez5ObexAgent(Bluez5Adapter *adapter);
+	Bluez5ObexAgent(Bluez5SIL *sil);
 	~Bluez5ObexAgent();
 
 	static gboolean onHandleAuthorizePush(BluezObexAgent1 *object, GDBusMethodInvocation *invocation,
@@ -59,7 +60,7 @@ private:
 	BluezObexAgentManager1 *mAgentManagerProxy;
 	BluezObexAgent1* mAgentInterface;
 	DBusUtils::NameWatch mNameWatch;
-	Bluez5Adapter *mAdapter;
+	Bluez5SIL *mSIL;
 
 	void connectWithObex();
 	void createObexAgentManagerProxy();

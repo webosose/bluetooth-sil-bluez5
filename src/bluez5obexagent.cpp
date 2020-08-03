@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "bluez5obexagent.h"
+#include "bluez5sil.h"
 #include "dbusutils.h"
 #include "asyncutils.h"
 #include "logging.h"
@@ -24,11 +25,15 @@
 
 const std::string OBEX_AGENT_PATH = "/obex/agent";
 
-Bluez5ObexAgent::Bluez5ObexAgent(Bluez5Adapter *adapter) :
+#define BLUEZ5_OBEX_AGENT_ERROR_CANCELED        "org.bluez.Error.Canceled"
+#define BLUEZ5_OBEX_AGENT_ERROR_REJECTED        "org.bluez.Error.Rejected"
+#define BLUEZ5_OBEX_AGENT_ERROR_NOT_IMPLEMENTED "org.bluez.Error.NotImplemented"
+
+Bluez5ObexAgent::Bluez5ObexAgent(Bluez5SIL *sil) :
 	mAgentManagerProxy(nullptr),
 	mAgentInterface(nullptr),
 	mNameWatch(BLUEZ5_OBEX_DBUS_BUS_TYPE, "org.bluez.obex"),
-	mAdapter(adapter)
+	mSIL(sil)
 {
 	DBusUtils::waitForBus(BLUEZ5_OBEX_DBUS_BUS_TYPE, [this](bool available) {
 		if (!available) {
@@ -190,9 +195,36 @@ void Bluez5ObexAgent::createAgentInterface(const std::string &objectPath)
 gboolean Bluez5ObexAgent::handleAuthorizePush(BluezObexAgent1 *object, GDBusMethodInvocation *invocation,
 	                                      const gchar *arg_path)
 {
-	Bluez5ProfileOpp *oppProfile = dynamic_cast<Bluez5ProfileOpp*> (mAdapter->getProfile(BLUETOOTH_PROFILE_ID_OPP));
+	GError *error = 0;
+	BluezObexTransfer1* mTransFerProxy = bluez_obex_transfer1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
+															   "org.bluez.obex", arg_path, NULL, &error);
+	if (error)
+	{
+		g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ5_OBEX_AGENT_ERROR_REJECTED, "User rejected confirmation");
+		g_error_free(error);
+		return TRUE;
+	}
+
+	const gchar * sessionPath = bluez_obex_transfer1_get_session(mTransFerProxy);
+
+
+	BluezObexSession1* mSessionProxy = bluez_obex_session1_proxy_new_for_bus_sync(BLUEZ5_OBEX_DBUS_BUS_TYPE, G_DBUS_PROXY_FLAGS_NONE,
+	                                                           "org.bluez.obex", sessionPath, NULL, &error);
+	if (error)
+	{
+		g_dbus_method_invocation_return_dbus_error(invocation, BLUEZ5_OBEX_AGENT_ERROR_REJECTED, "User rejected confirmation");
+		g_error_free(error);
+		return TRUE;
+	}
+
+	std::string sourceAddress = bluez_obex_session1_get_source(mSessionProxy);
+
+	auto adapter = mSIL->getBluez5AdapterbyAddress(sourceAddress);
+
+	Bluez5ProfileOpp *oppProfile = dynamic_cast<Bluez5ProfileOpp*> (adapter->getProfile(BLUETOOTH_PROFILE_ID_OPP));
 	if (oppProfile)
 		oppProfile->agentTransferConfirmationRequested(object, invocation, arg_path);
+
 	return TRUE;
 }
 

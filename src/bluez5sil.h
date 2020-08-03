@@ -30,6 +30,7 @@ extern "C" {
 
 class Bluez5Adapter;
 class Bluez5Agent;
+class Bluez5ObexAgent;
 
 class Bluez5SIL : public BluetoothSIL
 {
@@ -42,6 +43,8 @@ public:
 
 	BluetoothAdapter* getDefaultAdapter();
 	std::vector<BluetoothAdapter*> getAdapters();
+
+	Bluez5Adapter *getBluez5AdapterbyAddress(std::string address);
 	Bluez5Adapter *getBluez5Adapter(std::string objectPath);
 	Bluez5Adapter* getDefaultBluez5Adapter() { return mDefaultAdapter; }
 	BluetoothPairingIOCapability getCapability() { return mCapability; }
@@ -63,6 +66,8 @@ private:
 	void assignNewDefaultAdapter();
 	void createAdapter(const std::string &objectPath);
 	void removeAdapter(const std::string &objectPath);
+	void createObexAgent();
+	void deleteObexAgent();
 	void createDevice(const std::string &objectPath);
 	void removeDevice(const std::string &objectPath);
 	void createAgentManager(const std::string &objectPath);
@@ -81,6 +86,7 @@ private:
 	BluezAgentManager1 *mAgentManager;
 	BluezProfileManager1 *mProfileManager;
 	Bluez5Agent *mAgent;
+	Bluez5ObexAgent *mObexAgent;
 	BluetoothPairingIOCapability mCapability;
 };
 

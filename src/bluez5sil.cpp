@@ -20,6 +20,7 @@
 #include "bluez5adapter.h"
 #include "bluez5device.h"
 #include "bluez5agent.h"
+#include "bluez5obexagent.h"
 #include "logging.h"
 #include "asyncutils.h"
 #include "dbusutils.h"
@@ -36,6 +37,7 @@ Bluez5SIL::Bluez5SIL(BluetoothPairingIOCapability capability) :
 	mAgentManager(0),
 	mProfileManager(0),
 	mAgent(0),
+	mObexAgent(0),
 	mCapability(capability)
 {
 }
@@ -44,6 +46,9 @@ Bluez5SIL::~Bluez5SIL()
 {
 	if (mAgent)
 		delete mAgent;
+
+	if (mObexAgent)
+		delete mObexAgent;
 
 	for (auto iter = mAdapters.begin(); iter != mAdapters.end(); ++iter)
 	{
@@ -92,6 +97,8 @@ void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *na
 			sil->createAdapter(std::string(objectPath));
 		}
 	}
+
+	sil->createObexAgent();
 
 	if (sil->observer && !sil->mAdapters.empty())
 		sil->observer->adaptersChanged();
@@ -166,11 +173,7 @@ void Bluez5SIL::handleBluezServiceStopped(GDBusConnection *conn, const gchar *na
 	if (sil->observer)
 		sil->observer->adaptersChanged();
 
-	if (sil->mObjectManager)
-	{
-		g_object_unref(sil->mObjectManager);
-		sil->mObjectManager = 0;
-	}
+	sil->deleteObexAgent();
 }
 
 void Bluez5SIL::handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject *object, void *user_data)
@@ -280,6 +283,20 @@ void Bluez5SIL::createAdapter(const std::string &objectPath)
 
 	if (mProfileManager)
 		adapter->assignProfileManager(mProfileManager);
+}
+
+void Bluez5SIL::createObexAgent()
+{
+	mObexAgent = new Bluez5ObexAgent(this);
+}
+
+void Bluez5SIL::deleteObexAgent()
+{
+	if (mObexAgent)
+	{
+		delete mObexAgent;
+		mObexAgent = 0;
+	}
 }
 
 void Bluez5SIL::removeAdapter(const std::string &objectPath)
@@ -448,6 +465,17 @@ std::vector<BluetoothAdapter*> Bluez5SIL::getAdapters()
 	// here.
 	std::vector<BluetoothAdapter*> adapters(mAdapters.begin(), mAdapters.end());
 	return adapters;
+}
+
+Bluez5Adapter * Bluez5SIL::getBluez5AdapterbyAddress(std::string address)
+{
+	for (auto adapter: mAdapters)
+	{
+		if(address == adapter->getAddress())
+			return adapter;
+	}
+
+	return nullptr;
 }
 
 Bluez5Adapter * Bluez5SIL::getBluez5Adapter(std::string objectPath)

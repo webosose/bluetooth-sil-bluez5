@@ -22,6 +22,7 @@
 #include "bluez5obexsession.h"
 #include "bluez5obexclient.h"
 #include "bluez5busconfig.h"
+#include "utils.h"
 
 using namespace std::placeholders;
 
@@ -152,6 +153,7 @@ void Bluez5ProfileOpp::agentTransferConfirmationRequested(BluezObexAgent1 *inter
 	}
 
 	std::string deviceAddress = bluez_obex_session1_get_destination(mSessionProxy);
+	std::string sourceAddress = bluez_obex_session1_get_source(mSessionProxy);
 	auto device = mAdapter->findDevice(deviceAddress);
 
 	if (!device)
@@ -167,7 +169,8 @@ void Bluez5ProfileOpp::agentTransferConfirmationRequested(BluezObexAgent1 *inter
 		storeSession(deviceAddress, session);
 		notifySessionStatus(deviceAddress, true);
 		mTransfersMap[transferId] = 0;
-		getOppObserver()->transferConfirmationRequested(transferId, deviceAddress, device->getName(), mFileName, size);
+		std::string lowerCaseAddress = convertAddressToLowerCase(sourceAddress);
+		getOppObserver()->transferConfirmationRequested(transferId, lowerCaseAddress, deviceAddress, device->getName(), mFileName, size);
 	}
 
 	g_object_unref(mSessionProxy);

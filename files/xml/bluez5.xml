@@ -134,6 +134,7 @@
             <arg type="s" direction="out"/>
         </method>
         <property name="Destination" type="s" access="read"></property>
+        <property name="Source" type="s" access="read"></property>
     </interface>
     <interface name="org.bluez.obex.Transfer1">
         <method name="Cancel"/>

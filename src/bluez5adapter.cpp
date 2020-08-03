@@ -65,7 +65,6 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mCurrentPairingDevice(0),
 	mCurrentPairingCallback(0),
 	mObexClient(0),
-	mObexAgent(0),
 	mCancelDiscCallback(0),
 	mAdvertising(false),
 	mMediaManager(nullptr),
@@ -104,7 +103,6 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handleAdapterPropertiesChanged), this);
 
 	mObexClient = new Bluez5ObexClient(this);
-	mObexAgent = new Bluez5ObexAgent(this);
 
 	BluezLEAdvertisingManager1 *bleAdvManager =
 		bluez_leadvertising_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
@@ -164,9 +162,6 @@ Bluez5Adapter::~Bluez5Adapter()
 
 	if (mObexClient)
 		delete mObexClient;
-
-	if (mObexAgent)
-		delete mObexAgent;
 
 	if (mAdvertise)
 		delete mAdvertise;
