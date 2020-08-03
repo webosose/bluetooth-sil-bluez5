@@ -81,6 +81,7 @@ public:
 	void getFolderItems(uint32_t startIndex, uint32_t endIndex,
 						BluetoothAvrcpBrowseFolderItemsCallback callback) override;
 	BluetoothError changePath(const std::string &itemPath) override;
+	BluetoothError playItem(const std::string &itemPath);
 
 
 private:

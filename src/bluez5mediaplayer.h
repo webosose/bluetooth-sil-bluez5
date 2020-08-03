@@ -54,6 +54,7 @@ public:
 	void getFolderItems(uint32_t startIndex, uint32_t endIndex,
 						BluetoothAvrcpBrowseFolderItemsCallback callback);
 	BluetoothError changePath(const std::string &itemPath);
+	BluetoothError playItem(const std::string &itemPath);
 
 	/* AVRCP CT helper functions called from AVRCP profile class */
 	std::string getPlayerObjPath() const { return mPlayerInfo.getPath(); }

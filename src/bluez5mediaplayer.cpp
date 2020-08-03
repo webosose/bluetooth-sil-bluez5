@@ -666,3 +666,23 @@ BluetoothError Bluez5MediaPlayer::changePath(const std::string &itemPath)
 	DEBUG("ItemPath : %s", finalItemPath.c_str());
 	return mMediaFolder->changePath(finalItemPath);
 }
+
+BluetoothError Bluez5MediaPlayer::playItem(const std::string &itemPath)
+{
+	if (!mMediaFolder)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "MediaFolder interface is not created. Browsing not supported");
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	std::string playerPath = mPlayerInfo.getPath();
+	size_t pos = playerPath.find("player");
+	if (pos != std::string::npos)
+	{
+		playerPath.erase(pos, strlen("player") + 1);
+	}
+	std::string finalItemPath = playerPath + itemPath;
+	DEBUG("ItemPath : %s", finalItemPath.c_str());
+	return mMediaFolder->playItem(finalItemPath);
+}
