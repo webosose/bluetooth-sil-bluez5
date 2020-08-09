@@ -34,5 +34,6 @@ std::vector<unsigned char>convertArrayByteGVariantToVector(GVariant *iter);
 std::vector<std::string>convertArrayStringGVariantToVector(GVariant *iter);
 GVariant* convertVectorToArrayByteGVariant(const std::vector<unsigned char> &v);
 void splitInPathAndName(const std::string &serviceObjectPath, std::string &path, std::string &name);
+void objPathToDevAddress(const std::string &objectPath, std::string &devAddress);
 
 #endif // BLUEZ_UTILS_H

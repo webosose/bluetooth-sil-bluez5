@@ -16,6 +16,7 @@
 
 #include <utils.h>
 #include <vector>
+#include <algorithm>
 
 std::string convertAddressToLowerCase(const std::string &input)
 {
@@ -124,4 +125,19 @@ void splitInPathAndName(const std::string &serviceObjectPath, std::string &path,
 	}
 	path = serviceObjectPath.substr(0, found);
 	name = serviceObjectPath.substr(found+1);
+}
+
+void objPathToDevAddress(const std::string &objectPath, std::string &devAddress)
+{
+	devAddress = objectPath;
+	auto pos = devAddress.find("dev_");
+	pos = (pos != std::string::npos)?(pos):(0);
+	if (devAddress.size() > 4)
+		devAddress = devAddress.substr(pos + 4);
+	pos = devAddress.find("/");
+	pos = (pos != std::string::npos)?(pos):(devAddress.size());
+	devAddress = devAddress.substr(0, pos);
+	if (!devAddress.empty()){
+		std::replace(devAddress.begin(), devAddress.end(), '_', ':');
+	}
 }

@@ -516,7 +516,7 @@ void Bluez5ProfileGatt::updateDeviceProperties(std::string deviceAddress)
 {
 	std::string lowerCaseAddress = convertAddressToLowerCase(deviceAddress);
 	int connectId = getConnectId(lowerCaseAddress);
-	if (mAutoConnDevMap.find(convertAddressToUpperCase(deviceAddress)) == mAutoConnDevMap.end())
+	if (mAutoConnDevMap.find(convertAddressToLowerCase(deviceAddress)) == mAutoConnDevMap.end())
 		if (mConnectedDevices.find(connectId) != mConnectedDevices.end())
 			mConnectedDevices.erase(connectId);
 
@@ -554,14 +554,23 @@ void Bluez5ProfileGatt::registerSignalHandlers()
 void Bluez5ProfileGatt::handleAutoConnectDevAdd(const std::string & objPath)
 {
 	Bluez5Device* device = mAdapter->findDeviceByObjectPath(objPath);
+	std::string address;
 	if (!device)
 	{
-		DEBUG("%s NO_DEVICE_FOUND for %s", __FUNCTION__, objPath.c_str());
-		return;
+		objPathToDevAddress(objPath, address);
+		address = convertAddressToLowerCase(address);
+		if (mAutoConnDevMap.find(address) == mAutoConnDevMap.end())
+		{
+			DEBUG("%s NO_DEVICE_FOUND for %s", __FUNCTION__, address.c_str());
+			return;
+		}
+		mAdapter->addDevice(objPath);
+		device = mAdapter->findDeviceByObjectPath(objPath);
 	}
-	std::string address = device->getAddress();
+	else
+		address = device->getAddress();
 	DEBUG("%s:%s", __FUNCTION__, address.c_str());
-	std::string devAddress = convertAddressToUpperCase(address);
+	std::string devAddress = convertAddressToLowerCase(address);
 	auto iter = mAutoConnDevMap.find(devAddress);
 	if (iter != mAutoConnDevMap.end())
 	{
@@ -570,10 +579,9 @@ void Bluez5ProfileGatt::handleAutoConnectDevAdd(const std::string & objPath)
 		uint16_t appId = iter->second.second;
 		mAutoConnDevMap[devAddress] = {0, appId};
 
-		Bluez5Device *device = mAdapter->findDevice(devAddress);
+		Bluez5Device *device = mAdapter->findDevice(convertAddressToUpperCase(devAddress));
 		if (device)
 		{
-			devAddress = convertAddressToLowerCase(devAddress);
 			auto gattConnCallBack = [devAddress, appId, this](BluetoothError error)
 			{
 				DEBUG("gattConnCallBack error : %d", error);
@@ -592,7 +600,7 @@ void Bluez5ProfileGatt::handleAutoConnectDevAdd(const std::string & objPath)
 void Bluez5ProfileGatt::handleAutoConnectDevRem(const std::string & address)
 {
 	DEBUG("%s:%s", __FUNCTION__, address.c_str());
-	std::string devAddress = convertAddressToUpperCase(address);
+	std::string devAddress = convertAddressToLowerCase(address);
 	auto iter = mAutoConnDevMap.find(devAddress);
 	if (iter != mAutoConnDevMap.end())
 	{
@@ -610,7 +618,7 @@ void Bluez5ProfileGatt::handleAutoConnectDevRem(const std::string & address)
 void Bluez5ProfileGatt::handleAutoConnTimeout(const std::string & address)
 {
 	DEBUG("%s:%s", __FUNCTION__, address.c_str());
-	std::string devAddress = convertAddressToUpperCase(address);
+	std::string devAddress = convertAddressToLowerCase(address);
 	auto iter = mAutoConnDevMap.find(devAddress);
 	if ((iter != mAutoConnDevMap.end()) && (iter->second.first != 0))
 	{
@@ -633,7 +641,7 @@ gboolean Bluez5ProfileGatt::autoConnTimeoutHandler(gpointer user_data)
 void Bluez5ProfileGatt::handleAutoConnectReq(const bool& autoConnection, const std::string & address, const uint16_t& appId)
 {
 	DEBUG("%s:%s autoCon=%d, appId=%d", __FUNCTION__, address.c_str(), autoConnection, appId);
-	std::string devAddress = convertAddressToUpperCase(address);
+	std::string devAddress = convertAddressToLowerCase(address);
 	auto iter = mAutoConnDevMap.find(devAddress);
 	if ((iter != mAutoConnDevMap.end()) && (iter->second.first != 0))
 		g_source_remove(iter->second.first);
@@ -662,7 +670,7 @@ void Bluez5ProfileGatt::connectGatt(const uint16_t & appId, bool autoConnection,
 		if (connDev.second == lowerCaseAddress)
 		{
 			pAppId = connDev.first;
-			auto iter = mAutoConnDevMap.find(devAddress);
+			auto iter = mAutoConnDevMap.find(lowerCaseAddress);
 			if ((iter != mAutoConnDevMap.end()) && (iter->second.first == 0))
 			{
 				callback(BLUETOOTH_ERROR_NONE, pAppId);
@@ -695,10 +703,7 @@ void Bluez5ProfileGatt::disconnectGatt(const uint16_t &appId, const uint16_t &co
 		callback(BLUETOOTH_ERROR_FAIL);
 		return;
 	}
-	else
-	{
-		deviceAddress = deviceInfo->second;
-	}
+	deviceAddress = deviceInfo->second;
 
 	deviceAddress = convertAddressToUpperCase(deviceAddress);
 	Bluez5Device *device = mAdapter->findDevice(deviceAddress);
