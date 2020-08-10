@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -241,7 +241,9 @@ gboolean Bluez5ProfileSpp::handleNewConnection (GDBusMethodInvocation *invocatio
 		devieInfo->mDeviceAddress = bluezDevice->getAddress();
 	}
 
-	getSppObserver()->channelStateChanged(deviceAddress, devieInfo->mUuid, devieInfo->mChannelId, true);
+	devieInfo->mAdapterAddress = mAdapter->getAddress();
+
+	getSppObserver()->channelStateChanged(mAdapter->getAddress(), deviceAddress, devieInfo->mUuid, devieInfo->mChannelId, true);
 
 	devieInfo->mChannel = g_io_channel_unix_new (devieInfo->mSockfd);
 
@@ -265,7 +267,7 @@ gboolean Bluez5ProfileSpp::handleRequestDisconnection (BluezProfile1 *interface,
 	UNUSED(device);
 	UNUSED(interface);
 
-	getSppObserver()->channelStateChanged(devieInfo->mDeviceAddress, devieInfo->mUuid, devieInfo->mChannelId, false);
+	getSppObserver()->channelStateChanged(devieInfo->mAdapterAddress, devieInfo->mDeviceAddress, devieInfo->mUuid, devieInfo->mChannelId, false);
 
 	if (devieInfo->mChannel)
 	{
@@ -339,10 +341,10 @@ gboolean Bluez5ProfileSpp::ioCallback(GIOChannel * io, GIOCondition condition, g
 {
 	SppDeviceInfo* sppDevice = static_cast<SppDeviceInfo*>(data);
 
-	return sppDevice->mSppProfile->handleRxData(io, condition, sppDevice->mChannelId);
+	return sppDevice->mSppProfile->handleRxData(io, condition, sppDevice->mChannelId, sppDevice->mAdapterAddress);
 }
 
-gboolean Bluez5ProfileSpp::handleRxData(GIOChannel *io, GIOCondition condition, BluetoothSppChannelId channelId)
+gboolean Bluez5ProfileSpp::handleRxData(GIOChannel *io, GIOCondition condition, BluetoothSppChannelId channelId, const std::string &adapterAddress)
 {
 	char buf[1024] = { 0 };
 	gsize bytesRead = 0;
@@ -355,7 +357,7 @@ gboolean Bluez5ProfileSpp::handleRxData(GIOChannel *io, GIOCondition condition, 
 
 		if (status == G_IO_STATUS_NORMAL && bytesRead > 0)
 		{
-			getSppObserver()->dataReceived(channelId, (const uint8_t *)buf, bytesRead);
+			getSppObserver()->dataReceived(channelId, adapterAddress, (const uint8_t *)buf, bytesRead);
 			DEBUG("received [%s] bytes_read[%lu]", buf, bytesRead);
 		}
 
@@ -542,7 +544,7 @@ BluetoothError Bluez5ProfileSpp::removeChannel(const std::string &uuid)
 		std::string objPath = BASE_OBJ_PATH + std::to_string(sppConnectionInfo->mChannelId);
 		bluez_profile_manager1_call_unregister_profile_sync(mAdapter->getProfileManager(), objPath.c_str(), NULL, NULL);
 		g_object_unref(sppConnectionInfo->mInterface);
-		getSppObserver()->channelStateChanged(sppConnectionInfo->mDeviceAddress, uuid, sppConnectionInfo->mChannelId, false);
+		getSppObserver()->channelStateChanged(sppConnectionInfo->mAdapterAddress, sppConnectionInfo->mDeviceAddress, uuid, sppConnectionInfo->mChannelId, false);
 		removeConnectedDevice(sppConnectionInfo->mChannelId);
 		deallocateChannelId(sppConnectionInfo->mChannelId);
 	}

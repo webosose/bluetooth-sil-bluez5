@@ -59,7 +59,7 @@ public:
 	gboolean handleNewConnection (GDBusMethodInvocation *invocation, const gchar *device, const GVariant *fd,
 								const GVariant *fd_props, SppDeviceInfo* deviceInfo);
 	gboolean handleRelease();
-	gboolean handleRxData(GIOChannel *io, GIOCondition condition, BluetoothSppChannelId id);
+	gboolean handleRxData(GIOChannel *io, GIOCondition condition, BluetoothSppChannelId id, const std::string &adapterAddress);
 	gboolean handleRequestDisconnection (BluezProfile1 *interface, GDBusMethodInvocation *invocation, const gchar *device, SppDeviceInfo* deviceInfo);
 
 	static gboolean onHandleNewConnection (BluezProfile1 *interface, GDBusMethodInvocation *invocation, const gchar *device, const GVariant *fd,
@@ -85,6 +85,7 @@ private:
 		{
 		}
 
+		std::string mAdapterAddress;
 		std::string mDeviceAddress;
 		std::string mName;
 		std::string mUuid;
