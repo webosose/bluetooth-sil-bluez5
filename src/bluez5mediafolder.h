@@ -39,6 +39,7 @@ public:
 						BluetoothAvrcpBrowseFolderItemsCallback callback);
 	BluetoothError changePath(const std::string &itemPath);
 	BluetoothError playItem(const std::string &itemPath);
+	BluetoothError addToNowPlaying(const std::string &itemPath);
 
 private:
 	std::string mPlayerObjPath;

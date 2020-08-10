@@ -664,3 +664,15 @@ BluetoothError Bluez5ProfileAvcrp::playItem(const std::string &itemPath)
 
 	return mAddressedMediaPlayer->playItem(itemPath);
 }
+
+BluetoothError Bluez5ProfileAvcrp::addToNowPlaying(const std::string &itemPath)
+{
+	if (!mConnectedController || !mAddressedMediaPlayer)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "Not connected as controller/addressed player not there");
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	return mAddressedMediaPlayer->addToNowPlaying(itemPath);
+}

@@ -370,3 +370,44 @@ BluetoothError Bluez5MediaFolder::playItem(const std::string &itemPath)
 	}
 	return BLUETOOTH_ERROR_NONE;
 }
+
+BluetoothError Bluez5MediaFolder::addToNowPlaying(const std::string &itemPath)
+{
+	GError *error = 0;
+	BluezMediaItem1 *mediaItem = bluez_media_item1_proxy_new_for_bus_sync(
+		G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE, "org.bluez", itemPath.c_str(), NULL, &error);
+
+	if (error)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "Not able to get media item interface: %s", error->message);
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	if (!mediaItem)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "MediaItem is NULL");
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	const gboolean playable = bluez_media_item1_get_playable(mediaItem);
+	DEBUG("MediaItem playable : %d", playable);
+	if (!playable)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "MediaItem is not playable");
+		return BLUETOOTH_ERROR_AVRCP_ITEM_NOT_PLAYABLE;
+	}
+	bluez_media_item1_call_addto_now_playing_sync(mediaItem, NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "Not able to add to NowPlaying: %s", error->message);
+		if (strstr(error->message, "org.bluez.Error.NotSupported"))
+		{
+			g_error_free(error);
+			return BLUETOOTH_ERROR_NOT_ALLOWED;
+		}
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	return BLUETOOTH_ERROR_NONE;
+}
