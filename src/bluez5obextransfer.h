@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2019 LG Electronics, Inc.
+// Copyright (c) 2014-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ public:
 	uint64_t getFileSize() const { return mFileSize; }
 	const std::string& getFileName() const { return mFileName; }
 	const std::string& getFilePath() const { return mFilePath; }
+	const std::string& getMessageHandle() const { return mMessageHandle; }
 
 public:
 	static void handlePropertiesChanged(BluezObexTransfer1 *, gchar *interface,  GVariant *changedProperties,
@@ -83,6 +84,7 @@ private:
 	TransferType mTransferType;
 	std::string mFileName;
 	std::string mFilePath;
+	std::string mMessageHandle;
 	void updateFromProperties(GVariant *properties);
 	bool parsePropertyFromVariant(const std::string &key, GVariant *valueVar);
 	void notifyWatcherAboutChangedProperties();

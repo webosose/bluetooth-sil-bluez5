@@ -42,7 +42,11 @@ std::unordered_map<std::string,BluetoothMapProperty::Type> propertyMap = {
     {"Read",BluetoothMapProperty::Type::READ},
     {"Sent",BluetoothMapProperty::Type::SENT},
     {"Protected",BluetoothMapProperty::Type::PROTECTED},
-    {"Text",BluetoothMapProperty::Type::TEXTTYPE}};
+    {"Text",BluetoothMapProperty::Type::TEXTTYPE},
+    {"ObjectPath",BluetoothMapProperty::Type::OBJECTPATH},
+    {"EventType",BluetoothMapProperty::Type::EVENTTYPE},
+    {"OldFolder",BluetoothMapProperty::Type::OLDFOLDER},
+    };
 
 Bluez5ProfileMap::Bluez5ProfileMap(Bluez5Adapter *adapter) :
     Bluez5ObexProfileBase(Bluez5ObexSession::Type::MAP, adapter, BLUETOOTH_PROFILE_MAS_UUID),
@@ -108,7 +112,8 @@ void Bluez5ProfileMap::createSession(const std::string &address, const std::stri
 		callback(BLUETOOTH_ERROR_NONE,sessionId);
 	};
 
-	obexClient->createSession(Bluez5ObexSession::Type::MAP, address, sessionCreateCallback, instanceName);
+	std::string upperCaseAddress = convertAddressToUpperCase(address);
+	obexClient->createSession(Bluez5ObexSession::Type::MAP, upperCaseAddress, sessionCreateCallback, instanceName);
 }
 
 void Bluez5ProfileMap::notifySessionStatus(const std::string &sessionKey, bool createdOrRemoved)
@@ -445,6 +450,8 @@ void Bluez5ProfileMap::addMessageProperties(std::string& key , GVariant* value ,
             case BluetoothMapProperty::Type::RECIPIENTADDRESS:
             case BluetoothMapProperty::Type::MESSAGETYPES:
             case BluetoothMapProperty::Type::STATUS:
+            case BluetoothMapProperty::Type::EVENTTYPE:
+            case BluetoothMapProperty::Type::OLDFOLDER:
                 {
                     std::string parsedStringVal = g_variant_get_string(value, NULL);
                     messageProperties.push_back(BluetoothMapProperty(it->second,parsedStringVal));
@@ -544,11 +551,20 @@ BluezObexMessage1* Bluez5ProfileMap::createMessageHandleProxyUsingPath(const std
 
 void Bluez5ProfileMap::startTransfer(const std::string &objectPath, BluetoothResultCallback callback, Bluez5ObexTransfer::TransferType type)
 {
-    // NOTE: ownership of the transfer object is passed to updateActiveTransfer which
-    // will delete it once there is nothing to left to do with it
-    Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
-    mTransfersMap.insert({std::string(objectPath), transfer});
-    transfer->watch(std::bind(&Bluez5ProfileMap::updateActiveTransfer, this, objectPath, transfer, callback));
+      // NOTE: ownership of the transfer object is passed to updateActiveTransfer which
+      // will delete it once there is nothing to left to do with it
+      Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
+      mTransfersMap.insert({std::string(objectPath), transfer});
+      transfer->watch(std::bind(&Bluez5ProfileMap::updateActiveTransfer, this, objectPath, transfer, callback));
+}
+
+void Bluez5ProfileMap::startPushTransfer(const std::string &objectPath, BluetoothMapCallback callback, Bluez5ObexTransfer::TransferType type)
+{
+      // NOTE: ownership of the transfer object is passed to updateActiveTransfer which
+      // will delete it once there is nothing to left to do with it
+      Bluez5ObexTransfer *transfer = new Bluez5ObexTransfer(std::string(objectPath), type);
+      mTransfersMap.insert({std::string(objectPath), transfer});
+      transfer->watch(std::bind(&Bluez5ProfileMap::updatePushTransfer, this, objectPath, transfer, callback));
 }
 
 void Bluez5ProfileMap::removeTransfer(const std::string &objectPath)
@@ -575,6 +591,26 @@ void Bluez5ProfileMap::updateActiveTransfer(const std::string &objectPath, Bluez
     {
         DEBUG("File transfer failed");
         callback(BLUETOOTH_ERROR_FAIL);
+        cleanup = true;
+    }
+
+    if (cleanup)
+        removeTransfer(objectPath);
+}
+
+void Bluez5ProfileMap::updatePushTransfer(const std::string &objectPath, Bluez5ObexTransfer *transfer, BluetoothMapCallback callback)
+{
+    bool cleanup = false;
+
+    if (transfer->getState() == Bluez5ObexTransfer::State::COMPLETE)
+    {
+        callback(BLUETOOTH_ERROR_NONE,transfer->getMessageHandle());
+        cleanup = true;
+    }
+    else if (transfer->getState() == Bluez5ObexTransfer::State::ERROR)
+    {
+        DEBUG("File transfer failed");
+        callback(BLUETOOTH_ERROR_FAIL,transfer->getMessageHandle());
         cleanup = true;
     }
 
@@ -620,4 +656,117 @@ void Bluez5ProfileMap::setMessageStatus(const std::string &sessionKey, const std
     if(objectMessageProxy)
         g_object_unref(objectMessageProxy);
 
+}
+
+void Bluez5ProfileMap::pushMessage(const std::string &sessionKey, const std::string &sourceFile, const std::string &folder, const std::string &charset, bool transparent, bool retry, BluetoothMapCallback callback)
+{
+
+    const Bluez5ObexSession *session = findSession(sessionKey);
+
+    if (!session)
+    {
+        callback(BLUETOOTH_ERROR_PARAM_INVALID, "");
+        return;
+    }
+
+    BluezObexMessageAccess1 *objectMessageProxy = session->getObjectMessageProxy();
+    if (!objectMessageProxy)
+    {
+        callback(BLUETOOTH_ERROR_FAIL, "");
+        return;
+    }
+
+   auto pushMessageCallback = [=](GAsyncResult *result) {
+
+        GError *error = 0;
+        gboolean ret;
+        gchar *objectPath = 0;
+        GVariant *outProperties;
+
+        ret = bluez_obex_message_access1_call_push_message_finish(objectMessageProxy, &objectPath, &outProperties, result, &error);
+        if (error)
+        {
+            ERROR(MSGID_MAP_PROFILE_ERROR, 0, "Failed to get message error:%s",error->message);
+            callback(BLUETOOTH_ERROR_FAIL,"");
+            g_error_free(error);
+            return;
+        }
+
+		startPushTransfer(std::string(objectPath), callback, Bluez5ObexTransfer::TransferType::SENDING);
+    };
+
+    bluez_obex_message_access1_call_push_message(objectMessageProxy , sourceFile.c_str(),  folder.c_str(), buildMessageArgs(charset, transparent, retry),
+                                                 NULL, glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(pushMessageCallback));
+}
+
+GVariant* Bluez5ProfileMap::buildMessageArgs(const std::string &charset, bool transparent, bool retry)
+{
+    DEBUG("%s", __FUNCTION__);
+    GVariantBuilder *builder = 0;
+    GVariant *params = 0;
+    builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+    g_variant_builder_add (builder, "{sv}","Transparent" , g_variant_new_boolean(transparent));
+    g_variant_builder_add (builder, "{sv}","Retry" , g_variant_new_boolean(retry));
+    g_variant_builder_add (builder, "{sv}","Charset" ,g_variant_new_string(charset.c_str()));
+
+    params = g_variant_builder_end(builder);
+    g_variant_builder_unref(builder);
+    return params;
+}
+
+void Bluez5ProfileMap::updateProperties(GVariant *changedProperties)
+{
+    bool notificationEvent = false;
+    BluetoothMessageList messageList;
+    std::string sessionId;
+
+    for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+    {
+        GVariant *propertyVar = g_variant_get_child_value(changedProperties, n);
+        GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
+        GVariant *valueVariant = g_variant_get_child_value(propertyVar, 1);
+        GVariant *valueVar = g_variant_get_variant(valueVariant);
+        std::string key = g_variant_get_string(keyVar, NULL);
+        if (key == "Notification")
+        {
+            g_autoptr(GVariantIter) iter1 = NULL;
+            g_autoptr(GVariant) value = NULL;
+            g_variant_get (valueVar, "a{sv}", &iter1);
+
+            const gchar *key;
+            BluetoothMapPropertiesList properties;
+            std::string ObjectPath;
+
+            while (g_variant_iter_loop (iter1, "{sv}", &key, &value))
+            {
+                std::string keyValue(key);
+                addMessageProperties(keyValue,value,properties);
+                if (keyValue == "ObjectPath")
+                {
+                    notificationEvent = true;
+                    ObjectPath = g_variant_get_string(value, NULL);
+                }
+
+            }
+            std::size_t messageFound = ObjectPath.find("message");
+            if (messageFound != std::string::npos)
+            {
+                std::string messageHandle = ObjectPath.substr(messageFound);
+                messageList.push_back(std::make_pair(messageHandle,properties));
+            }
+
+            std::string session("session");
+            std::size_t sessionFound = ObjectPath.find(session);
+            if (sessionFound != std::string::npos)
+            {
+                sessionId = ObjectPath.substr(sessionFound, session.length()+1);
+            }
+        }
+        g_variant_unref(keyVar);
+        g_variant_unref(propertyVar);
+        g_variant_unref(valueVariant);
+        g_variant_unref(valueVar);
+    }
+    if(notificationEvent)
+        getMapObserver()->messageNotificationEvent(convertAddressToLowerCase(mAdapter->getAddress()), sessionId, messageList);
 }
