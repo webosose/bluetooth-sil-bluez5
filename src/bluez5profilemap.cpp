@@ -391,7 +391,7 @@ GVariant * Bluez5ProfileMap::buildGetMessageListParam(const BluetoothMapProperti
                     for(auto field : fields)
                         g_variant_builder_add(builderFields, "s", field.c_str());
                     fieldFilters = g_variant_builder_end(builderFields);
-                    g_variant_builder_add (builder, "{sv}","Fields" , builderFields);
+                    g_variant_builder_add (builder, "{sv}","Fields" , fieldFilters);
                     g_variant_builder_unref(builderFields);
                     break;
                 }

@@ -660,7 +660,8 @@ BluetoothError Bluez5MediaPlayer::changePath(const std::string &itemPath)
 	size_t pos = playerPath.find("player");
 	if (pos != std::string::npos)
 	{
-		playerPath.erase(pos, strlen("player") + 1);
+		size_t len = playerPath.find("/", pos);
+		playerPath.erase(pos, len);
 	}
 	std::string finalItemPath = playerPath + itemPath;
 	DEBUG("ItemPath : %s", finalItemPath.c_str());
@@ -680,7 +681,8 @@ BluetoothError Bluez5MediaPlayer::playItem(const std::string &itemPath)
 	size_t pos = playerPath.find("player");
 	if (pos != std::string::npos)
 	{
-		playerPath.erase(pos, strlen("player") + 1);
+		size_t len = playerPath.find("/", pos);
+		playerPath.erase(pos, len);
 	}
 	std::string finalItemPath = playerPath + itemPath;
 	DEBUG("ItemPath : %s", finalItemPath.c_str());
@@ -700,7 +702,8 @@ BluetoothError Bluez5MediaPlayer::addToNowPlaying(const std::string &itemPath)
 	size_t pos = playerPath.find("player");
 	if (pos != std::string::npos)
 	{
-		playerPath.erase(pos, strlen("player") + 1);
+		size_t len = playerPath.find("/", pos);
+		playerPath.erase(pos, len);
 	}
 	std::string finalItemPath = playerPath + itemPath;
 	DEBUG("ItemPath : %s", finalItemPath.c_str());

@@ -246,12 +246,14 @@ void Bluez5ProfileAvcrp::supplyMediaPlayStatus(BluetoothAvrcpRequestId requestId
 
 void Bluez5ProfileAvcrp::mediaPlayStatusRequested(const std::string &address)
 {
-	getAvrcpObserver()->mediaPlayStatusRequested(generateMediaPlayStatusRequestId(), address);
+	getAvrcpObserver()->mediaPlayStatusRequested(generateMediaPlayStatusRequestId(),
+		convertAddressToLowerCase(mAdapter->getAddress()), address);
 }
 
 void Bluez5ProfileAvcrp::mediaMetaDataRequested(const std::string &address)
 {
-	getAvrcpObserver()->mediaMetaDataRequested(generateMetaDataRequestId(), address);
+	getAvrcpObserver()->mediaMetaDataRequested(generateMetaDataRequestId(),
+		convertAddressToLowerCase(mAdapter->getAddress()), address);
 }
 
 void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool status, const std::string &uuid)
@@ -431,6 +433,8 @@ void Bluez5ProfileAvcrp::recievePassThroughCommand(std::string address, std::str
 	{
 		getAvrcpObserver()->passThroughCommandReceived(keyCode, keyStatus, convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
 
+		//TODO: Remove setMediaPlayStatus() call from this code block, after
+		//proper implementation in media application
 		BluetoothMediaPlayStatus status;
 		if (key == "PLAY")
 		{
