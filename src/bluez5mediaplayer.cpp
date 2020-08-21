@@ -596,7 +596,7 @@ bool Bluez5MediaPlayer::updatePlayerProperties()
 				{
 					mPlayerInfo.setSearchable(searchable);
 					changed = true;
-					DEBUG("searchable: %s", searchable);
+					DEBUG("searchable: %d", searchable);
 				}
 			}
 		}
