@@ -1091,7 +1091,7 @@ void Bluez5ProfileGatt::writeCharacteristic(const uint16_t &connId, const Blueto
 		{
 			remoteService->service.updateCharacteristicValue(characteristic.getUuid(), characteristic.getValue());
 			updateRemoteDeviceServices();
-			getGattObserver()->characteristicValueChanged(deviceAddress, service, characteristic);
+			getGattObserver()->characteristicValueChanged(deviceAddress, service, characteristic, convertAddressToLowerCase(mAdapter->getAddress()));
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -1267,7 +1267,7 @@ void Bluez5ProfileGatt::writeCharacteristic(const std::string &address, const Bl
 		{
 			remoteService->service.updateCharacteristicValue(characteristic.getUuid(), characteristic.getValue());
 			updateRemoteDeviceServices();
-			getGattObserver()->characteristicValueChanged(address, service, characteristic);
+			getGattObserver()->characteristicValueChanged(address, service, characteristic, convertAddressToLowerCase(mAdapter->getAddress()));
 			callback(BLUETOOTH_ERROR_NONE);
 			return;
 		}
@@ -2219,7 +2219,7 @@ void Bluez5ProfileGatt::onCharacteristicPropertiesChanged(GattRemoteCharacterist
 				BluetoothUuid charUuid(bluez_gatt_characteristic1_get_uuid(characteristic->mInterface), BluetoothUuid::UUID128);
 				remoteChar.setUuid(charUuid);
 				remoteChar.setValue(charValue);
-				getGattObserver()->characteristicValueChanged(lowerCaseAddress, service_uuid, remoteChar);
+				getGattObserver()->characteristicValueChanged(lowerCaseAddress, service_uuid, remoteChar, convertAddressToLowerCase(mAdapter->getAddress()));
 			}
 		}
 		g_variant_iter_free (iter);
@@ -2314,7 +2314,7 @@ void Bluez5ProfileGatt::onHandleCharacteriscticWriteValue(BluezGattCharacteristi
 	}
 	BluetoothUuid service(uuid);
 
-	getGattObserver()->characteristicValueChanged(service, characteristic);
+	getGattObserver()->characteristicValueChanged(service, characteristic, convertAddressToLowerCase(mAdapter->getAddress()));
 	return;
 }
 
