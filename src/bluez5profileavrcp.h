@@ -83,7 +83,8 @@ public:
 	BluetoothError changePath(const std::string &itemPath) override;
 	BluetoothError playItem(const std::string &itemPath);
 	BluetoothError addToNowPlaying(const std::string &itemPath);
-
+	void search(const std::string &searchString,
+				BluetoothAvrcpBrowseSearchListCallback callback);
 
 private:
 	BluetoothAvrcpRequestId generateMetaDataRequestId() { return ++mMetaDataRequestId; }

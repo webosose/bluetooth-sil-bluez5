@@ -56,6 +56,8 @@ public:
 	BluetoothError changePath(const std::string &itemPath);
 	BluetoothError playItem(const std::string &itemPath);
 	BluetoothError addToNowPlaying(const std::string &itemPath);
+	void search(const std::string &searchString,
+                BluetoothAvrcpBrowseSearchListCallback callback);
 
 	/* AVRCP CT helper functions called from AVRCP profile class */
 	std::string getPlayerObjPath() const { return mPlayerInfo.getPath(); }

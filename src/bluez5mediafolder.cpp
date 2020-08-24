@@ -411,3 +411,34 @@ BluetoothError Bluez5MediaFolder::addToNowPlaying(const std::string &itemPath)
 	}
 	return BLUETOOTH_ERROR_NONE;
 }
+
+void Bluez5MediaFolder::search(const std::string &searchString,
+                BluetoothAvrcpBrowseSearchListCallback callback)
+{
+	GError *error = 0;
+
+	auto searchCallback = [this, callback](GAsyncResult *result) {
+
+		GError *error = 0;
+		gboolean ret;
+		gchar *outFolder = NULL;
+
+		GVariant *items = NULL;
+		ret = bluez_media_folder1_call_search_finish(
+			mFolderInterface, &outFolder, result, &error);
+		if (error)
+		{
+			ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Search failed: %s", error->message);
+			g_error_free(error);
+			callback(BLUETOOTH_ERROR_FAIL, "");
+			return;
+		}
+		callback(BLUETOOTH_ERROR_NONE, std::string(outFolder));
+
+	};
+
+	bluez_media_folder1_call_search(mFolderInterface, searchString.c_str(), NULL,
+										NULL, glibAsyncMethodWrapper,
+										new GlibAsyncFunctionWrapper(searchCallback));
+	return;
+}

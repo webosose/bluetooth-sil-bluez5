@@ -709,3 +709,24 @@ BluetoothError Bluez5MediaPlayer::addToNowPlaying(const std::string &itemPath)
 	DEBUG("ItemPath : %s", finalItemPath.c_str());
 	return mMediaFolder->addToNowPlaying(finalItemPath);
 }
+
+void Bluez5MediaPlayer::search(const std::string &searchString,
+							   BluetoothAvrcpBrowseSearchListCallback callback)
+{
+	if (!mPlayerInfo.getSearchable())
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "Player does not support search feature");
+		callback(BLUETOOTH_ERROR_NOT_ALLOWED, "");
+		return;
+	}
+	if (!mMediaFolder)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0,
+			  "MediaFolder interface is not created. Browsing not supported");
+		callback(BLUETOOTH_ERROR_NOT_ALLOWED, "");
+		return;
+	}
+
+	return mMediaFolder->search(searchString, callback);
+}

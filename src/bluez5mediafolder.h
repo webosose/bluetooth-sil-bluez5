@@ -40,6 +40,8 @@ public:
 	BluetoothError changePath(const std::string &itemPath);
 	BluetoothError playItem(const std::string &itemPath);
 	BluetoothError addToNowPlaying(const std::string &itemPath);
+	void search(const std::string &searchString,
+                BluetoothAvrcpBrowseSearchListCallback callback);
 
 private:
 	std::string mPlayerObjPath;
