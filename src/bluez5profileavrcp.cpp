@@ -244,16 +244,34 @@ void Bluez5ProfileAvcrp::supplyMediaPlayStatus(BluetoothAvrcpRequestId requestId
 	callback(BLUETOOTH_ERROR_NONE);
 }
 
+void Bluez5ProfileAvcrp::notifyMediaPlayStatus(const BluetoothMediaPlayStatus &playStatus, BluetoothResultCallback callback)
+{
+	if (!mConnectedTarget)
+	{
+		ERROR(MSGID_AVRCP_PROFILE_ERROR, 0, "Not connected as target");
+		callback(BLUETOOTH_ERROR_NOT_ALLOWED);
+		return;
+	}
+	mAdapter->getPlayer()->setMediaPlayStatus(playStatus);
+	if (playStatus.getStatus() == BluetoothMediaPlayStatus::MEDIA_PLAYSTATUS_STOPPED)
+		mAdapter->getPlayer()->setMediaPosition(0);
+	else
+		mAdapter->getPlayer()->setMediaPosition(playStatus.getPosition());
+	mAdapter->getPlayer()->setMediaDuration(playStatus.getDuration());
+	callback(BLUETOOTH_ERROR_NONE);
+}
+
+
 void Bluez5ProfileAvcrp::mediaPlayStatusRequested(const std::string &address)
 {
 	getAvrcpObserver()->mediaPlayStatusRequested(generateMediaPlayStatusRequestId(),
-		convertAddressToLowerCase(mAdapter->getAddress()), address);
+		convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
 }
 
 void Bluez5ProfileAvcrp::mediaMetaDataRequested(const std::string &address)
 {
 	getAvrcpObserver()->mediaMetaDataRequested(generateMetaDataRequestId(),
-		convertAddressToLowerCase(mAdapter->getAddress()), address);
+		convertAddressToLowerCase(mAdapter->getAddress()), convertAddressToLowerCase(address));
 }
 
 void Bluez5ProfileAvcrp::updateConnectionStatus(const std::string &address, bool status, const std::string &uuid)

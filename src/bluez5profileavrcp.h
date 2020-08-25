@@ -75,6 +75,9 @@ public:
 	std::string getAdapterAddress();
 	BluetoothAvrcpStatusObserver* getAvrcpObserver() { return BluetoothAvrcpProfile::getAvrcpObserver(); }
 	void updatePlayerInfo();
+	void notifyMediaPlayStatus(const BluetoothMediaPlayStatus &playStatus,
+			BluetoothResultCallback callback) override;
+
 
 	/*AVRCP CT Browse APIs */
 	void getNumberOfItems(BluetoothAvrcpBrowseTotalNumberOfItemsCallback callback) override;
