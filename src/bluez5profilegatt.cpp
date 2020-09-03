@@ -95,7 +95,7 @@ void Bluez5ProfileGatt::addRemoteServiceToDevice(GattRemoteService* gattService)
 		/* Send connect status*/
 		BluetoothPropertiesList properties;
 		properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, true));
-		getObserver()->propertiesChanged(lowerCaseAddress, properties);
+		getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), lowerCaseAddress, properties);
 	}
 	else
 	{
@@ -435,7 +435,7 @@ void Bluez5ProfileGatt::removeRemoteGattService(const std::string &serviceObject
 			mDeviceServicesMap.erase(deviceServicesIter);
 			BluetoothPropertiesList properties;
 			properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, false));
-			getObserver()->propertiesChanged(lowerCaseAddress, properties);
+			getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), lowerCaseAddress, properties);
 		}
 	}
 }
@@ -528,7 +528,7 @@ void Bluez5ProfileGatt::updateDeviceProperties(std::string deviceAddress)
 		mRemoteDeviceServicesMap.erase(deviceRemoteServicesIter);
 	BluetoothPropertiesList properties;
 	properties.push_back(BluetoothProperty(BluetoothProperty::Type::CONNECTED, false));
-	getObserver()->propertiesChanged(lowerCaseAddress, properties);
+	getObserver()->propertiesChanged(convertAddressToLowerCase(mAdapter->getAddress()), lowerCaseAddress, properties);
 }
 
 void Bluez5ProfileGatt::registerSignalHandlers()
