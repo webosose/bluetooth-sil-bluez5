@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2019 LG Electronics, Inc.
+// Copyright (c) 2018-2020 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,6 +66,11 @@ Bluez5ProfileGatt::~Bluez5ProfileGatt()
 	{
 		g_bus_unown_name(mBusId);
 		mBusId = 0;
+	}
+	if (mObjectManager)
+	{
+		g_object_unref(mObjectManager);
+		mObjectManager = 0;
 	}
 }
 
@@ -447,8 +452,13 @@ void Bluez5ProfileGatt::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 	UNUSED(objectManager);
 
 	Bluez5ProfileGatt *pThis = static_cast<Bluez5ProfileGatt*>(user_data);
+	std::string objectPath = g_dbus_object_get_object_path(object);
 
 	if (!pThis)
+		return;
+
+	auto adapterPath = pThis->mAdapter->getObjectPath();
+	if (objectPath.compare(0, adapterPath.length(), adapterPath))
 		return;
 
 	if (auto serviceInterface = g_dbus_object_get_interface(object, "org.bluez.GattService1"))
@@ -472,10 +482,11 @@ void Bluez5ProfileGatt::handleObjectAdded(GDBusObjectManager *objectManager, GDB
 		pThis->createRemoteGattDescriptor(std::string(objectPath));
 		g_object_unref(descriptorInterface);
 	}
-	else
+	else if (auto deviceInterface = g_dbus_object_get_interface(object, "org.bluez.Device1"))
 	{
 		auto objectPath = g_dbus_object_get_object_path(object);
 		pThis->handleAutoConnectDevAdd(std::string(objectPath));
+		g_object_unref(deviceInterface);
 	}
 }
 
