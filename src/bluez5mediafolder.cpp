@@ -416,6 +416,10 @@ void Bluez5MediaFolder::search(const std::string &searchString,
                 BluetoothAvrcpBrowseSearchListCallback callback)
 {
 	GError *error = 0;
+	GVariantBuilder *builderFilter = g_variant_builder_new(G_VARIANT_TYPE("a{sv}"));
+
+	GVariant *filters = g_variant_builder_end(builderFilter);
+	g_variant_builder_unref(builderFilter);
 
 	auto searchCallback = [this, callback](GAsyncResult *result) {
 
@@ -433,11 +437,20 @@ void Bluez5MediaFolder::search(const std::string &searchString,
 			callback(BLUETOOTH_ERROR_FAIL, "");
 			return;
 		}
-		callback(BLUETOOTH_ERROR_NONE, std::string(outFolder));
+
+		/* Modify the item path to not include bluez info */
+		std::string itemPath = outFolder;
+		size_t pos = itemPath.find("player");
+		if (pos != std::string::npos)
+		{
+			itemPath.erase(0, pos);
+		}
+		DEBUG("Search path: %s", itemPath.c_str());
+		callback(BLUETOOTH_ERROR_NONE, itemPath);
 
 	};
 
-	bluez_media_folder1_call_search(mFolderInterface, searchString.c_str(), NULL,
+	bluez_media_folder1_call_search(mFolderInterface, searchString.c_str(), filters,
 										NULL, glibAsyncMethodWrapper,
 										new GlibAsyncFunctionWrapper(searchCallback));
 	return;
