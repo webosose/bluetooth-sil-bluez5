@@ -154,6 +154,34 @@ void Bluez5ProfileA2dp::updateA2dpUuid(const std::string &address, BluetoothResu
 
 void Bluez5ProfileA2dp::enable(const std::string &uuid, BluetoothResultCallback callback)
 {
+#ifdef WEBOS_AUTO
+	GError *error = 0;
+	std::string role;
+
+	if (uuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID)
+	{
+		role = "source";
+	}
+	else if (uuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID)
+	{
+		role = "sink";
+	}
+
+	BluezMedia1 *mMediaProxy = mAdapter->getMediaManager();
+	if (mMediaProxy)
+	{
+		bool ret = bluez_media1_call_select_role_sync(mMediaProxy, role.c_str(), NULL, &error);
+		if (!ret)
+		{
+			if (strstr(error->message, "org.bluez.Error.AlreadyExists") == NULL)
+			{
+				ERROR("A2DP_ENABLE_ROLE", 0, "Role enable %s failed error %s", role.c_str(), error->message);
+				callback(BLUETOOTH_ERROR_FAIL);
+			}
+			g_error_free(error);
+		}
+	}
+#endif
 	mAdapter->notifyA2dpRoleChnange(uuid);
 	callback(BLUETOOTH_ERROR_NONE);
 
@@ -161,7 +189,39 @@ void Bluez5ProfileA2dp::enable(const std::string &uuid, BluetoothResultCallback 
 
 void Bluez5ProfileA2dp::disable(const std::string &uuid, BluetoothResultCallback callback)
 {
+#ifdef WEBOS_AUTO
+	GError *error = 0;
+	std::string enableRole;
+
+	if (uuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID)
+	{
+		enableRole = "sink";
+	}
+	else if (uuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID)
+	{
+		enableRole = "source";
+	}
+
+	BluezMedia1 *mMediaProxy = mAdapter->getMediaManager();
+	if (mMediaProxy)
+	{
+		bool ret = bluez_media1_call_select_role_sync(mMediaProxy, enableRole.c_str(), NULL, &error);
+		if (!ret)
+		{
+			if (strstr(error->message, "org.bluez.Error.AlreadyExists") == NULL)
+			{
+				ERROR("A2DP_ENABLE_ROLE", 0, "Role enable %s failed error %s", enableRole.c_str(), error->message);
+				callback(BLUETOOTH_ERROR_FAIL);
+			}
+			g_error_free(error);
+		}
+	}
+
+	mAdapter->notifyA2dpRoleChnange(uuid);
+	callback(BLUETOOTH_ERROR_NONE);
+#else
 	callback(BLUETOOTH_ERROR_UNSUPPORTED);
+#endif
 }
 
 BluetoothError Bluez5ProfileA2dp::setDelayReportingState(bool state)

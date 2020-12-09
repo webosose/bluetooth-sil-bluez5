@@ -361,8 +361,24 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 				mCancelDiscCallback(BLUETOOTH_ERROR_NONE);
 		}
 	}
+	else if (key == "UUIDs")
+	{
+		mUuids.clear();
 
-	return changed;
+		for (int m = 0; m < g_variant_n_children(valueVar); m++)
+		{
+			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
+
+			std::string uuid = g_variant_get_string(uuidVar, NULL);
+			mUuids.push_back(uuid);
+
+			g_variant_unref(uuidVar);
+		}
+		properties.push_back(BluetoothProperty(BluetoothProperty::Type::UUIDS, mUuids));
+		changed = true;
+	}
+
+       return changed;
 }
 
 void Bluez5Adapter::getAdapterProperties(BluetoothPropertiesResultCallback callback)

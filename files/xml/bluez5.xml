@@ -354,6 +354,9 @@
         </method>
         <method name="UnregisterPlayer"><arg name="player" type="o" direction="in"/>
         </method>
+        <method name="SelectRole">
+            <arg name="role" type="s" direction="in"/>
+        </method>
     </interface>
     <interface name="org.bluez.obex.PhonebookAccess1">
       <method name="Select">

@@ -167,6 +167,7 @@ public:
 	void mediaPlayStatusRequest(std::string address);
 	void mediaMetaDataRequest(std::string address);
 	void addMediaManager(std::string objectPath);
+	BluezMedia1* getMediaManager() { return mMediaManager; }
 	void removeMediaManager(const std::string &objectPath);
 	void updateRemoteFeatures(uint8_t features, const std::string &role, const std::string &address);
 	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address);
