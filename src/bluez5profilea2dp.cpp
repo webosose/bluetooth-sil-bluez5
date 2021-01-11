@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 LG Electronics, Inc.
+// Copyright (c) 2018-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -141,6 +141,7 @@ void Bluez5ProfileA2dp::updateA2dpUuid(const std::string &address, BluetoothResu
 		return;
 	}
 
+#ifndef WEBOS_AUTO
 	for(auto tempUuid : device->getUuids())
 	{
 		if ((tempUuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID) ||
@@ -150,6 +151,7 @@ void Bluez5ProfileA2dp::updateA2dpUuid(const std::string &address, BluetoothResu
 			break;
 		}
 	}
+#endif
 }
 
 void Bluez5ProfileA2dp::enable(const std::string &uuid, BluetoothResultCallback callback)
@@ -161,10 +163,12 @@ void Bluez5ProfileA2dp::enable(const std::string &uuid, BluetoothResultCallback 
 	if (uuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID)
 	{
 		role = "source";
+		mUuid = BLUETOOTH_PROFILE_A2DP_SINK_UUID;
 	}
 	else if (uuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID)
 	{
 		role = "sink";
+		mUuid = BLUETOOTH_PROFILE_A2DP_SOURCE_UUID;
 	}
 
 	BluezMedia1 *mMediaProxy = mAdapter->getMediaManager();
