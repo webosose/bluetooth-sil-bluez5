@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 LG Electronics, Inc.
+// Copyright (c) 2014-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -173,6 +173,7 @@ public:
 	void updateSupportedNotificationEvents(uint16_t notificationEvents, const std::string& address);
 	void notifyA2dpRoleChnange (const std::string &uuid );
 	void notifyAvrcpRoleChange(const std::string &uuid);
+	std::vector<std::string> getAdapterSupportedUuid () const{return mUuids;}
 
 private:
 	std::string propertyTypeToString(BluetoothProperty::Type type);

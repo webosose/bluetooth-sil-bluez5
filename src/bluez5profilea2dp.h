@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 LG Electronics, Inc.
+// Copyright (c) 2018-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ public:
 											gpointer user_data);
 	static void handlePropertiesChanged(BluezMediaTransport1 *, gchar *interface,  GVariant *changedProperties,
 										GVariant *invalidatedProperties, gpointer userData);
+	void setA2dpUuid(const std::string &uuid);
 
 	static void updateTransportProperties(Bluez5ProfileA2dp *pA2dp);
 	BluezMediaTransport1* getMediaTransport() { return mInterface; }

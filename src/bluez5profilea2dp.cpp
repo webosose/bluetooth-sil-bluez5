@@ -151,8 +151,31 @@ void Bluez5ProfileA2dp::updateA2dpUuid(const std::string &address, BluetoothResu
 			break;
 		}
 	}
+#else
+	for(auto tempUuid : mAdapter->getAdapterSupportedUuid())
+	{
+		if ((tempUuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID) ||
+			(tempUuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID))
+		{
+			setA2dpUuid(tempUuid);
+			break;
+		}
+	}
 #endif
 }
+
+void Bluez5ProfileA2dp::setA2dpUuid(const std::string &uuid)
+{
+	if (uuid == BLUETOOTH_PROFILE_A2DP_SOURCE_UUID)
+	{
+		mUuid = BLUETOOTH_PROFILE_A2DP_SINK_UUID;
+	}
+	else if (uuid == BLUETOOTH_PROFILE_A2DP_SINK_UUID)
+	{
+		mUuid = BLUETOOTH_PROFILE_A2DP_SOURCE_UUID;
+	}
+}
+
 
 void Bluez5ProfileA2dp::enable(const std::string &uuid, BluetoothResultCallback callback)
 {
