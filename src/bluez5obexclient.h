@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 LG Electronics, Inc.
+// Copyright (c) 2014-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -44,11 +44,6 @@ public:
 
 	void createSession(Bluez5ObexSession::Type type, const std::string &deviceAddress, Bluez5ObexSessionCreateCallback callback, const std::string &instanceName = "");
 	void destroySession(const std::string &objectPath);
-
-	static void handleObexServiceStarted(GDBusConnection *conn, const gchar *name,
-	                                      const gchar *nameOwner, gpointer user_data);
-	static void handleObexServiceStopped(GDBusConnection *conn, const gchar *name,
-	                                     gpointer user_data);
 
 private:
 	BluezObexClient1 *mClientProxy;

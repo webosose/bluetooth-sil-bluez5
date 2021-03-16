@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 LG Electronics, Inc.
+// Copyright (c) 2014-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -379,7 +379,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 
 		GVariant *array;
 		const gchar *key;
-		uint8_t val;
+		char val;
 
 		while (g_variant_iter_loop(iter, "{&sv}", &key, &array))
 		{
