@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 LG Electronics, Inc.
+// Copyright (c) 2014-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -755,6 +755,35 @@ void Bluez5Adapter::setDeviceProperties(const std::string& address, const Blueto
 		}
 	}
 	callback(BLUETOOTH_ERROR_NONE);
+}
+
+BluetoothError Bluez5Adapter::forceRepower()
+{
+	GVariant *valueVar = g_variant_new_boolean(FALSE);
+	GError *error = 0;
+
+	free_desktop_dbus_properties_call_set_sync(mPropertiesProxy, "org.bluez.Adapter1",
+						"Powered", g_variant_new_variant(valueVar),
+						NULL, &error);
+	if (error)
+	{
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+
+	sleep(1);
+
+	valueVar = g_variant_new_boolean(TRUE);
+	free_desktop_dbus_properties_call_set_sync(mPropertiesProxy, "org.bluez.Adapter1",
+						"Powered", g_variant_new_variant(valueVar),
+						NULL, &error);
+	if (error)
+	{
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+
+	return BLUETOOTH_ERROR_NONE;
 }
 
 BluetoothError Bluez5Adapter::enable()

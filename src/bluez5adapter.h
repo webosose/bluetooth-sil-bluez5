@@ -66,6 +66,7 @@ public:
 	void setDeviceProperty(const std::string& address, const BluetoothProperty& property, BluetoothResultCallback callback);
 	void setDeviceProperties(const std::string& address, const BluetoothPropertiesList& properties, BluetoothResultCallback callback);
 	BluetoothError enable();
+	BluetoothError forceRepower();
 	BluetoothError disable();
 	BluetoothError startDiscovery();
 	void cancelDiscovery(BluetoothResultCallback callback);

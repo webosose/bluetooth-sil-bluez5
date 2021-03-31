@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 LG Electronics, Inc.
+// Copyright (c) 2014-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -271,6 +271,8 @@ void Bluez5SIL::createAdapter(const std::string &objectPath)
 	DEBUG("New adapter on path %s", objectPath.c_str());
 
 	Bluez5Adapter *adapter = new Bluez5Adapter(std::string(objectPath));
+
+	adapter->forceRepower();
 	mAdapters.push_back(adapter);
 
 	assignNewDefaultAdapter();
