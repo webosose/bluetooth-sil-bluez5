@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2020 LG Electronics, Inc.
+// Copyright (c) 2014-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ extern PmLogContext bluez5LogContext;
 #define MSGID_DBUS_METHOD_CALL_FAILED                  "DBUS METHOD CALL FAILED"
 #define MSGID_AVRCP_PROFILE_ERROR                      "AVRCP_PROFILE_ERROR"
 #define MSGID_MAP_PROFILE_ERROR                        "MAP_PROFILE_ERROR"
+#define MSGID_MESH_PROFILE_ERROR                       "MESH_PROFILE_ERROR"
 
 
 #endif // LOGGING_H

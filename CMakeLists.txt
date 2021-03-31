@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020 LG Electronics, Inc.
+# Copyright (c) 2018-2021 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -126,9 +126,16 @@ file(GLOB SOURCES
      src/bluez5profilemap.cpp
      src/bluez5mediaplayer.cpp
      src/bluez5mediafolder.cpp
+     src/bluez5profilemesh.cpp
+     src/bluez5meshadv.cpp
+     src/bluez5meshadvprovisioner.cpp
+     src/bluez5meshadvprovagent.cpp
+     src/bluez5meshelement.cpp
+     src/bluez5meshmodelconfigclient.cpp
+     src/bluez5meshmodelonoffclient.cpp
      )
 
 add_library(bluez5 MODULE ${SOURCES})
 target_link_libraries(bluez5 ${GLIB2_LDFLAGS} ${PMLOG_LDFLAGS}
-                             ${GIO2_LDFLAGS} ${GIO-UNIX_LDFLAGS})
+                             ${GIO2_LDFLAGS} ${GIO-UNIX_LDFLAGS} ssl crypto)
 install(TARGETS bluez5 DESTINATION ${WEBOS_INSTALL_LIBDIR}/bluetooth-sils)
