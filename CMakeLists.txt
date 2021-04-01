@@ -130,6 +130,7 @@ file(GLOB SOURCES
      src/bluez5meshadv.cpp
      src/bluez5meshadvprovisioner.cpp
      src/bluez5meshadvprovagent.cpp
+     src/bluez5meshapplication.cpp
      src/bluez5meshelement.cpp
      src/bluez5meshmodelconfigclient.cpp
      src/bluez5meshmodelonoffclient.cpp

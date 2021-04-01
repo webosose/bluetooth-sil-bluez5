@@ -109,8 +109,8 @@ gboolean Bluez5MeshAdvProvAgent::handlePromptStatic(BluezMeshProvisionAgent1 *ob
 	DEBUG("handlePromptStatic: %s", argType);
 	provAgent->supplyStaticInvokation = invocation;
 	provAgent->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_NONE,
-											  convertAddressToLowerCase(
-												  provAgent->mAdapter->getAddress()),
-											  "promptStatic", "", 0, "", "", 0, "");
+												convertAddressToLowerCase(
+													provAgent->mAdapter->getAddress()),
+												"promptStatic", "", 0, "", "", 0, "");
 	return true;
 }

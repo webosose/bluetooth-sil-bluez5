@@ -24,6 +24,7 @@
 #include "bluez5meshelement.h"
 #include "bluez5meshadvprovisioner.h"
 #include "bluez5meshadvprovagent.h"
+#include "bluez5meshapplication.h"
 #include <openssl/rand.h>
 #include "utils_mesh.h"
 #include <cstdint>
@@ -51,6 +52,9 @@ mAdapter(adapter),
 mNetworkInterface(nullptr),
 mObjectManager(nullptr),
 mDbusConn(nullptr),
+mMeshAdvProv(nullptr),
+mMeshAdvProvAgent(nullptr),
+mMeshApplication(nullptr),
 mToken(0)
 {
 	GError *error = 0;
@@ -65,6 +69,7 @@ mToken(0)
 
 	mMeshAdvProv = new Bluez5MeshAdvProvisioner(mAdapter, mMesh);
 	mMeshAdvProvAgent = new Bluez5MeshAdvProvAgent(mAdapter, mMesh);
+	mMeshApplication = new Bluez5MeshApplication(mAdapter, mMesh);
 
 	g_bus_watch_name(G_BUS_TYPE_SYSTEM, BLUEZ_MESH_NAME, G_BUS_NAME_WATCHER_FLAGS_NONE,
 					 handleBluezMeshServiceStarted, handleBluezMeshServiceStopped, this, NULL);
@@ -72,31 +77,41 @@ mToken(0)
 
 Bluez5MeshAdv::~Bluez5MeshAdv()
 {
+	if (mMeshAdvProv)
+	{
+		g_object_unref(mMeshAdvProv);
+		mMeshAdvProv = 0;
+	}
+
+	if (mMeshAdvProvAgent)
+	{
+		g_object_unref(mMeshAdvProvAgent);
+		mMeshAdvProvAgent = 0;
+	}
+
+	if (mMeshApplication)
+	{
+		g_object_unref(mMeshApplication);
+		mMeshApplication = 0;
+	}
+
+	if (mNetworkInterface)
+	{
+		g_object_unref(mNetworkInterface);
+		mNetworkInterface = 0;
+	}
+
+	if (mObjectManager)
+	{
+		g_object_unref(mObjectManager);
+		mObjectManager = 0;
+	}
+
 }
 
 void Bluez5MeshAdv::getRandomBytes(unsigned char *buf, int size)
 {
 	RAND_bytes(buf, size);
-}
-
-gboolean Bluez5MeshAdv::handleJoinComplete(BluezMeshApplication1 *object,
-										   GDBusMethodInvocation *invocation,
-										   guint64 argToken, gpointer userData)
-{
-	Bluez5MeshAdv *meshAdv = static_cast<Bluez5MeshAdv *>(userData);
-	meshAdv->mToken = argToken;
-	DEBUG("handleJoinCompletem mToken: %lu", meshAdv->mToken);
-
-	meshAdv->attach();
-	return true;
-}
-
-gboolean Bluez5MeshAdv::handleJoinFailed(BluezMeshApplication1 *object,
-										 GDBusMethodInvocation *invocation,
-										 const gchar *argReason, gpointer userData)
-{
-	DEBUG("handleJoinFailed, reason: %s", argReason);
-	return true;
 }
 
 void Bluez5MeshAdv::attach()
@@ -109,11 +124,10 @@ void Bluez5MeshAdv::attach()
 		if (error)
 		{
 			ERROR(MSGID_MESH_PROFILE_ERROR, 0, "Atttach failed: %s", error->message);
+			g_error_free(error);
+			return;
 		}
-		else
-		{
-			DEBUG("node: %s", node);
-		}
+		DEBUG("attached node: %s", node);
 	};
 
 	bluez_mesh_network1_call_attach(mNetworkInterface, BLUEZ_MESH_APP_PATH, mToken, NULL,
@@ -136,12 +150,9 @@ void Bluez5MeshAdv::createNetwork(BleMeshNetworkIdCallback callback)
 		{
 			ERROR(MSGID_MESH_PROFILE_ERROR, 0, "CreateNetwork failed: %s", error->message);
 			g_error_free(error);
+			return;
 		}
-		else
-		{
-			DEBUG("Mesh CreateNetwork success");
-		}
-		return;
+		DEBUG("Mesh CreateNetwork success");
 	};
 
 	bluez_mesh_network1_call_create_network(mNetworkInterface, BLUEZ_MESH_APP_PATH, uuidVar, NULL, glibAsyncMethodWrapper,
@@ -159,29 +170,17 @@ void Bluez5MeshAdv::handleBluezMeshServiceStarted(GDBusConnection *conn, const g
 {
 	GError *error = 0;
 	Bluez5MeshAdv *meshAdv = static_cast<Bluez5MeshAdv *>(userData);
-	GDBusObjectManagerServer * objectManagerServer = g_dbus_object_manager_server_new("/");
-
+	GDBusObjectManagerServer * objectManagerServer = g_dbus_object_manager_server_new(BLUEZ_MESH_APP_PATH);
 	GDBusObjectSkeleton *meshAppSkeleton = g_dbus_object_skeleton_new(BLUEZ_MESH_APP_PATH);
-	BluezMeshApplication1 *appInterface = bluez_mesh_application1_skeleton_new();
-	uint16_t cid = 0x05f1;
-	uint16_t pid = 0x0002;
-	uint16_t vid = 0x0001;
-	bluez_mesh_application1_set_company_id(appInterface, cid);
-	bluez_mesh_application1_set_product_id(appInterface, pid);
-	bluez_mesh_application1_set_version_id(appInterface, vid);
-	bluez_mesh_application1_set_crpl(appInterface, 10);
 
-	g_signal_connect(appInterface, "handle_join_complete", G_CALLBACK(handleJoinComplete), meshAdv);
-	g_signal_connect(appInterface, "handle_join_failed", G_CALLBACK(handleJoinFailed), meshAdv);
-
-	g_dbus_object_skeleton_add_interface(meshAppSkeleton, G_DBUS_INTERFACE_SKELETON(appInterface));
+	meshAdv->mMeshApplication->registerApplicationInterface(objectManagerServer, meshAppSkeleton, meshAdv);
 	meshAdv->mMeshAdvProv->registerProvisionerInterface(objectManagerServer, meshAppSkeleton);
 	meshAdv->mMeshAdvProvAgent->registerProvAgentInterface(objectManagerServer);
 	g_dbus_object_manager_server_export(objectManagerServer, meshAppSkeleton);
 
 	for (auto element = meshAdv->mElements.begin(); element != meshAdv->mElements.end(); element++)
 	{
-		(*element)->registerElementInterface(objectManagerServer);
+		element->registerElementInterface(objectManagerServer);
 	}
 
 	g_dbus_object_manager_server_set_connection(objectManagerServer, conn);
@@ -193,7 +192,7 @@ void Bluez5MeshAdv::handleBluezMeshServiceStarted(GDBusConnection *conn, const g
 	if (error)
 	{
 		ERROR(MSGID_MESH_PROFILE_ERROR, 0,
-			  "Failed to create object manager: %s", error->message);
+			"Failed to create object manager: %s", error->message);
 		g_error_free(error);
 		return;
 	}
@@ -215,18 +214,19 @@ void Bluez5MeshAdv::handleBluezMeshServiceStarted(GDBusConnection *conn, const g
 			DEBUG("org.bluez.mesh.Network1 interface added");
 			meshAdv->mNetworkInterface = bluez_mesh_network1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-				"org.bluez.mesh", objectPath.c_str(), NULL, &error);
+				BLUEZ_MESH_NAME, objectPath.c_str(), NULL, &error);
 			if (error)
 			{
 				ERROR(MSGID_MESH_PROFILE_ERROR, 0, "Not able to get Mesh Network interface");
 				g_error_free(error);
 				return;
 			}
+
 			g_object_unref(networkInterface);
 		}
 		else
 		{
-			 DEBUG("org.bluez.mesh.Network1 interface add failed!!");
+			DEBUG("org.bluez.mesh.Network1 interface add failed!!");
 		}
 		g_object_unref(object);
 	}
@@ -255,7 +255,7 @@ void Bluez5MeshAdv::handleObjectAdded(GDBusObjectManager *objectManager,
 			DEBUG("org.bluez.mesh.Network1 interface added");
 			meshAdv->mNetworkInterface = bluez_mesh_network1_proxy_new_for_bus_sync(
 				G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-				"org.bluez.mesh", objectPath.c_str(), NULL, &error);
+				BLUEZ_MESH_NAME, objectPath.c_str(), NULL, &error);
 		}
 	}
 
@@ -265,7 +265,7 @@ void Bluez5MeshAdv::handleObjectAdded(GDBusObjectManager *objectManager,
 		DEBUG("org.bluez.mesh.Management1 interface added");
 		meshAdv->mMgmtInterface = bluez_mesh_management1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-			"org.bluez.mesh", objectPath.c_str(), NULL, &error);
+			BLUEZ_MESH_NAME, objectPath.c_str(), NULL, &error);
 	}
 
 	auto meshNodeInterface = g_dbus_object_get_interface(object, "org.bluez.mesh.Node1");
@@ -274,7 +274,7 @@ void Bluez5MeshAdv::handleObjectAdded(GDBusObjectManager *objectManager,
 		DEBUG("org.bluez.mesh.Node1 interface added");
 		meshAdv->mNodeInterface = bluez_mesh_node1_proxy_new_for_bus_sync(
 			G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
-			"org.bluez.mesh", objectPath.c_str(), NULL, &error);
+			BLUEZ_MESH_NAME, objectPath.c_str(), NULL, &error);
 	}
 }
 
@@ -427,6 +427,7 @@ BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, 
 	msg[n++] = mTransacId++;
 	GBytes *bytes = g_bytes_new(msg, n);
 	GVariant *dataToSend = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
+	g_bytes_unref (bytes);
 
 	bluez_mesh_node1_call_send_sync(mNodeInterface, BLUEZ_MESH_ELEMENT_PATH,
 											destAddress, appIndex,
@@ -457,21 +458,21 @@ BluetoothError Bluez5MeshAdv::configSet(
 }
 
 BluetoothError Bluez5MeshAdv::registerElement(uint8_t index,
-										   std::vector<uint32_t> &sigModelIds,
-										   std::vector<uint32_t> &vendorModelIds)
+                                                std::vector<uint32_t> &sigModelIds,
+                                                std::vector<uint32_t> &vendorModelIds)
 {
-	Bluez5MeshElement *element = new Bluez5MeshElement(index);
+	Bluez5MeshElement element(index);
 
 	for (auto sigModelId = sigModelIds.begin(); sigModelId != sigModelIds.end();
 		 sigModelId++)
 	{
-		element->addModel(*sigModelId);
+		element.addModel(*sigModelId);
 	}
 
 	for (auto vendorModelId = vendorModelIds.begin(); vendorModelId != vendorModelIds.end();
 		 vendorModelId++)
 	{
-		element->addModel(*vendorModelId);
+		element.addModel(*vendorModelId);
 	}
 
 	mElements.push_back(element);

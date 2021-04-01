@@ -63,11 +63,14 @@ gboolean Bluez5MeshAdvProvisioner::handleScanResult(BluezMeshProvisioner1 *inter
 	result = convertArrayByteGVariantToVector(argData);
 	for (int i = 0; i < 16; ++i)
 	{
-		sprintf(deviceUuid + (i * 2), "%2.2x", result[i]);
+			sprintf(deviceUuid + (i * 2), "%2.2x", result[i]);
 	}
 
 	std::string deviceUuidS(deviceUuid);
 	DEBUG("Device discovered : %s", deviceUuidS.c_str());
+	meshAdvProvisioner->mMesh->getMeshObserver()->scanResult(
+		convertAddressToLowerCase(meshAdvProvisioner->mAdapter->getAddress()),
+		argRssi, deviceUuidS);
 
 	return true;
 }
@@ -91,10 +94,10 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeComplete(BluezMeshProvisioner1 *
 	std::string deviceUuidS(deviceUuid);
 	Bluez5MeshAdvProvisioner *meshAdvProvisioner = (Bluez5MeshAdvProvisioner *)userData;
 	meshAdvProvisioner->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_NONE,
-																  convertAddressToLowerCase(
-																	  meshAdvProvisioner->mAdapter->getAddress()),
-																  "endProvision", "", 0, "", "",
-																  unicast, deviceUuidS);
+																	convertAddressToLowerCase(
+																		meshAdvProvisioner->mAdapter->getAddress()),
+																	"endProvision", "", 0, "", "",
+																	unicast, deviceUuidS);
 
 	return true;
 }
@@ -117,10 +120,10 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeFailed(BluezMeshProvisioner1 *in
 	std::string deviceUuidS(deviceUuid);
 	Bluez5MeshAdvProvisioner *meshAdvProvisioner = (Bluez5MeshAdvProvisioner *)userData;
 	meshAdvProvisioner->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_FAIL,
-																  convertAddressToLowerCase(
-																	  meshAdvProvisioner->mAdapter->getAddress()),
-																  "endProvision", "", 0, "", "",
-																  0, deviceUuidS);
+																	convertAddressToLowerCase(
+																		meshAdvProvisioner->mAdapter->getAddress()),
+																	"endProvision", "", 0, "", "",
+																	0, deviceUuidS);
 
 	return true;
 }
@@ -132,8 +135,8 @@ gboolean Bluez5MeshAdvProvisioner::handleRequestProvData(BluezMeshProvisioner1 *
 	DEBUG("handleRequestProvData: %d", count);
 	Bluez5MeshAdvProvisioner *meshAdvProvisioner = (Bluez5MeshAdvProvisioner *)userData;
 	g_dbus_method_invocation_return_value(invocation,
-										  g_variant_new("(qq)", DEFAULT_NET_INDEX,
-										  meshAdvProvisioner->mUnicastAddressAvailable));
+										g_variant_new("(qq)", DEFAULT_NET_INDEX,
+										meshAdvProvisioner->mUnicastAddressAvailable));
 	meshAdvProvisioner->mUnicastAddressAvailable += count;
 	DEBUG("Next available unicast address: %x", meshAdvProvisioner->mUnicastAddressAvailable);
 

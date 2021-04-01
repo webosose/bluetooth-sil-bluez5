@@ -33,6 +33,7 @@ class Bluez5ProfileMesh;
 class Bluez5MeshElement;
 class Bluez5MeshAdvProvisioner;
 class Bluez5MeshAdvProvAgent;
+class Bluez5MeshApplication;
 
 class Bluez5MeshAdv
 {
@@ -76,15 +77,14 @@ public:
 	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);
 
 	BluetoothError registerElement(uint8_t index,
-								   std::vector<uint32_t> &sigModelIds,
-								   std::vector<uint32_t> &vendorModelIds);
-
-private:
+									std::vector<uint32_t> &sigModelIds,
+									std::vector<uint32_t> &vendorModelIds);
 	void attach();
+
+	private:
 	void getRandomBytes(unsigned char *buf, int size);
 	uint16_t meshOpcodeSet(uint32_t opcode, uint8_t *buf);
 	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
-
 
 private:
 	GDBusConnection *mDbusConn;
@@ -94,13 +94,16 @@ private:
 	BluezMeshNode1 *mNodeInterface;
 	Bluez5MeshAdvProvisioner *mMeshAdvProv;
 	Bluez5MeshAdvProvAgent *mMeshAdvProvAgent;
+	Bluez5MeshApplication *mMeshApplication;
 
-	uint64_t mToken;
 	unsigned char mUuid[16]; //Local node uuid
 	Bluez5ProfileMesh *mMesh;
 	Bluez5Adapter *mAdapter;
-	std::vector<Bluez5MeshElement *> mElements;
+	std::vector<Bluez5MeshElement> mElements;
 	uint8_t mTransacId;
+
+public:
+	uint64_t mToken;
 };
 
 #endif //BLUEZ5MESHADV_H

@@ -38,25 +38,25 @@ public:
 									  GDBusObjectSkeleton *provSkeleton);
 
 	static gboolean handleScanResult(BluezMeshProvisioner1 *interface,
-									GDBusMethodInvocation *invocation,
-									gint16 argRssi,
-									GVariant *argData,
-									gpointer userData);
+						GDBusMethodInvocation *invocation,
+						gint16 argRssi,
+						GVariant *argData,
+						gpointer userData);
 	static gboolean handleAddNodeComplete(BluezMeshProvisioner1 *interface,
-										GDBusMethodInvocation *invocation,
-										GVariant *uuid,
-										guint16 unicast,
-										guchar count,
-										gpointer userData);
+							GDBusMethodInvocation *invocation,
+							GVariant *uuid,
+							guint16 unicast,
+							guchar count,
+							gpointer userData);
 	static gboolean handleAddNodeFailed(BluezMeshProvisioner1 *interface,
-										GDBusMethodInvocation *invocation,
-										GVariant *uuid,
-										const gchar *reason,
-										gpointer userData);
+							GDBusMethodInvocation *invocation,
+							GVariant *uuid,
+							const gchar *reason,
+							gpointer userData);
 	static gboolean handleRequestProvData(BluezMeshProvisioner1 *interface,
-										GDBusMethodInvocation *invocation,
-										guchar count,
-										gpointer userData);
+							GDBusMethodInvocation *invocation,
+							guchar count,
+							gpointer userData);
 
 private:
 	Bluez5Adapter *mAdapter;
@@ -64,9 +64,9 @@ private:
 
 	//TODO : We need to store the information about all the nodes in the network.
 	/* Loop through the available nodes and number of elements in the node to decide
-	 * the next available unicast address. It should also consider the number of elements
-	 * in the device that is currently being provisioned.
-	 */
+	* the next available unicast address. It should also consider the number of elements
+	* in the device that is currently being provisioned.
+	*/
 	uint16_t mUnicastAddressAvailable;
 };
 
