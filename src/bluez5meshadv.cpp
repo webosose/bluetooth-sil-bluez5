@@ -283,12 +283,17 @@ void Bluez5MeshAdv::handleObjectRemoved(GDBusObjectManager *objectManager,
 {
 }
 
-
-
 BluetoothError Bluez5MeshAdv::scanUnprovisionedDevices(const uint16_t scanTimeout)
 {
+	GVariantBuilder *builder = 0;
+	GVariant *params = 0;
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	g_variant_builder_add (builder, "{sv}","Seconds" ,g_variant_new_uint16(scanTimeout));
+	params = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+
 	GError *error = 0;
-	bluez_mesh_management1_call_unprovisioned_scan_sync(mMgmtInterface, 0, NULL, &error);
+	bluez_mesh_management1_call_unprovisioned_scan_sync(mMgmtInterface, params, NULL, &error);
 	if (error)
 	{
 		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "UnProvisionedScan failed: %s", error->message);

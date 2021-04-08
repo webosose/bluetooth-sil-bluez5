@@ -54,6 +54,7 @@ gboolean Bluez5MeshAdvProvisioner::handleScanResult(BluezMeshProvisioner1 *inter
 													GDBusMethodInvocation *invocation,
 													gint16 argRssi,
 													GVariant *argData,
+													GVariant *argOptions,
 													gpointer userData)
 {
 	Bluez5MeshAdvProvisioner *meshAdvProvisioner = (Bluez5MeshAdvProvisioner *)userData;

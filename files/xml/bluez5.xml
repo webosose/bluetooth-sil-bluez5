@@ -601,7 +601,7 @@
                         <arg name="count" type="y" direction="in"/>
                 </method>
                 <method name="UnprovisionedScan">
-                        <arg name="seconds" type="q" direction="in"/>
+                        <arg name="options" type="a{sv}" direction="in"/>
                 </method>
                 <method name="UnprovisionedScanCancel">
                 </method>
@@ -675,6 +675,7 @@
                 <arg name="data" type="ay" direction="in">
                     <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
                 </arg>
+                <arg name="options" type="a{sv}" direction="in"/>
             </method>
             <method name="RequestProvData">
                 <arg name="count" type="y" direction="in"/>

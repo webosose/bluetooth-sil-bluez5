@@ -41,6 +41,7 @@ public:
 						GDBusMethodInvocation *invocation,
 						gint16 argRssi,
 						GVariant *argData,
+						GVariant *argOptions,
 						gpointer userData);
 	static gboolean handleAddNodeComplete(BluezMeshProvisioner1 *interface,
 							GDBusMethodInvocation *invocation,
