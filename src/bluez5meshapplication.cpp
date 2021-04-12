@@ -57,9 +57,10 @@ gboolean Bluez5MeshApplication::handleJoinComplete(BluezMeshApplication1 *object
 {
 	Bluez5MeshAdv *meshAdv = static_cast<Bluez5MeshAdv *>(userData);
 	meshAdv->mToken = argToken;
-	DEBUG("handleJoinCompletem mToken: %lu", meshAdv->mToken);
+	DEBUG("handleJoinCompletem mToken: %llu", meshAdv->mToken);
 	bluez_mesh_application1_complete_join_complete(object, invocation);
 	meshAdv->attach();
+	meshAdv->updateNetworkId();
 	return true;
 }
 

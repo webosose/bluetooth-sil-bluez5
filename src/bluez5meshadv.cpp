@@ -114,6 +114,13 @@ void Bluez5MeshAdv::getRandomBytes(unsigned char *buf, int size)
 	RAND_bytes(buf, size);
 }
 
+void Bluez5MeshAdv::updateNetworkId()
+{
+	DEBUG("updateNetworkId mToken: %llu", mToken);
+	mMesh->getMeshObserver()->updateNetworkId(convertAddressToLowerCase(mAdapter->getAddress()),
+		mToken);
+}
+
 void Bluez5MeshAdv::attach()
 {
 	auto attachCallback = [this](GAsyncResult *result) {
@@ -129,12 +136,11 @@ void Bluez5MeshAdv::attach()
 		}
 		DEBUG("attached node: %s", node);
 	};
-
 	bluez_mesh_network1_call_attach(mNetworkInterface, BLUEZ_MESH_APP_PATH, mToken, NULL,
 									glibAsyncMethodWrapper, new GlibAsyncFunctionWrapper(attachCallback));
 }
 
-void Bluez5MeshAdv::createNetwork(BleMeshNetworkIdCallback callback)
+BluetoothError Bluez5MeshAdv::createNetwork()
 {
 	GError *error = 0;
 	getRandomBytes(mUuid, 16);
@@ -150,14 +156,15 @@ void Bluez5MeshAdv::createNetwork(BleMeshNetworkIdCallback callback)
 		{
 			ERROR(MSGID_MESH_PROFILE_ERROR, 0, "CreateNetwork failed: %s", error->message);
 			g_error_free(error);
-			return;
+			return BLUETOOTH_ERROR_FAIL;
 		}
-		DEBUG("Mesh CreateNetwork success");
+		DEBUG("Mesh CreateNetwork success\n");
+		return BLUETOOTH_ERROR_NONE;
 	};
 
 	bluez_mesh_network1_call_create_network(mNetworkInterface, BLUEZ_MESH_APP_PATH, uuidVar, NULL, glibAsyncMethodWrapper,
 											new GlibAsyncFunctionWrapper(createNetworkCallback));
-	return;
+	return BLUETOOTH_ERROR_NONE;
 }
 
 void Bluez5MeshAdv::getMeshInfo(BleMeshInfoCallback callback)
@@ -221,7 +228,6 @@ void Bluez5MeshAdv::handleBluezMeshServiceStarted(GDBusConnection *conn, const g
 				g_error_free(error);
 				return;
 			}
-
 			g_object_unref(networkInterface);
 		}
 		else

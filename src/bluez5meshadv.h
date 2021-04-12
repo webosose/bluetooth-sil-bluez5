@@ -51,7 +51,7 @@ public:
 	static gboolean handleJoinFailed(BluezMeshApplication1 *object, GDBusMethodInvocation *invocation, const gchar *argReason, gpointer userData);
 
 	/* Mesh APIs */
-	void createNetwork(BleMeshNetworkIdCallback callback);
+	BluetoothError createNetwork();
 	void getMeshInfo(BleMeshInfoCallback callback);
 	BluetoothError scanUnprovisionedDevices(const uint16_t scanTimeout);
 	BluetoothError unprovisionedScanCancel();
@@ -77,9 +77,10 @@ public:
 	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);
 
 	BluetoothError registerElement(uint8_t index,
-									std::vector<uint32_t> &sigModelIds,
-									std::vector<uint32_t> &vendorModelIds);
+								std::vector<uint32_t> &sigModelIds,
+								std::vector<uint32_t> &vendorModelIds);
 	void attach();
+	void updateNetworkId();
 
 	private:
 	void getRandomBytes(unsigned char *buf, int size);

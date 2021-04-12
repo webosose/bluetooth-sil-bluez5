@@ -50,22 +50,21 @@ public:
 	void getProperty(const std::string &address, BluetoothProperty::Type type, BluetoothPropertyResultCallback callback);
 
 	/* Mesh APIs */
-	void createNetwork(const std::string &bearer,
-							   BleMeshNetworkIdCallback callback);
+	BluetoothError createNetwork(const std::string &bearer);
 	void getMeshInfo(const std::string &bearer, BleMeshInfoCallback callback);
 	BluetoothError scanUnprovisionedDevices(const std::string &bearer, const uint16_t scanTimeout);
 	BluetoothError unprovisionedScanCancel(const std::string &bearer);
 	BluetoothError provision(const std::string &bearer, const std::string &uuid,
-							const uint16_t timeout);
+								const uint16_t timeout);
 	BluetoothError supplyProvisioningNumeric(const std::string &bearer, uint32_t number);
 	BluetoothError supplyProvisioningOob(const std::string &bearer, const std::string &oobData);
 	void getCompositionData(const std::string &bearer, uint16_t destAddress,
 							BleMeshCompositionDataCallback callback);
 	BluetoothError createAppKey(const std::string &bearer, uint16_t netKeyIndex,
-								uint16_t appKeyIndex);
+										uint16_t appKeyIndex);
 	BluetoothError modelSend(const std::string &bearer, uint16_t srcAddress,
-							uint16_t destAddress, uint16_t appKeyIndex,
-							const std::string &command,
+									uint16_t destAddress, uint16_t appKeyIndex,
+									const std::string &command,
 									 BleMeshPayload payload);
 	void configGet(BleMeshGetConfigCallback callback,
 					const std::string &bearer,

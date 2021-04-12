@@ -96,17 +96,18 @@ void Bluez5ProfileMesh::handleObjectRemoved(GDBusObjectManager *objectManager,
 {
 }
 
-void Bluez5ProfileMesh::createNetwork(const std::string &bearer,
-							   BleMeshNetworkIdCallback callback)
+BluetoothError Bluez5ProfileMesh::createNetwork(const std::string &bearer)
 {
 	if (bearer == "PB-GATT")
 	{
-		//Not supported
+		return BLUETOOTH_ERROR_UNSUPPORTED;
 	}
 	else if (bearer == "PB-ADV")
 	{
-		mMeshAdv->createNetwork(callback);
+		return mMeshAdv->createNetwork();
 	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
 void Bluez5ProfileMesh::getMeshInfo(const std::string &bearer, BleMeshInfoCallback callback)
