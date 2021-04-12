@@ -47,7 +47,7 @@ void Bluez5MeshAdvProvisioner::registerProvisionerInterface(GDBusObjectManagerSe
 	g_signal_connect(provInterface, "handle_request_prov_data", G_CALLBACK(handleRequestProvData), this);
 
 	g_dbus_object_skeleton_add_interface(provSkeleton, G_DBUS_INTERFACE_SKELETON(provInterface));
-	g_dbus_object_manager_server_export(objectManagerServer, provSkeleton);
+
 }
 
 gboolean Bluez5MeshAdvProvisioner::handleScanResult(BluezMeshProvisioner1 *interface,
@@ -119,8 +119,13 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeFailed(BluezMeshProvisioner1 *in
 	}
 
 	std::string deviceUuidS(deviceUuid);
+	BluetoothError error = BLUETOOTH_ERROR_NONE;
+
+	if(strcmp(reason, "bad-pdu") == 0)
+		error = BLUETOOTH_ERROR_MESH_BAD_PDU;
+
 	Bluez5MeshAdvProvisioner *meshAdvProvisioner = (Bluez5MeshAdvProvisioner *)userData;
-	meshAdvProvisioner->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_FAIL,
+	meshAdvProvisioner->mMesh->getMeshObserver()->provisionResult(error,
 																	convertAddressToLowerCase(
 																		meshAdvProvisioner->mAdapter->getAddress()),
 																	"endProvision", "", 0, "", "",

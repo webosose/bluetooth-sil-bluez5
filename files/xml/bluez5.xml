@@ -590,6 +590,7 @@
                         <arg name="uuid" type="ay" direction="in">
                             <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
                         </arg>
+                        <arg name="options" type="a{sv}" direction="in"/>
                 </method>
                 <method name="ImportRemoteNode">
                         <arg name="primary" type="q" direction="in"/>
@@ -714,7 +715,9 @@
                     <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
                 </arg>
             </method>
-            <property name="Capabilities" type="as" access="read"/>
+            <property name="Capabilities" type="as" access="read">
+                  <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+            </property>
         </interface>
         <interface name="org.freedesktop.DBus.Properties">
                 <method name="Get">

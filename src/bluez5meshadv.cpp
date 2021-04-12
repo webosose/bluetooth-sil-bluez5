@@ -148,6 +148,7 @@ BluetoothError Bluez5MeshAdv::createNetwork()
 	GBytes *bytes = g_bytes_new(mUuid, 16);
 
 	GVariant *uuidVar = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
+
 	auto createNetworkCallback = [this](GAsyncResult *result) {
 
 		GError *error = 0;
@@ -183,6 +184,7 @@ void Bluez5MeshAdv::handleBluezMeshServiceStarted(GDBusConnection *conn, const g
 	meshAdv->mMeshApplication->registerApplicationInterface(objectManagerServer, meshAppSkeleton, meshAdv);
 	meshAdv->mMeshAdvProv->registerProvisionerInterface(objectManagerServer, meshAppSkeleton);
 	meshAdv->mMeshAdvProvAgent->registerProvAgentInterface(objectManagerServer);
+
 	g_dbus_object_manager_server_export(objectManagerServer, meshAppSkeleton);
 
 	for (auto element = meshAdv->mElements.begin(); element != meshAdv->mElements.end(); element++)
@@ -328,30 +330,43 @@ static unsigned char gethex(const char *s, char **endptr) {
 
 BluetoothError Bluez5MeshAdv::provision(const std::string &uuid, const uint16_t timeout)
 {
-	GError *error = 0;
 	const char *uuidStr = uuid.c_str();
-	uint8_t uuidByte[17];
+	uint8_t uuidByte[16] = {0};
 	int j = 0;
+
+	auto provisionCallback = [this](GAsyncResult *result) {
+
+		GError *error = 0;
+		bluez_mesh_management1_call_add_node_finish(mMgmtInterface, result, &error);
+		if (error)
+		{
+			ERROR(MSGID_MESH_PROFILE_ERROR, 0, "provision failed: %s", error->message);
+			g_error_free(error);
+			return BLUETOOTH_ERROR_FAIL;
+		}
+		DEBUG("provision success\n");
+		return BLUETOOTH_ERROR_NONE;
+	};
 
 	for (int i = 0; i < 16; ++i)
 	{
-			sscanf(&uuidStr[i * 2], "%02hhx", &uuidByte[i]);
-			//sscanf(&uuidStr[i], "%02x", &uuidByte[j]);
-			DEBUG("%2.2x - %d", uuidByte[i], j);
-			++j;
+		sscanf(&uuidStr[i * 2], "%02hhx", &uuidByte[i]);
+		DEBUG("%2.2x - %d", uuidByte[i], j);
+		++j;
 	}
 
 	GBytes *bytes = g_bytes_new(uuidByte, 16);
 	GVariant *uuidVar = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
 
-	bluez_mesh_management1_call_add_node_sync(mMgmtInterface, uuidVar,
-											  NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "provision failed: %s", error->message);
-		g_error_free(error);
-		return BLUETOOTH_ERROR_FAIL;
-	}
+	GVariantBuilder *builder = 0;
+	GVariant *params = 0;
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	params = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+
+	bluez_mesh_management1_call_add_node(mMgmtInterface, uuidVar, params, NULL, glibAsyncMethodWrapper,
+										new GlibAsyncFunctionWrapper(provisionCallback));
+
 	return BLUETOOTH_ERROR_NONE;
 }
 
