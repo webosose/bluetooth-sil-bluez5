@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 LG Electronics, Inc.
+// Copyright (c) 2018-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,6 +52,31 @@ Bluez5Advertise::~Bluez5Advertise()
 		g_object_unref(mAdvManager);
 		mAdvManager = NULL;
 	}
+}
+
+void Bluez5Advertise::assignAdvertiseManager(std::string objectPath)
+{
+	GError *error = 0;
+
+	if (mAdvManager)
+	{
+		g_object_unref(mAdvManager);
+		mAdvManager = NULL;
+	}
+
+	mAdvManager =
+		bluez_leadvertising_manager1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM,
+		G_DBUS_PROXY_FLAGS_NONE, "org.bluez", objectPath.c_str(), NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_FAILED_TO_CREATE_AGENT_MGR_PROXY, 0,
+			"Failed to create dbus proxy for agent manager on path %s: %s",
+			objectPath.c_str(), error->message);
+		g_error_free(error);
+		return;
+	}
+
+	return;
 }
 
 void Bluez5Advertise::handleBusAcquired(GDBusConnection *connection, const gchar *name, gpointer user_data)

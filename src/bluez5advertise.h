@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 LG Electronics, Inc.
+// Copyright (c) 2018-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ public:
 	Bluez5Advertise(const Bluez5Advertise&) = delete;
 	Bluez5Advertise& operator = (const Bluez5Advertise&) = delete;
 
+	void assignAdvertiseManager(std::string objectPath);
 	void createAdvertisementId(AdvertiserIdStatusCallback callback);
 	void registerAdvertisement(uint8_t advId, AdvertiserStatusCallback callback);
 	gboolean unRegisterAdvertisement(uint8_t advId);

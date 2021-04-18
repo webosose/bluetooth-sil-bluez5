@@ -784,6 +784,8 @@ BluetoothError Bluez5Adapter::forceRepower()
 		return BLUETOOTH_ERROR_FAIL;
 	}
 
+	mAdvertise->assignAdvertiseManager(mObjectPath);
+
 	return BLUETOOTH_ERROR_NONE;
 }
 
