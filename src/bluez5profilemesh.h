@@ -67,8 +67,7 @@ public:
 									uint16_t destAddress, uint16_t appKeyIndex,
 									const std::string &command,
 									 BleMeshPayload payload);
-	void configGet(BleMeshGetConfigCallback callback,
-					const std::string &bearer,
+	BluetoothError configGet(const std::string &bearer,
 					uint16_t destAddress,
 					const std::string &config,
 					uint16_t netKeyIndex = 0);

@@ -28,11 +28,13 @@ extern "C"
 }
 
 class Bluez5MeshModel;
+class Bluez5Adapter;
+class Bluez5ProfileMesh;
 
 class Bluez5MeshElement
 {
 public:
-	Bluez5MeshElement(uint8_t elementIndex);
+	Bluez5MeshElement(uint8_t elementIndex, Bluez5Adapter *adapter, Bluez5ProfileMesh *mesh);
 	~Bluez5MeshElement();
 
 	static gboolean handleDevKeyMessageReceived(BluezMeshElement1 *object,
@@ -60,6 +62,8 @@ private:
 private:
 	uint8_t mElementIndex;
 	std::vector<Bluez5MeshModel *> mModels;
+	Bluez5Adapter *mAdapter;
+	Bluez5ProfileMesh *mMeshProfile;
 };
 
 #endif //BLUEZ5MESHELEMENT_H

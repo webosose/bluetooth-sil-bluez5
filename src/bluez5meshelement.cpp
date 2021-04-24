@@ -22,6 +22,8 @@
 #include "bluez5meshmodelconfigclient.h"
 #include "bluez5meshmodelonoffclient.h"
 #include "utils_mesh.h"
+#include "bluez5profilemesh.h"
+#include "bluez5adapter.h"
 #include <cstdint>
 #include <vector>
 
@@ -108,8 +110,12 @@
 /* Generic onoff model opration status */
 #define OP_GENERIC_ONOFF_STATUS			0x8204
 
-Bluez5MeshElement::Bluez5MeshElement(uint8_t elementIndex) : mElementIndex(elementIndex)
+Bluez5MeshElement::Bluez5MeshElement(uint8_t elementIndex, Bluez5Adapter *adapter, Bluez5ProfileMesh *mesh) :
+mElementIndex(elementIndex),
+mAdapter(adapter),
+mMeshProfile(mesh)
 {
+
 }
 
 Bluez5MeshElement::~Bluez5MeshElement()
@@ -201,6 +207,8 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 	int32_t n = 0;
 	uint32_t opcode;
 
+	BleMeshConfiguration configuration;
+
 	data = (uint8_t *)g_variant_get_fixed_array(argData, &dataLen, sizeof(guint8));
 
 	DEBUG("Received msg with length: %d", dataLen);
@@ -218,71 +226,117 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 
 	switch (opcode & ~OP_UNRELIABLE)
 	{
-	case OP_APPKEY_STATUS:
-	{
-		if (dataLen != 4)
-			break;
-
-		DEBUG("Node %4.4x AppKey status %x\n", argSource, data[0]);
-		uint16_t net_idx = get_le16(data + 1) & 0xfff;
-		uint16_t app_idx = get_le16(data + 2) >> 4;
-
-		DEBUG("NetKey\t%3.3x\n", net_idx);
-		DEBUG("AppKey\t%3.3x\n", app_idx);
-
-		break;
-	}
-	case OP_APPKEY_LIST:
-	{
-		if (dataLen < 3)
-			break;
-
-		DEBUG("AppKey List (node %4.4x) Status %d\n",
-			  argSource, data[0]);
-		DEBUG("NetKey %3.3x\n", get_le16(&data[1]));
-		dataLen -= 3;
-
-		if (data[0] != MESH_STATUS_SUCCESS)
-			break;
-
-		DEBUG("AppKeys:\n");
-		data += 3;
-
-		while (dataLen >= 3)
+		case OP_APPKEY_STATUS:
 		{
-			DEBUG("\t%3.3x\n", get_le16(data) & 0xfff);
-			DEBUG("\t%3.3x\n", get_le16(data + 1) >> 4);
-			dataLen -= 3;
-			data += 3;
-		}
+			if (dataLen != 4)
+				break;
 
-		if (dataLen == 2)
-			DEBUG("\t%3.3x\n", get_le16(data));
+			DEBUG("Node %4.4x AppKey status %x\n", argSource, data[0]);
+			uint16_t net_idx = get_le16(data + 1) & 0xfff;
+			uint16_t app_idx = get_le16(data + 2) >> 4;
 
-		break;
-	}
-	case OP_MODEL_APP_STATUS:
-	{
-		if (dataLen != 7 && dataLen != 9)
+			DEBUG("NetKey\t%3.3x\n", net_idx);
+			DEBUG("AppKey\t%3.3x\n", app_idx);
+			configuration.setConfig("APPKEY_ADD");
 			break;
+		}
+		case OP_APPKEY_LIST:
+		{
+			std::vector<uint16_t> appKeyList;
+			if (dataLen < 3)
+				break;
 
-		DEBUG("Node %4.4x: Model App status %d\n", argSource, data[0]);
-		uint16_t addr = get_le16(data + 1);
-		uint16_t app_idx = get_le16(data + 3);
+			DEBUG("AppKey List (node %4.4x) Status %d\n",
+				argSource, data[0]);
+			DEBUG("NetKey %3.3x\n", get_le16(&data[1]));
+			dataLen -= 3;
 
-		DEBUG("Element Addr\t%4.4x\n", addr);
+			if (data[0] != MESH_STATUS_SUCCESS)
+				break;
 
-		uint32_t mod_id = get_le16(data + 5);
-		DEBUG("Model ID\t %4.4x\n",mod_id);
+			DEBUG("AppKeys:\n");
+			data += 3;
 
-		DEBUG("AppIdx\t\t%3.3x\n ", app_idx);
-		break;
+			while (dataLen >= 3)
+			{
+				DEBUG("\t%3.3x\n", get_le16(data) & 0xfff);
+				DEBUG("\t%3.3x\n", get_le16(data + 1) >> 4);
+				appKeyList.push_back(get_le16(data) & 0xfff);
+				appKeyList.push_back(get_le16(data + 1) >> 4);
+				dataLen -= 3;
+				data += 3;
+			}
+
+			if (dataLen == 2)
+			{
+				DEBUG("\t%3.3x\n", get_le16(data));
+				appKeyList.push_back(get_le16(data));
+			}
+
+			configuration.setConfig("APPKEYINDEX");
+			configuration.setAppKeyIndexes(appKeyList);
+			break;
+		}
+		case OP_MODEL_APP_STATUS:
+		{
+			if (dataLen != 7 && dataLen != 9)
+				break;
+
+			DEBUG("Node %4.4x: Model App status %d\n", argSource, data[0]);
+			uint16_t addr = get_le16(data + 1);
+			uint16_t app_idx = get_le16(data + 3);
+
+			DEBUG("Element Addr\t%4.4x\n", addr);
+
+			uint32_t mod_id = get_le16(data + 5);
+			DEBUG("Model ID\t %4.4x\n",mod_id);
+
+			DEBUG("AppIdx\t\t%3.3x\n ", app_idx);
+			configuration.setConfig("APPKEY_BIND");
+			break;
+		}
+		case OP_CONFIG_DEFAULT_TTL_STATUS:
+		{
+			if (dataLen != 1)
+				break;
+
+			DEBUG("Node %4.4x  Default TTL %d\n", argSource, data[0]);
+			configuration.setConfig("DEFAULT_TTL");
+			configuration.setTTL(data[0]);
+			DEBUG("Config:%s\n",configuration.getConfig());
+			break;
+		}
+		case OP_CONFIG_PROXY_STATUS:
+		{
+			if (dataLen != 1)
+				break;
+			configuration.setConfig("GATT_PROXY");
+			configuration.setGattProxyState(data[0]);
+			DEBUG("Node %4.4x  Proxy state 0x%02x\n", argSource, data[0]);
+			break;
+		}
+		case OP_CONFIG_RELAY_STATUS:
+		{
+			if (dataLen != 2)
+				break;
+
+			BleMeshRelayStatus relayStatus;
+			relayStatus.setRelay(data[0]);
+			relayStatus.setRelayRetransmitCount(data[1] & 0x7);
+			relayStatus.setRelayRetransmitIntervalSteps(data[1] >> 3);
+
+			configuration.setConfig("RELAY");
+			configuration.setRelayStatus(relayStatus);
+
+			DEBUG("Node %4.4x: Relay 0x%02x, cnt %d, steps %d\n",
+				argSource, data[0], data[1] & 0x7, data[1] >> 3);
+			break;
+		}
+		default:
+			DEBUG("Op code not handled");
 	}
 
-	default:
-		DEBUG("Op code not handled");
-	}
-
+	meshElement->mMeshProfile->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(meshElement->mAdapter->getAddress()), configuration);
 	return true;
 }
 

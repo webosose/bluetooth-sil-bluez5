@@ -262,12 +262,21 @@ BluetoothError Bluez5ProfileMesh::setOnOff(const std::string &bearer,
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
-void Bluez5ProfileMesh::configGet(BleMeshGetConfigCallback callback,
-										const std::string &bearer,
+BluetoothError Bluez5ProfileMesh::configGet(const std::string &bearer,
 										uint16_t destAddress,
 										const std::string &config,
 										uint16_t netKeyIndex)
 {
+	if (bearer == "PB-GATT")
+	{
+		return BLUETOOTH_ERROR_UNSUPPORTED;
+	}
+	else if (bearer == "PB-ADV")
+	{
+		return mMeshAdv->configGet(destAddress, config, netKeyIndex);
+	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
 BluetoothError Bluez5ProfileMesh::configSet(const std::string &bearer,
@@ -276,7 +285,16 @@ BluetoothError Bluez5ProfileMesh::configSet(const std::string &bearer,
 											uint16_t appKeyIndex, uint32_t modelId,
 											uint8_t ttl, BleMeshRelayStatus *relayStatus)
 {
-	return BLUETOOTH_ERROR_UNSUPPORTED;
+	if (bearer == "PB-GATT")
+	{
+		return BLUETOOTH_ERROR_UNSUPPORTED;
+	}
+	else if (bearer == "PB-ADV")
+	{
+		return mMeshAdv->configSet(destAddress, config, gattProxyState, netKeyIndex, appKeyIndex, modelId, ttl, relayStatus);
+	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
 void Bluez5ProfileMesh::getProperties(const std::string &address,

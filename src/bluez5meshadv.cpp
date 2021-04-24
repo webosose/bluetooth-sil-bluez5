@@ -35,16 +35,27 @@
 #define BLUEZ_MESH_APP_PATH "/" //"/silbluez/mesh"
 #define BLUEZ_MESH_ELEMENT_PATH "/element"
 
-#define DEFAULT_NET_INDEX 0x0000
+#define DEFAULT_NET_KEY_INDEX 0x0000
 
 /* Generic OnOff model opcodes */
-#define OP_GENERIC_ONOFF_GET					0x8201
-#define OP_GENERIC_ONOFF_SET					0x8202
-#define OP_GENERIC_ONOFF_SET_UNACK			  0x8203
-#define OP_GENERIC_ONOFF_STATUS				 0x8204
+#define OP_GENERIC_ONOFF_GET				0x8201
+#define OP_GENERIC_ONOFF_SET				0x8202
+#define OP_GENERIC_ONOFF_SET_UNACK			0x8203
+#define OP_GENERIC_ONOFF_STATUS				0x8204
 
 /* Config model opcodes */
-#define OP_MODEL_APP_BIND					   0x803D
+#define OP_MODEL_APP_BIND				0x803D
+#define OP_CONFIG_DEFAULT_TTL_GET		0x800C
+#define OP_CONFIG_DEFAULT_TTL_SET		0x800D
+
+#define OP_APPKEY_GET				0x8001
+#define OP_CONFIG_RELAY_GET			0x8026
+#define OP_CONFIG_RELAY_SET			0x8027
+
+#define OP_CONFIG_PROXY_GET			0x8012
+#define OP_CONFIG_PROXY_SET			0x8013
+
+#define TTL_MASK	0x7f
 
 Bluez5MeshAdv::Bluez5MeshAdv(Bluez5ProfileMesh *mesh, Bluez5Adapter *adapter):
 mMesh(mesh),
@@ -367,13 +378,7 @@ BluetoothError Bluez5MeshAdv::provision(const std::string &uuid, const uint16_t 
 	GBytes *bytes = g_bytes_new(uuidByte, 16);
 	GVariant *uuidVar = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
 
-	GVariantBuilder *builder = 0;
-	GVariant *params = 0;
-	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
-	params = g_variant_builder_end(builder);
-	g_variant_builder_unref(builder);
-
-	bluez_mesh_management1_call_add_node(mMgmtInterface, uuidVar, params, NULL, glibAsyncMethodWrapper,
+	bluez_mesh_management1_call_add_node(mMgmtInterface, uuidVar, createEmptyStringArrayVariant(), NULL, glibAsyncMethodWrapper,
 										new GlibAsyncFunctionWrapper(provisionCallback));
 
 	return BLUETOOTH_ERROR_NONE;
@@ -460,13 +465,10 @@ BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, 
 	n = meshOpcodeSet(OP_GENERIC_ONOFF_SET, msg);
 	msg[n++] = onoff;
 	msg[n++] = mTransacId++;
-	GBytes *bytes = g_bytes_new(msg, n);
-	GVariant *dataToSend = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
-	g_bytes_unref (bytes);
 
 	bluez_mesh_node1_call_send_sync(mNodeInterface, BLUEZ_MESH_ELEMENT_PATH,
 											destAddress, appIndex,
-											dataToSend, NULL, &error);
+											createEmptyStringArrayVariant(), prepareSendDevKeyData(msg, n), NULL, &error);
 	if (error)
 	{
 		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "model send failed: %s", error->message);
@@ -477,11 +479,33 @@ BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, 
 	return BLUETOOTH_ERROR_NONE;
 }
 
-void Bluez5MeshAdv::configGet(BleMeshGetConfigCallback callback,
-										uint16_t destAddress,
+BluetoothError Bluez5MeshAdv::configGet(uint16_t destAddress,
 										const std::string &config,
 										uint16_t netKeyIndex)
 {
+
+	if (!mNodeInterface)
+	{
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	if(config == "APPKEYINDEX")
+	{
+		return getAppKeyIndex(destAddress, netKeyIndex);
+	}
+	else if(config == "DEFAULT_TTL")
+	{
+		return getDefaultTTL(destAddress, netKeyIndex);
+	}
+	else if(config == "GATT_PROXY")
+	{
+		return getGATTProxy(destAddress, netKeyIndex);
+	}
+	else if(config == "RELAY")
+	{
+		return getRelay(destAddress, netKeyIndex);
+	}
+	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
 BluetoothError Bluez5MeshAdv::configSet(
@@ -489,14 +513,241 @@ BluetoothError Bluez5MeshAdv::configSet(
 		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
 		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus)
 {
-	return BLUETOOTH_ERROR_UNSUPPORTED;
+	if (!mNodeInterface)
+	{
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	if(config == "APPKEY_ADD")
+	{
+		return configAppKeyAdd(destAddress, netKeyIndex, appKeyIndex);
+	}
+	else if(config == "APPKEY_UPDATE")
+	{
+		return configAppKeyUpdate(destAddress, netKeyIndex, appKeyIndex);
+	}
+	else if(config == "APPKEY_BIND")
+	{
+		return configBindAppKey(destAddress, netKeyIndex, appKeyIndex, modelId);
+	}
+	else if(config == "DEFAULT_TTL")
+	{
+		return setDefaultTTL(destAddress, netKeyIndex, ttl);
+	}
+	else if(config == "GATT_PROXY")
+	{
+		return setGATTProxy(destAddress, netKeyIndex, gattProxyState);
+	}
+	else if(config == "RELAY")
+	{
+		return setRelay(destAddress, netKeyIndex, relayStatus);
+	}
+	return BLUETOOTH_ERROR_PARAM_INVALID;
+}
+
+GVariant* Bluez5MeshAdv::createEmptyStringArrayVariant()
+{
+	GVariantBuilder *builder = 0;
+	GVariant *params = 0;
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	params = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+	return params;
+}
+
+GVariant* Bluez5MeshAdv::prepareSendDevKeyData(uint8_t *msg, uint16_t n)
+{
+	GBytes *bytes = g_bytes_new(msg, n);
+	GVariant *dataToSend = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
+	g_bytes_unref (bytes);
+	return dataToSend;
+}
+
+BluetoothError Bluez5MeshAdv::devKeySend(uint16_t destAddress, uint16_t netKeyIndex, uint8_t *msg, uint16_t n)
+{
+	GError *error = 0;
+	BluetoothError silError = BLUETOOTH_ERROR_FAIL;
+
+	bluez_mesh_node1_call_dev_key_send_sync(mNodeInterface, BLUEZ_MESH_ELEMENT_PATH,
+											destAddress, true, netKeyIndex,
+											createEmptyStringArrayVariant(), prepareSendDevKeyData(msg, n), NULL, &error);
+
+	if (error)
+	{
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "devKeySend failed: %s", error->message);
+		if (strstr(error->message, "Object not found"))
+		{
+			silError = BLUETOOTH_ERROR_MESH_NET_KEY_INDEX_DOES_NOT_EXIST;
+		}
+		g_error_free(error);
+		return silError;
+	}
+
+	return BLUETOOTH_ERROR_NONE;
+}
+
+BluetoothError Bluez5MeshAdv::setDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex, uint8_t ttl)
+{
+	uint8_t msg[32];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	if (ttl > TTL_MASK)
+		return BLUETOOTH_ERROR_PARAM_INVALID;
+
+	n = meshOpcodeSet(OP_CONFIG_DEFAULT_TTL_SET, msg);
+	msg[n++] = ttl;
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::getDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex)
+{
+	uint8_t msg[32];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	n = meshOpcodeSet(OP_CONFIG_DEFAULT_TTL_GET, msg);
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::getGATTProxy(uint16_t destAddress, uint16_t netKeyIndex)
+{
+	uint8_t msg[32];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	n = meshOpcodeSet(OP_CONFIG_PROXY_GET, msg);
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::setGATTProxy(uint16_t destAddress, uint16_t netKeyIndex, uint8_t gattProxyState)
+{
+	uint8_t msg[2 + 1];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	n = meshOpcodeSet(OP_CONFIG_PROXY_SET, msg);
+	msg[n++] = gattProxyState;
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::getRelay(uint16_t destAddress, uint16_t netKeyIndex)
+{
+	uint8_t msg[32];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	n = meshOpcodeSet(OP_CONFIG_RELAY_GET, msg);
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::setRelay(uint16_t destAddress, uint16_t netKeyIndex, BleMeshRelayStatus *relayStatus)
+{
+	uint8_t msg[2 + 2 + 4];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	DEBUG("%d::%d::%d",relayStatus->getRelay(),relayStatus->getrelayRetransmitCount(), relayStatus->getRelayRetransmitIntervalSteps());
+	n = meshOpcodeSet(OP_CONFIG_RELAY_SET, msg);
+
+	msg[n++] = relayStatus->getRelay();
+	msg[n++] = relayStatus->getrelayRetransmitCount() | (relayStatus->getRelayRetransmitIntervalSteps() << 3);
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::getAppKeyIndex(uint16_t destAddress, uint16_t netKeyIndex)
+{
+	uint8_t msg[32];
+	uint16_t n;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	n = meshOpcodeSet(OP_APPKEY_GET, msg);
+
+	put_le16(netKeyIndex, msg + n);
+	n += 2;
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::configBindAppKey(uint16_t destAddress,
+												uint16_t netKeyIndex, uint16_t appKeyIndex, uint32_t modelId)
+{
+	uint16_t n;
+	uint8_t msg[32];
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+
+	n = meshOpcodeSet(OP_MODEL_APP_BIND, msg);
+
+	put_le16(destAddress, msg + n);
+	n += 2;
+	put_le16(appKeyIndex, msg + n);
+	n += 2;
+
+	n += putModelId(msg + n, &modelId, false);
+
+	return devKeySend(destAddress, netKeyIndex, msg, n);
+}
+
+BluetoothError Bluez5MeshAdv::addAppKey(uint16_t destAddress,	uint16_t netKeyIndex, uint16_t appKeyIndex, bool update)
+{
+	GError *error = 0;
+	BluetoothError silError = BLUETOOTH_ERROR_FAIL;
+	bluez_mesh_node1_call_add_app_key_sync(mNodeInterface, BLUEZ_MESH_ELEMENT_PATH,
+										destAddress, appKeyIndex, netKeyIndex, update, NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "ConfigAppKey failed: %s", error->message);
+
+		if (strstr(error->message, "AppKey not found"))
+		{
+			silError = BLUETOOTH_ERROR_MESH_APP_KEY_INDEX_DOES_NOT_EXIST;
+		}
+		else if (strstr(error->message, "Object not found"))
+		{
+			silError = BLUETOOTH_ERROR_MESH_NET_KEY_INDEX_DOES_NOT_EXIST;
+		}
+		else if (strstr(error->message, "Cannot update"))
+		{
+			silError = BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY;
+		}
+		g_error_free(error);
+		return silError;
+	}
+	return BLUETOOTH_ERROR_NONE;
+}
+
+BluetoothError Bluez5MeshAdv::configAppKeyAdd(uint16_t destAddress,
+												uint16_t netKeyIndex, uint16_t appKeyIndex)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	return addAppKey(destAddress, netKeyIndex, appKeyIndex, false);
+}
+
+BluetoothError Bluez5MeshAdv::configAppKeyUpdate(uint16_t destAddress,
+												uint16_t netKeyIndex, uint16_t appKeyIndex)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	return addAppKey(destAddress, netKeyIndex, appKeyIndex, true);
 }
 
 BluetoothError Bluez5MeshAdv::registerElement(uint8_t index,
-                                                std::vector<uint32_t> &sigModelIds,
-                                                std::vector<uint32_t> &vendorModelIds)
+												std::vector<uint32_t> &sigModelIds,
+												std::vector<uint32_t> &vendorModelIds)
 {
-	Bluez5MeshElement element(index);
+	Bluez5MeshElement element(index, mAdapter, mMesh);
 
 	for (auto sigModelId = sigModelIds.begin(); sigModelId != sigModelIds.end();
 		 sigModelId++)

@@ -539,6 +539,7 @@
                         <arg name="element_path" type="o" direction="in"/>
                         <arg name="destination" type="q" direction="in"/>
                         <arg name="key_index" type="q" direction="in"/>
+                        <arg name="options" type="a{sv}" direction="in"/>
                         <arg name="data" type="ay" direction="in">
                             <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
                         </arg>
@@ -548,6 +549,7 @@
                         <arg name="destination" type="q" direction="in"/>
                         <arg name="remote" type="b" direction="in"/>
                         <arg name="net_index" type="q" direction="in"/>
+                        <arg name="options" type="a{sv}" direction="in"/>
                         <arg name="data" type="ay" direction="in">
                             <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
                         </arg>

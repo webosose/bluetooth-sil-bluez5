@@ -65,10 +65,20 @@ public:
 	BluetoothError modelSend(uint16_t srcAddress, uint16_t destAddress, uint16_t appKeyIndex,
 									 const std::string &command,
 									 BleMeshPayload payload);
-	BluetoothError configAppKeyAdd(uint16_t srcAddress, uint16_t destAddress,
-								   uint16_t netIndex, uint16_t appIndex);
-	void configGet(BleMeshGetConfigCallback callback,
-										uint16_t destAddress,
+	BluetoothError configAppKeyAdd(uint16_t destAddress,
+								   uint16_t netKeyIndex, uint16_t appKeyIndex);
+	BluetoothError configAppKeyUpdate(uint16_t destAddress,
+								   uint16_t netKeyIndex, uint16_t appKeyIndex);
+	BluetoothError configBindAppKey(uint16_t destAddress,
+									uint16_t netKeyIndex, uint16_t appKeyIndex, uint32_t modelId);
+	BluetoothError setDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex, uint8_t ttl);
+	BluetoothError getDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError getGATTProxy(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError setGATTProxy(uint16_t destAddress, uint16_t netKeyIndex, uint8_t gattProxyState);
+	BluetoothError getRelay(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError setRelay(uint16_t destAddress, uint16_t netKeyIndex, BleMeshRelayStatus *relayStatus);
+	BluetoothError getAppKeyIndex(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError configGet(uint16_t destAddress,
 										const std::string &config,
 										uint16_t netKeyIndex = 0);
 	BluetoothError configSet(
@@ -87,6 +97,10 @@ public:
 	void getRandomBytes(unsigned char *buf, int size);
 	uint16_t meshOpcodeSet(uint32_t opcode, uint8_t *buf);
 	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
+	GVariant* createEmptyStringArrayVariant();
+	GVariant* prepareSendDevKeyData(uint8_t *msg, uint16_t n);
+	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex, uint16_t appKeyIndex, bool update);
+	BluetoothError devKeySend(uint16_t destAddress, uint16_t netKeyIndex, uint8_t *msg, uint16_t n);
 
 private:
 	GDBusConnection *mDbusConn;
