@@ -233,7 +233,7 @@ BluetoothError Bluez5ProfileMesh::createAppKey(const std::string &bearer,
 BluetoothError Bluez5ProfileMesh::modelSend(const std::string &bearer, uint16_t srcAddress,
 									 uint16_t destAddress, uint16_t appKeyIndex,
 									 const std::string &command,
-									 BleMeshPayload payload)
+									 BleMeshPayload &payload)
 {
 	if (bearer == "PB-GATT")
 	{

@@ -433,8 +433,19 @@ uint16_t Bluez5MeshAdv::putModelId(uint8_t *buf, uint32_t *args, bool vendor)
 BluetoothError Bluez5MeshAdv::modelSend(uint16_t srcAddress, uint16_t destAddress,
 										uint16_t appKeyIndex,
 										const std::string &command,
-										BleMeshPayload payload)
+										BleMeshPayload &payload)
 {
+	if (command.compare("onOff") == 0)
+	{
+		DEBUG("modelSend:: onOff");
+		BleMeshPayloadOnOff payloadOnOff = payload.getPayloadOnOff();
+		return setOnOff(destAddress, appKeyIndex, payloadOnOff.value);
+	}
+	else if(command.compare("passThrough") == 0)
+	{
+		BleMeshPayloadPassthrough payloadPassThr = payload.getPayloadPassthrough();
+		return sendPassThrough(destAddress, appKeyIndex, payloadPassThr.value);
+	}
 	return BLUETOOTH_ERROR_UNSUPPORTED;
 }
 
@@ -456,21 +467,68 @@ uint16_t Bluez5MeshAdv::meshOpcodeSet(uint32_t opcode, uint8_t *buf)
 		}
 }
 
+BluetoothError Bluez5MeshAdv::sendPassThrough(uint16_t destAddress, uint16_t appIndex, const std::vector<uint8_t> value)
+{
+	uint8_t msg[32];
+	uint16_t n;
+	GError *error = 0;
+	GVariantBuilder *builder = 0;
+	GVariant *params = 0;
+
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	g_variant_builder_add (builder, "{sv}","ForceSegmented" ,g_variant_new_boolean (false));
+	params = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
+
+	GVariantBuilder *dataBuilder = g_variant_builder_new (G_VARIANT_TYPE ("ay"));
+	for (auto &dataIt : value)
+	{
+		DEBUG("data : %u ", dataIt);
+		g_variant_builder_add(dataBuilder, "y", dataIt);
+	}
+
+	GVariant *dataToSend = g_variant_builder_end(dataBuilder);
+	g_variant_builder_unref(dataBuilder);
+
+	bluez_mesh_node1_call_send_sync(mNodeInterface, BLUEZ_MESH_ELEMENT_PATH,
+								destAddress, appIndex,
+								params, dataToSend, NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "Model sendPassThrough failed: %s", error->message);
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+
+	return BLUETOOTH_ERROR_NONE;
+}
+
 BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff)
 {
 	uint8_t msg[32];
 	uint16_t n;
 	GError *error = 0;
+	static bool createKey = 0;
+
+	GVariantBuilder *builder = 0;
+	GVariant *params = 0;
+	builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+	g_variant_builder_add (builder, "{sv}","ForceSegmented" ,g_variant_new_boolean (false));
+	params = g_variant_builder_end(builder);
+	g_variant_builder_unref(builder);
 
 	DEBUG("onoff:%d", onoff);
 
 	n = meshOpcodeSet(OP_GENERIC_ONOFF_SET, msg);
 	msg[n++] = onoff;
 	msg[n++] = mTransacId++;
+	GBytes *bytes = g_bytes_new(msg, n);
+	GVariant *dataToSend = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);
+	g_bytes_unref (bytes);
 
 	bluez_mesh_node1_call_send_sync(mNodeInterface, BLUEZ_MESH_ELEMENT_PATH,
-											destAddress, appIndex,
-											createEmptyStringArrayVariant(), prepareSendDevKeyData(msg, n), NULL, &error);
+								destAddress, appIndex,
+								params, dataToSend, NULL, &error);
 	if (error)
 	{
 		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "model send failed: %s", error->message);

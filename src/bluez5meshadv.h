@@ -64,7 +64,7 @@ public:
 	BluetoothError createAppKey(uint16_t netKeyIndex, uint16_t appKeyIndex);
 	BluetoothError modelSend(uint16_t srcAddress, uint16_t destAddress, uint16_t appKeyIndex,
 									 const std::string &command,
-									 BleMeshPayload payload);
+									 BleMeshPayload &payload);
 	BluetoothError configAppKeyAdd(uint16_t destAddress,
 								   uint16_t netKeyIndex, uint16_t appKeyIndex);
 	BluetoothError configAppKeyUpdate(uint16_t destAddress,
@@ -86,6 +86,7 @@ public:
 		uint8_t gattProxyState, uint16_t netKeyIndex = 0, uint16_t appKeyIndex = 0,
 		uint32_t modelId = 0, uint8_t ttl = 0, BleMeshRelayStatus *relayStatus = NULL);
 	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);
+	BluetoothError sendPassThrough(uint16_t destAddress, uint16_t appIndex, const std::vector<uint8_t> value);
 
 	BluetoothError registerElement(uint8_t index,
 								std::vector<uint32_t> &sigModelIds,

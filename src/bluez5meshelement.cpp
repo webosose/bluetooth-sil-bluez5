@@ -16,6 +16,8 @@
 
 #include "bluez5meshelement.h"
 #include "bluez5meshmodel.h"
+#include "bluez5profilemesh.h"
+#include "bluez5adapter.h"
 #include "utils.h"
 #include "logging.h"
 #include "asyncutils.h"
@@ -338,6 +340,9 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 	}
 
 	meshElement->mMeshProfile->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(meshElement->mAdapter->getAddress()), configuration, BLUETOOTH_ERROR_NONE);
+	//Todo:
+	meshElement->mMeshProfile->getMeshObserver()->modelDataReceived(convertAddressToLowerCase(meshElement->mAdapter->getAddress()),
+				argSource, 0, 0xffff, data, dataLen);
 	return true;
 }
 
@@ -356,8 +361,10 @@ gboolean Bluez5MeshElement::handleMessageReceived(BluezMeshElement1 *object,
 	gsize dataLen = 0;
 	int32_t n = 0;
 	uint32_t opcode;
+	uint16_t destAddr = 0;
 
 	data = (uint8_t *)g_variant_get_fixed_array(argData, &dataLen, sizeof(guint8));
+	destAddr = g_variant_get_uint16 (argDestination);
 
 	DEBUG("Received msg with length: %d", dataLen);
 
@@ -395,6 +402,9 @@ gboolean Bluez5MeshElement::handleMessageReceived(BluezMeshElement1 *object,
 		DEBUG("Op code not handled");
 	}
 	}
+	//Todo: check why not getting any msgCB from bluez/nodeDevice
+	meshElement->mMeshProfile->getMeshObserver()->modelDataReceived(convertAddressToLowerCase(meshElement->mAdapter->getAddress()),
+				argSource, destAddr, argKeyIndex, data, dataLen);
 	return true;
 }
 

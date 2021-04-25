@@ -66,7 +66,7 @@ public:
 	BluetoothError modelSend(const std::string &bearer, uint16_t srcAddress,
 									uint16_t destAddress, uint16_t appKeyIndex,
 									const std::string &command,
-									 BleMeshPayload payload);
+									 BleMeshPayload &payload);
 	BluetoothError configGet(const std::string &bearer,
 					uint16_t destAddress,
 					const std::string &config,
