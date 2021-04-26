@@ -52,6 +52,7 @@ public:
 
 	/* Mesh APIs */
 	BluetoothError createNetwork();
+	BluetoothError attachToken(const std::string &token);
 	void getMeshInfo(BleMeshInfoCallback callback);
 	BluetoothError scanUnprovisionedDevices(const uint16_t scanTimeout);
 	BluetoothError unprovisionedScanCancel();

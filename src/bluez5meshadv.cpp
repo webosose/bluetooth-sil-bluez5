@@ -121,6 +121,15 @@ void Bluez5MeshAdv::updateNetworkId()
 		mToken);
 }
 
+BluetoothError Bluez5MeshAdv::attachToken(const std::string &token)
+{
+	std::string::size_type sz = 0;
+	mToken = std::stoull(token, &sz, 0);
+	DEBUG("attachToken mToken: %llu", mToken);
+	attach();
+	return BLUETOOTH_ERROR_NONE;
+}
+
 void Bluez5MeshAdv::attach()
 {
 	auto attachCallback = [this](GAsyncResult *result) {

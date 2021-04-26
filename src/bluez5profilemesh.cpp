@@ -110,6 +110,20 @@ BluetoothError Bluez5ProfileMesh::createNetwork(const std::string &bearer)
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
+BluetoothError Bluez5ProfileMesh::attach(const std::string &bearer, const std::string &token)
+{
+	if (bearer == "PB-GATT")
+	{
+		return BLUETOOTH_ERROR_UNSUPPORTED;
+	}
+	else if (bearer == "PB-ADV")
+	{
+		return mMeshAdv->attachToken(token);
+	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
+}
+
 void Bluez5ProfileMesh::getMeshInfo(const std::string &bearer, BleMeshInfoCallback callback)
 {
 	if (bearer == "PB-GATT")
