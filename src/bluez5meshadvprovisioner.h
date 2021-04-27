@@ -21,11 +21,8 @@
 #include <vector>
 #include <bluetooth-sil-api.h>
 
-extern "C"
-{
 #include "freedesktop-interface.h"
 #include "bluez-interface.h"
-}
 
 class Bluez5Adapter;
 class Bluez5ProfileMesh;
