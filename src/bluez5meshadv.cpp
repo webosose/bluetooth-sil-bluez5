@@ -34,6 +34,8 @@
 #define BLUEZ_MESH_NAME "org.bluez.mesh"
 #define BLUEZ_MESH_APP_PATH "/" //"/silbluez/mesh"
 #define BLUEZ_MESH_ELEMENT_PATH "/element"
+#define ONE_SECOND				1000
+#define RESPOND_WAIT_DURATION	2
 
 #define DEFAULT_NET_KEY_INDEX 0x0000
 
@@ -209,7 +211,7 @@ void Bluez5MeshAdv::handleBluezMeshServiceStarted(GDBusConnection *conn, const g
 
 	for (auto element = meshAdv->mElements.begin(); element != meshAdv->mElements.end(); element++)
 	{
-		element->registerElementInterface(objectManagerServer);
+		element->registerElementInterface(objectManagerServer, meshAdv);
 	}
 
 	g_dbus_object_manager_server_set_connection(objectManagerServer, conn);
@@ -483,6 +485,7 @@ BluetoothError Bluez5MeshAdv::configGet(uint16_t destAddress,
 										const std::string &config,
 										uint16_t netKeyIndex)
 {
+	startTimer(config);
 
 	if (!mNodeInterface)
 	{
@@ -505,6 +508,9 @@ BluetoothError Bluez5MeshAdv::configGet(uint16_t destAddress,
 	{
 		return getRelay(destAddress, netKeyIndex);
 	}
+
+	stopReqTimer();
+
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
@@ -517,6 +523,8 @@ BluetoothError Bluez5MeshAdv::configSet(
 	{
 		return BLUETOOTH_ERROR_NOT_ALLOWED;
 	}
+
+	startTimer(config);
 
 	if(config == "APPKEY_ADD")
 	{
@@ -542,6 +550,9 @@ BluetoothError Bluez5MeshAdv::configSet(
 	{
 		return setRelay(destAddress, netKeyIndex, relayStatus);
 	}
+
+	stopReqTimer();
+
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
@@ -580,6 +591,7 @@ BluetoothError Bluez5MeshAdv::devKeySend(uint16_t destAddress, uint16_t netKeyIn
 			silError = BLUETOOTH_ERROR_MESH_NET_KEY_INDEX_DOES_NOT_EXIST;
 		}
 		g_error_free(error);
+		stopReqTimer();
 		return silError;
 	}
 
@@ -724,6 +736,7 @@ BluetoothError Bluez5MeshAdv::addAppKey(uint16_t destAddress,	uint16_t netKeyInd
 			silError = BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY;
 		}
 		g_error_free(error);
+		stopReqTimer();
 		return silError;
 	}
 	return BLUETOOTH_ERROR_NONE;
@@ -764,4 +777,33 @@ BluetoothError Bluez5MeshAdv::registerElement(uint8_t index,
 	mElements.push_back(element);
 
 	return BLUETOOTH_ERROR_NONE;
+}
+
+static gboolean atTimeOut(gpointer userdata)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	Bluez5MeshAdv *adv = (Bluez5MeshAdv *)userdata;
+	adv->mMesh->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(adv->mAdapter->getAddress()), adv->mConfiguration, BLUETOOTH_ERROR_MESH_NO_RESPONSE_FROM_NODE);
+	return false;
+}
+
+void Bluez5MeshAdv::startTimer(const std::string config)
+{
+	stopReqTimer();
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	mConfiguration.setConfig(config);
+	mReqExpTimerId = g_timeout_add( RESPOND_WAIT_DURATION * ONE_SECOND, atTimeOut, this);
+	DEBUG("Request timer started [%d]",mReqExpTimerId);
+}
+
+void Bluez5MeshAdv::stopReqTimer()
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	if (mReqExpTimerId)
+	{
+		g_source_remove(mReqExpTimerId);
+		DEBUG("Request timer stopped [%d]",mReqExpTimerId);
+		mReqExpTimerId = 0;
+	}
+	return;
 }

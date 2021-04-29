@@ -92,6 +92,7 @@ public:
 								std::vector<uint32_t> &vendorModelIds);
 	void attach();
 	void updateNetworkId();
+	void stopReqTimer();
 
 	private:
 	void getRandomBytes(unsigned char *buf, int size);
@@ -101,6 +102,7 @@ public:
 	GVariant* prepareSendDevKeyData(uint8_t *msg, uint16_t n);
 	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex, uint16_t appKeyIndex, bool update);
 	BluetoothError devKeySend(uint16_t destAddress, uint16_t netKeyIndex, uint8_t *msg, uint16_t n);
+	void startTimer(const std::string config);
 
 private:
 	GDBusConnection *mDbusConn;
@@ -111,15 +113,17 @@ private:
 	Bluez5MeshAdvProvisioner *mMeshAdvProv;
 	Bluez5MeshAdvProvAgent *mMeshAdvProvAgent;
 	Bluez5MeshApplication *mMeshApplication;
-
 	unsigned char mUuid[16]; //Local node uuid
-	Bluez5ProfileMesh *mMesh;
-	Bluez5Adapter *mAdapter;
 	std::vector<Bluez5MeshElement> mElements;
 	uint8_t mTransacId;
+	guint mReqExpTimerId;
 
 public:
 	uint64_t mToken;
+	BleMeshConfiguration mConfiguration;
+	Bluez5ProfileMesh *mMesh;
+	Bluez5Adapter *mAdapter;
+
 };
 
 #endif //BLUEZ5MESHADV_H

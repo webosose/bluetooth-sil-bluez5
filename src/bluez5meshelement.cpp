@@ -22,6 +22,7 @@
 #include "bluez5meshmodelconfigclient.h"
 #include "bluez5meshmodelonoffclient.h"
 #include "utils_mesh.h"
+#include "bluez5meshadv.h"
 #include "bluez5profilemesh.h"
 #include "bluez5adapter.h"
 #include <cstdint>
@@ -122,11 +123,11 @@ Bluez5MeshElement::~Bluez5MeshElement()
 {
 }
 
-void Bluez5MeshElement::registerElementInterface(GDBusObjectManagerServer *objectManagerServer)
+void Bluez5MeshElement::registerElementInterface(GDBusObjectManagerServer *objectManagerServer, Bluez5MeshAdv *meshAdv)
 {
 	GDBusObjectSkeleton *elementSkeleton = g_dbus_object_skeleton_new(BLUEZ_MESH_ELEMENT_PATH);
 	BluezMeshElement1 *elementInterface = bluez_mesh_element1_skeleton_new();
-
+	mMeshAdv = meshAdv;
 	g_signal_connect(elementInterface, "handle_dev_key_message_received", G_CALLBACK(handleDevKeyMessageReceived), this);
 	g_signal_connect(elementInterface, "handle_message_received", G_CALLBACK(handleMessageReceived), this);
 
@@ -208,7 +209,7 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 	uint32_t opcode;
 
 	BleMeshConfiguration configuration;
-
+	meshElement->mMeshAdv->stopReqTimer();
 	data = (uint8_t *)g_variant_get_fixed_array(argData, &dataLen, sizeof(guint8));
 
 	DEBUG("Received msg with length: %d", dataLen);
@@ -336,7 +337,7 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 			DEBUG("Op code not handled");
 	}
 
-	meshElement->mMeshProfile->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(meshElement->mAdapter->getAddress()), configuration);
+	meshElement->mMeshProfile->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(meshElement->mAdapter->getAddress()), configuration, BLUETOOTH_ERROR_NONE);
 	return true;
 }
 

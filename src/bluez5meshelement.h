@@ -30,6 +30,7 @@ extern "C"
 class Bluez5MeshModel;
 class Bluez5Adapter;
 class Bluez5ProfileMesh;
+class Bluez5MeshAdv;
 
 class Bluez5MeshElement
 {
@@ -53,7 +54,7 @@ public:
 										  GVariant *argData,
 										  gpointer userData);
 
-	void registerElementInterface(GDBusObjectManagerServer *objectManagerServer);
+	void registerElementInterface(GDBusObjectManagerServer *objectManagerServer, Bluez5MeshAdv *meshAdv);
 	BluetoothError addModel(uint32_t modelId);
 
 private:
@@ -64,6 +65,7 @@ private:
 	std::vector<Bluez5MeshModel *> mModels;
 	Bluez5Adapter *mAdapter;
 	Bluez5ProfileMesh *mMeshProfile;
+	Bluez5MeshAdv *mMeshAdv;
 };
 
 #endif //BLUEZ5MESHELEMENT_H
