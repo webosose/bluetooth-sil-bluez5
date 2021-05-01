@@ -78,6 +78,8 @@ public:
 							 BleMeshRelayStatus *relayStatus = NULL);
 	BluetoothError setOnOff(const std::string &bearer,
 							uint16_t destAddress, uint16_t appKeyIndex, bool onoff);
+	BluetoothError updateNodeInfo(const std::string &bearer,
+								std::vector<uint16_t> &unicastAddresses);
 
 private:
 	GDBusObjectManager *mObjectManager;

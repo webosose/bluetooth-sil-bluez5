@@ -106,7 +106,7 @@ gboolean Bluez5MeshAdvProvAgent::handleDisplayNumeric(BluezMeshProvisionAgent1 *
 	provAgent->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_NONE,
 													convertAddressToLowerCase(
 														provAgent->mAdapter->getAddress()),
-														"displayNumeric", "", argNumber, "", "", 0, "");
+														"displayNumeric", "", argNumber, "", "", 0, 0, "");
 	return true;
 }
 
@@ -120,7 +120,7 @@ gboolean Bluez5MeshAdvProvAgent::handleDisplayString(BluezMeshProvisionAgent1 *o
 	provAgent->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_NONE,
 													convertAddressToLowerCase(
 														provAgent->mAdapter->getAddress()),
-														"displayString", argValue, 0, "", "", 0, "");
+														"displayString", argValue, 0, "", "", 0, 0, "");
 	return true;
 }
 
@@ -136,7 +136,7 @@ gboolean Bluez5MeshAdvProvAgent::handlePromptNumeric(BluezMeshProvisionAgent1 *o
 	provAgent->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_NONE,
 													convertAddressToLowerCase(
 														provAgent->mAdapter->getAddress()),
-														"promptNumeric", "", 0, argType, "", 0, "");
+														"promptNumeric", "", 0, argType, "", 0, 0, "");
 	return true;
 }
 
@@ -151,6 +151,6 @@ gboolean Bluez5MeshAdvProvAgent::handlePromptStatic(BluezMeshProvisionAgent1 *ob
 	provAgent->mMesh->getMeshObserver()->provisionResult(BLUETOOTH_ERROR_NONE,
 													convertAddressToLowerCase(
 														provAgent->mAdapter->getAddress()),
-														"promptStatic", "", 0, "", "", 0, "");
+														"promptStatic", "", 0, "", "", 0, 0, "");
 	return true;
 }

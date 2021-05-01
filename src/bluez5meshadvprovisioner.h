@@ -18,6 +18,8 @@
 #define BLUEZ5MESHADVPROV_H
 
 #include <cstdint>
+#include <vector>
+#include <bluetooth-sil-api.h>
 
 extern "C"
 {
@@ -58,6 +60,7 @@ public:
 							GDBusMethodInvocation *invocation,
 							guchar count,
 							gpointer userData);
+	BluetoothError updateNodeInfo(std::vector<uint16_t> &unicastAddresses);
 
 private:
 	Bluez5Adapter *mAdapter;
@@ -68,6 +71,7 @@ private:
 	* the next available unicast address. It should also consider the number of elements
 	* in the device that is currently being provisioned.
 	*/
+	std::vector<uint16_t> mUnicastAddresses;
 	uint16_t mUnicastAddressAvailable;
 };
 

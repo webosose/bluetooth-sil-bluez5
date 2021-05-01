@@ -865,3 +865,8 @@ void Bluez5MeshAdv::stopReqTimer()
 	}
 	return;
 }
+
+BluetoothError Bluez5MeshAdv::updateNodeInfo(std::vector<uint16_t> &unicastAddresses)
+{
+	return mMeshAdvProv->updateNodeInfo(unicastAddresses);
+}

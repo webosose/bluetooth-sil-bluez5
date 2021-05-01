@@ -307,3 +307,18 @@ void Bluez5ProfileMesh::getProperty(const std::string &address,
 								BluetoothPropertyResultCallback callback)
 {
 }
+
+BluetoothError Bluez5ProfileMesh::updateNodeInfo(const std::string &bearer,
+								std::vector<uint16_t> &unicastAddresses)
+{
+	if (bearer == "PB-GATT")
+	{
+		return BLUETOOTH_ERROR_UNSUPPORTED;
+	}
+	else if (bearer == "PB-ADV")
+	{
+		return mMeshAdv->updateNodeInfo(unicastAddresses);
+	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
+}

@@ -87,6 +87,7 @@ public:
 		uint32_t modelId = 0, uint8_t ttl = 0, BleMeshRelayStatus *relayStatus = NULL);
 	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);
 	BluetoothError sendPassThrough(uint16_t destAddress, uint16_t appIndex, const std::vector<uint8_t> value);
+	BluetoothError updateNodeInfo(std::vector<uint16_t> &unicastAddresses);
 
 	BluetoothError registerElement(uint8_t index,
 								std::vector<uint32_t> &sigModelIds,
@@ -124,7 +125,6 @@ public:
 	BleMeshConfiguration mConfiguration;
 	Bluez5ProfileMesh *mMesh;
 	Bluez5Adapter *mAdapter;
-
 };
 
 #endif //BLUEZ5MESHADV_H

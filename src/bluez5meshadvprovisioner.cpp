@@ -82,7 +82,7 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeComplete(BluezMeshProvisioner1 *
 														 guchar count,
 														 gpointer userData)
 {
-	DEBUG("handleAddNodeComplete");
+	DEBUG("handleAddNodeComplete: count: %d", count);
 	std::vector<unsigned char> result;
 	char deviceUuid[16 * 2 + 1];
 
@@ -98,7 +98,7 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeComplete(BluezMeshProvisioner1 *
 																	convertAddressToLowerCase(
 																		meshAdvProvisioner->mAdapter->getAddress()),
 																	"endProvision", "", 0, "", "",
-																	unicast, deviceUuidS);
+																	unicast, count, deviceUuidS);
 
 	return true;
 }
@@ -129,7 +129,7 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeFailed(BluezMeshProvisioner1 *in
 																	convertAddressToLowerCase(
 																		meshAdvProvisioner->mAdapter->getAddress()),
 																	"endProvision", "", 0, "", "",
-																	0, deviceUuidS);
+																	0, 0, deviceUuidS);
 
 	return true;
 }
@@ -143,8 +143,22 @@ gboolean Bluez5MeshAdvProvisioner::handleRequestProvData(BluezMeshProvisioner1 *
 	g_dbus_method_invocation_return_value(invocation,
 										g_variant_new("(qq)", DEFAULT_NET_INDEX,
 										meshAdvProvisioner->mUnicastAddressAvailable));
+	for (int i = 0; i < count; ++i)
+	{
+		meshAdvProvisioner->mUnicastAddresses.push_back(meshAdvProvisioner->mUnicastAddressAvailable + i);
+	}
 	meshAdvProvisioner->mUnicastAddressAvailable += count;
 	DEBUG("Next available unicast address: %x", meshAdvProvisioner->mUnicastAddressAvailable);
 
 	return true;
+}
+
+BluetoothError Bluez5MeshAdvProvisioner::updateNodeInfo(std::vector<uint16_t> &unicastAddresses)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	mUnicastAddresses = unicastAddresses;
+	sort(mUnicastAddresses.begin(), mUnicastAddresses.end());
+	int n = mUnicastAddresses.size();
+	mUnicastAddressAvailable = mUnicastAddresses[n-1] + 1;
+	return BLUETOOTH_ERROR_NONE;
 }
