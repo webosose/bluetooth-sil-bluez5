@@ -203,14 +203,20 @@ void Bluez5ProfileA2dp::enable(const std::string &uuid, BluetoothResultCallback 
 			if (strstr(error->message, "org.bluez.Error.AlreadyExists") == NULL)
 			{
 				ERROR("A2DP_ENABLE_ROLE", 0, "Role enable %s failed error %s", role.c_str(), error->message);
-				callback(BLUETOOTH_ERROR_FAIL);
+				if(callback != NULL)
+				{
+					callback(BLUETOOTH_ERROR_FAIL);
+				}
 			}
 			g_error_free(error);
 		}
 	}
 #endif
 	mAdapter->notifyA2dpRoleChnange(uuid);
-	callback(BLUETOOTH_ERROR_NONE);
+	if(callback != NULL)
+	{
+		callback(BLUETOOTH_ERROR_NONE);
+	}
 
 }
 

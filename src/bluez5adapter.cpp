@@ -289,6 +289,15 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 				mAlias = std::string("sa8155") + " "+ std::string("Bluetooth ") + mObjectPath.substr(found);
 				BluetoothProperty alias(BluetoothProperty::Type::ALIAS, mAlias);
 				setAdapterPropertySync(alias);
+
+				Bluez5ProfileA2dp *a2dp = dynamic_cast<Bluez5ProfileA2dp*> (getProfile(BLUETOOTH_PROFILE_ID_A2DP));
+				if (a2dp)
+				{
+					if (mAlias == "sa8155 Bluetooth hci2") //AVN
+						a2dp->enable(BLUETOOTH_PROFILE_A2DP_SINK_UUID, NULL);
+					else // RSE0 RSE1
+						a2dp->enable(BLUETOOTH_PROFILE_A2DP_SOURCE_UUID, NULL);
+				}
 			}
 		}
 #endif
