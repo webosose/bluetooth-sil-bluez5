@@ -210,9 +210,18 @@ BluetoothError Bluez5ProfileMesh::supplyProvisioningOob(const std::string &beare
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
-void Bluez5ProfileMesh::getCompositionData(const std::string &bearer, uint16_t destAddress,
-										   BleMeshCompositionDataCallback callback)
+BluetoothError Bluez5ProfileMesh::getCompositionData(const std::string &bearer, uint16_t destAddress)
 {
+	if (bearer == "PB-GATT")
+	{
+		return BLUETOOTH_ERROR_UNSUPPORTED;
+	}
+	else if (bearer == "PB-ADV")
+	{
+		return mMeshAdv->getCompositionData(destAddress);
+	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
 BluetoothError Bluez5ProfileMesh::createAppKey(const std::string &bearer,

@@ -59,8 +59,7 @@ public:
 	BluetoothError provision(const std::string &uuid, const uint16_t timeout);
 	BluetoothError supplyNumeric(uint32_t number);
 	BluetoothError supplyStatic(const std::string &oobData);
-	void getCompositionData(uint16_t destAddress,
-							BleMeshCompositionDataCallback callback);
+	BluetoothError getCompositionData(uint16_t destAddress);
 	BluetoothError createAppKey(uint16_t netKeyIndex, uint16_t appKeyIndex);
 	BluetoothError modelSend(uint16_t srcAddress, uint16_t destAddress, uint16_t appKeyIndex,
 									 const std::string &command,

@@ -49,13 +49,12 @@
 #define OP_MODEL_APP_BIND				0x803D
 #define OP_CONFIG_DEFAULT_TTL_GET		0x800C
 #define OP_CONFIG_DEFAULT_TTL_SET		0x800D
-
 #define OP_APPKEY_GET				0x8001
 #define OP_CONFIG_RELAY_GET			0x8026
 #define OP_CONFIG_RELAY_SET			0x8027
-
 #define OP_CONFIG_PROXY_GET			0x8012
 #define OP_CONFIG_PROXY_SET			0x8013
+#define OP_DEV_COMP_GET				0x8008
 
 #define TTL_MASK	0x7f
 
@@ -394,11 +393,6 @@ BluetoothError Bluez5MeshAdv::supplyNumeric(uint32_t number)
 BluetoothError Bluez5MeshAdv::supplyStatic(const std::string &oobData)
 {
 	return mMeshAdvProvAgent->supplyStatic(oobData);
-}
-
-void Bluez5MeshAdv::getCompositionData(uint16_t destAddress,
-										   BleMeshCompositionDataCallback callback)
-{
 }
 
 BluetoothError Bluez5MeshAdv::createAppKey(uint16_t netKeyIndex, uint16_t appKeyIndex)
@@ -864,6 +858,21 @@ void Bluez5MeshAdv::stopReqTimer()
 		mReqExpTimerId = 0;
 	}
 	return;
+}
+
+BluetoothError Bluez5MeshAdv::getCompositionData(uint16_t destAddress)
+{
+	uint16_t n;
+	uint8_t msg[32];
+
+	n = meshOpcodeSet(OP_DEV_COMP_GET, msg);
+
+	/* By default, use page 0 */
+	msg[n++] = 0;
+
+	startTimer("COMPOSITION_DATA");
+
+	return devKeySend(destAddress, DEFAULT_NET_KEY_INDEX, msg, n);
 }
 
 BluetoothError Bluez5MeshAdv::updateNodeInfo(std::vector<uint16_t> &unicastAddresses)

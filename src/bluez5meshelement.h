@@ -59,6 +59,9 @@ public:
 
 private:
 	bool meshOpcodeGet(const uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n);
+	const char * sigModelString(uint16_t sigModelId);
+	uint32_t printModId(uint8_t *data, bool vendor, const char *offset);
+	void compositionReceived(uint8_t *data, uint16_t len, BleMeshCompositionData &compositionData);
 
 private:
 	uint8_t mElementIndex;
