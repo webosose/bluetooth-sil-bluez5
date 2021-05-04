@@ -31,11 +31,43 @@ class Bluez5MeshModel;
 class Bluez5MeshModelConfigClient : public Bluez5MeshModel
 {
 public:
-	Bluez5MeshModelConfigClient(uint32_t modelId);
+	Bluez5MeshModelConfigClient(uint32_t modelId, Bluez5ProfileMesh *meshProfile,
+								Bluez5MeshAdv *meshAdv, Bluez5Adapter *adapter);
 	~Bluez5MeshModelConfigClient();
 	BluetoothError sendData(uint16_t srcAddress, uint16_t destAddress,
 							uint16_t appIndex, uint8_t data[]);
-	void recvData(uint16_t srcAddress, uint16_t destAddress, uint16_t appIndex, uint8_t data);
+	bool recvData(uint16_t srcAddress, uint16_t destAddress, uint16_t appIndex,
+					uint8_t data[], uint32_t dataLen);
+	BluetoothError configGet(uint16_t destAddress,
+								const std::string &config,
+								uint16_t netKeyIndex);
+	BluetoothError configSet(
+		uint16_t destAddress, const std::string &config,
+		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
+		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus);
+	BluetoothError getCompositionData(uint16_t destAddress);
+
+private:
+	const char * sigModelString(uint16_t sigModelId);
+	uint32_t printModId(uint8_t *data, bool vendor, const char *offset);
+	void compositionReceived(uint8_t *data, uint16_t len, BleMeshCompositionData &compositionData);
+	BluetoothError getDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError getGATTProxy(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError getRelay(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError getAppKeyIndex(uint16_t destAddress, uint16_t netKeyIndex);
+	BluetoothError configAppKeyAdd(uint16_t destAddress,
+								   uint16_t netKeyIndex, uint16_t appKeyIndex);
+	BluetoothError configAppKeyUpdate(uint16_t destAddress,
+								   uint16_t netKeyIndex, uint16_t appKeyIndex);
+	BluetoothError configBindAppKey(uint16_t destAddress,
+									uint16_t netKeyIndex, uint16_t appKeyIndex, uint32_t modelId);
+	BluetoothError setDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex, uint8_t ttl);
+	BluetoothError setGATTProxy(uint16_t destAddress, uint16_t netKeyIndex, uint8_t gattProxyState);
+	BluetoothError setRelay(uint16_t destAddress, uint16_t netKeyIndex, BleMeshRelayStatus *relayStatus);
+	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
+	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex,
+								uint16_t appKeyIndex, bool update);
+
 };
 
 #endif //BLUEZ5MESHCONFIGCLIENT_H

@@ -64,19 +64,6 @@ public:
 	BluetoothError modelSend(uint16_t srcAddress, uint16_t destAddress, uint16_t appKeyIndex,
 									 const std::string &command,
 									 BleMeshPayload &payload);
-	BluetoothError configAppKeyAdd(uint16_t destAddress,
-								   uint16_t netKeyIndex, uint16_t appKeyIndex);
-	BluetoothError configAppKeyUpdate(uint16_t destAddress,
-								   uint16_t netKeyIndex, uint16_t appKeyIndex);
-	BluetoothError configBindAppKey(uint16_t destAddress,
-									uint16_t netKeyIndex, uint16_t appKeyIndex, uint32_t modelId);
-	BluetoothError setDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex, uint8_t ttl);
-	BluetoothError getDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex);
-	BluetoothError getGATTProxy(uint16_t destAddress, uint16_t netKeyIndex);
-	BluetoothError setGATTProxy(uint16_t destAddress, uint16_t netKeyIndex, uint8_t gattProxyState);
-	BluetoothError getRelay(uint16_t destAddress, uint16_t netKeyIndex);
-	BluetoothError setRelay(uint16_t destAddress, uint16_t netKeyIndex, BleMeshRelayStatus *relayStatus);
-	BluetoothError getAppKeyIndex(uint16_t destAddress, uint16_t netKeyIndex);
 	BluetoothError configGet(uint16_t destAddress,
 										const std::string &config,
 										uint16_t netKeyIndex = 0);
@@ -91,18 +78,18 @@ public:
 	BluetoothError registerElement(uint8_t index,
 								std::vector<uint32_t> &sigModelIds,
 								std::vector<uint32_t> &vendorModelIds);
+	BluetoothError devKeySend(uint16_t destAddress, uint16_t netKeyIndex, uint8_t *msg, uint16_t n);
+	BluetoothError send(uint16_t destAddress, uint16_t appKeyIndex, uint8_t *msg, uint16_t msgLen);
 	void attach();
 	void updateNetworkId();
 	void stopReqTimer();
+	BluezMeshNode1* getBluezNodeInterface() { return mNodeInterface; }
+	uint8_t getTransactionId() { return mTransacId++; }
 
-	private:
+private:
 	void getRandomBytes(unsigned char *buf, int size);
-	uint16_t meshOpcodeSet(uint32_t opcode, uint8_t *buf);
-	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
 	GVariant* createEmptyStringArrayVariant();
 	GVariant* prepareSendDevKeyData(uint8_t *msg, uint16_t n);
-	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex, uint16_t appKeyIndex, bool update);
-	BluetoothError devKeySend(uint16_t destAddress, uint16_t netKeyIndex, uint8_t *msg, uint16_t n);
 	void startTimer(const std::string config);
 
 private:

@@ -19,6 +19,7 @@
 
 #include <bluetooth-sil-api.h>
 #include <cstdint>
+#include "utils_mesh.h"
 
 extern "C"
 {
@@ -31,10 +32,14 @@ class Bluez5MeshModel;
 class Bluez5MeshModelOnOffClient : public Bluez5MeshModel
 {
 public:
-	Bluez5MeshModelOnOffClient(uint32_t modelId);
+	Bluez5MeshModelOnOffClient(uint32_t modelId, Bluez5ProfileMesh *meshProfile,
+								Bluez5MeshAdv *meshAdv, Bluez5Adapter *adapter);
 	~Bluez5MeshModelOnOffClient();
 	BluetoothError sendData(uint16_t srcAddress, uint16_t destAddress,
 							uint16_t appIndex, uint8_t data[]);
-    void recvData(uint16_t srcAddress, uint16_t destAddress, uint16_t appIndex, uint8_t data);
+    bool recvData(uint16_t srcAddress, uint16_t destAddress, uint16_t appIndex,
+					uint8_t data[], uint32_t dataLen);
+	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);
+
 };
 #endif //BLUEZ5MESHONOFFCLIENT_H

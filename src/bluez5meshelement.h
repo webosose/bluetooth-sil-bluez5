@@ -35,7 +35,8 @@ class Bluez5MeshAdv;
 class Bluez5MeshElement
 {
 public:
-	Bluez5MeshElement(uint8_t elementIndex, Bluez5Adapter *adapter, Bluez5ProfileMesh *mesh);
+	Bluez5MeshElement(uint8_t elementIndex, Bluez5Adapter *adapter,
+						Bluez5ProfileMesh *mesh, Bluez5MeshAdv *meshAdv);
 	~Bluez5MeshElement();
 
 	static gboolean handleDevKeyMessageReceived(BluezMeshElement1 *object,
@@ -54,18 +55,25 @@ public:
 										  GVariant *argData,
 										  gpointer userData);
 
-	void registerElementInterface(GDBusObjectManagerServer *objectManagerServer, Bluez5MeshAdv *meshAdv);
+	void registerElementInterface(GDBusObjectManagerServer *objectManagerServer);
 	BluetoothError addModel(uint32_t modelId);
 
-private:
-	bool meshOpcodeGet(const uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n);
-	const char * sigModelString(uint16_t sigModelId);
-	uint32_t printModId(uint8_t *data, bool vendor, const char *offset);
-	void compositionReceived(uint8_t *data, uint16_t len, BleMeshCompositionData &compositionData);
+	/* Config client model's APIs */
+	BluetoothError configGet(uint16_t destAddress,
+								const std::string &config,
+								uint16_t netKeyIndex);
+	BluetoothError configSet(
+		uint16_t destAddress, const std::string &config,
+		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
+		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus);
+	BluetoothError getCompositionData(uint16_t destAddress);
+
+	/* Generic onoff client model's APIs */
+	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);
 
 private:
 	uint8_t mElementIndex;
-	std::vector<Bluez5MeshModel *> mModels;
+	std::map<uint32_t, Bluez5MeshModel *> mModels;
 	Bluez5Adapter *mAdapter;
 	Bluez5ProfileMesh *mMeshProfile;
 	Bluez5MeshAdv *mMeshAdv;

@@ -15,6 +15,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <utils.h>
+#include <utils_mesh.h>
 #include <vector>
 #include <algorithm>
 
@@ -139,5 +140,63 @@ void objPathToDevAddress(const std::string &objectPath, std::string &devAddress)
 	devAddress = devAddress.substr(0, pos);
 	if (!devAddress.empty()){
 		std::replace(devAddress.begin(), devAddress.end(), '_', ':');
+	}
+}
+
+bool meshOpcodeGet(const uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n)
+{
+	if (!n || !opcode || sz < 1)
+		return false;
+
+	switch (buf[0] & 0xc0) {
+	case 0x00:
+	case 0x40:
+		/* RFU */
+		if (buf[0] == 0x7f)
+			return false;
+
+		*n = 1;
+		*opcode = buf[0];
+		break;
+
+	case 0x80:
+		if (sz < 2)
+			return false;
+
+		*n = 2;
+		*opcode = get_be16(buf);
+		break;
+
+	case 0xc0:
+		if (sz < 3)
+			return false;
+
+		*n = 3;
+		*opcode = get_be16(buf + 1);
+		*opcode |= buf[0] << 16;
+		break;
+
+	default:
+		DEBUG("Bad opcode");
+		return false;
+	}
+	return true;
+}
+
+uint16_t meshOpcodeSet(uint32_t opcode, uint8_t *buf)
+{
+	if (opcode <= 0x7e) {
+		buf[0] = opcode;
+		return 1;
+	} else if (opcode >= 0x8000 && opcode <= 0xbfff) {
+		put_be16(opcode, buf);
+		return 2;
+	} else if (opcode >= 0xc00000 && opcode <= 0xffffff) {
+		buf[0] = (opcode >> 16) & 0xff;
+		put_be16(opcode, buf + 1);
+		return 3;
+	} else {
+		DEBUG("Illegal Opcode %x", opcode);
+		return 0;
 	}
 }

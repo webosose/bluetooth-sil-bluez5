@@ -268,4 +268,7 @@ static inline void put_be64(uint64_t val, void *dst)
 {
 	put_unaligned(cpu_to_be64(val), (uint64_t *) dst);
 }
+
+bool meshOpcodeGet(const uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n);
+uint16_t meshOpcodeSet(uint32_t opcode, uint8_t *buf);
 #endif

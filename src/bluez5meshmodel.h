@@ -26,18 +26,31 @@ extern "C"
 #include "bluez-interface.h"
 }
 
+class Bluez5ProfileMesh;
+class Bluez5MeshAdv;
+class Bluez5Adapter;
+
 class Bluez5MeshModel
 {
 public:
-	Bluez5MeshModel(uint32_t modelId) { mModelId = modelId; }
+	Bluez5MeshModel(uint32_t modelId, Bluez5ProfileMesh *meshProfile, Bluez5MeshAdv *meshAdv,
+						Bluez5Adapter *adapter):
+	mModelId(modelId),
+	mMeshProfile(meshProfile),
+	mMeshAdv(meshAdv),
+	mAdapter(adapter) {}
 	~Bluez5MeshModel() {}
 	virtual BluetoothError sendData(uint16_t srcAddress, uint16_t destAddress,
 									uint16_t appIndex, uint8_t data[])
 									{ return BLUETOOTH_ERROR_UNSUPPORTED; }
-	virtual void recvData(uint16_t srcAddress, uint16_t destAddress, uint16_t appIndex, uint8_t data) {}
+	virtual bool recvData(uint16_t srcAddress, uint16_t destAddress, uint16_t appIndex,
+							uint8_t data[], uint32_t datalen) { return false; }
 
 public:
 	uint32_t mModelId;
+	Bluez5ProfileMesh *mMeshProfile;
+	Bluez5MeshAdv *mMeshAdv;
+	Bluez5Adapter *mAdapter;
 };
 
 #endif //BLUEZ5MESHMODEL_H
