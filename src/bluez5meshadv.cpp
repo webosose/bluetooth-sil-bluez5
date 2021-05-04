@@ -163,6 +163,9 @@ void Bluez5MeshAdv::attach()
 
 BluetoothError Bluez5MeshAdv::createNetwork()
 {
+	if(!mNetworkInterface)
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+
 	GError *error = 0;
 	getRandomBytes(mUuid, 16);
 

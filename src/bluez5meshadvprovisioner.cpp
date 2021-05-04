@@ -25,6 +25,17 @@
 #define BLUEZ_MESH_PROV_PATH "/"
 #define DEFAULT_NET_INDEX 0x0000
 
+std::map<std::string, BluetoothError> meshProvisionerError =
+{
+	{"timeout", BLUETOOTH_ERROR_MESH_TIMEOUT},
+	{"bad-pdu", BLUETOOTH_ERROR_MESH_BAD_PDU},
+	{"confirmation-failed", BLUETOOTH_ERROR_MESH_CONFIRMATION_FAILED},
+	{"out-of-resources", BLUETOOTH_ERROR_MESH_OUT_OF_RESOURCES},
+	{"decryption-error", BLUETOOTH_ERROR_MESH_DECRYPTION_ERROR},
+	{"unexpected-error", BLUETOOTH_ERROR_MESH_UNEXPECTED_ERROR},
+	{"cannot-assign-addresses", BLUETOOTH_ERROR_MESH_CANNOT_ASSIGN_ADDRESSES}
+};
+
 Bluez5MeshAdvProvisioner::Bluez5MeshAdvProvisioner(Bluez5Adapter *adapter, Bluez5ProfileMesh *mesh) :
 mAdapter(adapter),
 mMesh(mesh),
@@ -119,13 +130,9 @@ gboolean Bluez5MeshAdvProvisioner::handleAddNodeFailed(BluezMeshProvisioner1 *in
 	}
 
 	std::string deviceUuidS(deviceUuid);
-	BluetoothError error = BLUETOOTH_ERROR_NONE;
-
-	if(strcmp(reason, "bad-pdu") == 0)
-		error = BLUETOOTH_ERROR_MESH_BAD_PDU;
 
 	Bluez5MeshAdvProvisioner *meshAdvProvisioner = (Bluez5MeshAdvProvisioner *)userData;
-	meshAdvProvisioner->mMesh->getMeshObserver()->provisionResult(error,
+	meshAdvProvisioner->mMesh->getMeshObserver()->provisionResult(meshProvisionerError[reason],
 																	convertAddressToLowerCase(
 																		meshAdvProvisioner->mAdapter->getAddress()),
 																	"endProvision", "", 0, "", "",
