@@ -500,12 +500,18 @@ BluetoothError Bluez5MeshAdv::sendPassThrough(uint16_t destAddress, uint16_t app
 	return BLUETOOTH_ERROR_NONE;
 }
 
-BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff)
+BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff, bool ack)
 {
 	uint8_t msg[32];
 	uint16_t n;
 	GError *error = 0;
 	static bool createKey = 0;
+
+	if (ack)
+	{
+		startTimer("setOnOff");
+		mConfiguration.setOnOffState(onoff);
+	}
 
 	GVariantBuilder *builder = 0;
 	GVariant *params = 0;
@@ -530,6 +536,7 @@ BluetoothError Bluez5MeshAdv::setOnOff(uint16_t destAddress, uint16_t appIndex, 
 	{
 		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "model send failed: %s", error->message);
 		g_error_free(error);
+		stopReqTimer();
 		return BLUETOOTH_ERROR_FAIL;
 	}
 
@@ -838,7 +845,15 @@ static gboolean atTimeOut(gpointer userdata)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
 	Bluez5MeshAdv *adv = (Bluez5MeshAdv *)userdata;
-	adv->mMesh->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(adv->mAdapter->getAddress()), adv->mConfiguration, BLUETOOTH_ERROR_MESH_NO_RESPONSE_FROM_NODE);
+	if (adv->mConfiguration.getConfig() == "setOnOff")
+	{
+		// Ack is not supported buy nrf Device so returning same state
+		adv->mMesh->getMeshObserver()->modelSetOnOffResult(convertAddressToLowerCase(adv->mAdapter->getAddress()), adv->mConfiguration.getOnOffState(), BLUETOOTH_ERROR_NONE);
+	}
+	else
+	{
+		adv->mMesh->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(adv->mAdapter->getAddress()), adv->mConfiguration, BLUETOOTH_ERROR_MESH_NO_RESPONSE_FROM_NODE);
+	}
 	return false;
 }
 

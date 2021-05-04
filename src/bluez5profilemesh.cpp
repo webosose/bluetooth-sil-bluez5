@@ -257,7 +257,7 @@ BluetoothError Bluez5ProfileMesh::modelSend(const std::string &bearer, uint16_t 
 }
 
 BluetoothError Bluez5ProfileMesh::setOnOff(const std::string &bearer,
-									 uint16_t destAddress, uint16_t appKeyIndex, bool onoff)
+									 uint16_t destAddress, uint16_t appKeyIndex, bool onoff, bool ack)
 {
 	if (bearer == "PB-GATT")
 	{
@@ -265,7 +265,7 @@ BluetoothError Bluez5ProfileMesh::setOnOff(const std::string &bearer,
 	}
 	else if (bearer == "PB-ADV")
 	{
-		return mMeshAdv->setOnOff(destAddress, appKeyIndex, onoff);
+		return mMeshAdv->setOnOff(destAddress, appKeyIndex, onoff, ack);
 	}
 
 	return BLUETOOTH_ERROR_PARAM_INVALID;

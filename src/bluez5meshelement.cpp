@@ -522,6 +522,20 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 			configuration.setCompositionData(compositionData);
 			break;
 		}
+		case OP_GENERIC_ONOFF_STATUS:
+		{
+			if (dataLen != 1 && dataLen != 3)
+				break;
+
+			DEBUG("Node %4.4x: Off Status present = %s",
+						argSource, data[0] ? "ON" : "OFF");
+			configuration.setOnOffState(data[0]);
+
+			//if onOFF cmd Status ack msg received
+			meshElement->mMeshProfile->getMeshObserver()->modelSetOnOffResult(
+				convertAddressToLowerCase(meshElement->mAdapter->getAddress()), configuration.getOnOffState(), BLUETOOTH_ERROR_NONE);
+			break;
+		}
 		default:
 			DEBUG("Op code not handled");
 	}

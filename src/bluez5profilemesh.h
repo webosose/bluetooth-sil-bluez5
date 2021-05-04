@@ -76,7 +76,7 @@ public:
 							 uint32_t modelId = 0, uint8_t ttl = 0,
 							 BleMeshRelayStatus *relayStatus = NULL);
 	BluetoothError setOnOff(const std::string &bearer,
-							uint16_t destAddress, uint16_t appKeyIndex, bool onoff);
+							uint16_t destAddress, uint16_t appKeyIndex, bool onoff, bool ack = false);
 	BluetoothError updateNodeInfo(const std::string &bearer,
 								std::vector<uint16_t> &unicastAddresses);
 
