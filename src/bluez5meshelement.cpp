@@ -49,12 +49,7 @@ mMeshAdv(meshAdv)
 
 Bluez5MeshElement::~Bluez5MeshElement()
 {
-	for (auto modelEntry: mModels)
-	{
-		Bluez5MeshModel *model = modelEntry.second;
-		delete(model);
-	}
-	mModels.clear();
+
 }
 
 void Bluez5MeshElement::registerElementInterface(GDBusObjectManagerServer *objectManagerServer)
