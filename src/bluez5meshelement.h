@@ -73,7 +73,7 @@ public:
 
 private:
 	uint8_t mElementIndex;
-	std::map<uint32_t, Bluez5MeshModel *> mModels;
+	std::map<uint32_t, std::shared_ptr<Bluez5MeshModel>> mModels;
 	Bluez5Adapter *mAdapter;
 	Bluez5ProfileMesh *mMeshProfile;
 	Bluez5MeshAdv *mMeshAdv;

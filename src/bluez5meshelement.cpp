@@ -49,7 +49,7 @@ mMeshAdv(meshAdv)
 
 Bluez5MeshElement::~Bluez5MeshElement()
 {
-
+	mModels.clear();
 }
 
 void Bluez5MeshElement::registerElementInterface(GDBusObjectManagerServer *objectManagerServer)
@@ -99,7 +99,7 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 
 	for ( auto model : meshElement->mModels)
 	{
-		if (model.second->recvData(argSource, 0, 0, data, dataLen))
+		if (model.second.get()->recvData(argSource, 0, 0, data, dataLen))
 		{
 			break;
 		}
@@ -129,7 +129,7 @@ gboolean Bluez5MeshElement::handleMessageReceived(BluezMeshElement1 *object,
 
 	for ( auto model : meshElement->mModels)
 	{
-		if (model.second->recvData(argSource, 0, 0, data, dataLen))
+		if (model.second.get()->recvData(argSource, 0, 0, data, dataLen))
 		{
 			break;
 		}
@@ -149,7 +149,8 @@ BluetoothError Bluez5MeshElement::addModel(uint32_t modelId)
 		model = new Bluez5MeshModelOnOffClient(modelId, mMeshProfile, mMeshAdv, mAdapter);
 	}
 
-	mModels.insert(std::pair<uint32_t, Bluez5MeshModel *>(modelId, model));
+	std::shared_ptr <Bluez5MeshModel> p(model);
+	mModels.insert(std::pair<uint32_t, std::shared_ptr<Bluez5MeshModel>>(modelId, p));
 
 	return BLUETOOTH_ERROR_NONE;
 }
@@ -159,7 +160,7 @@ BluetoothError Bluez5MeshElement::configGet(uint16_t destAddress,
 										uint16_t netKeyIndex)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
-	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)model->second;
+	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->configGet(destAddress, config, netKeyIndex);
 }
 
@@ -169,7 +170,7 @@ BluetoothError Bluez5MeshElement::configSet(
 		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
-	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)model->second;
+	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->configSet(destAddress, config, gattProxyState,
 									netKeyIndex, appKeyIndex, modelId,
 									ttl, relayStatus);
@@ -178,13 +179,13 @@ BluetoothError Bluez5MeshElement::configSet(
 BluetoothError Bluez5MeshElement::getCompositionData(uint16_t destAddress)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
-	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)model->second;
+	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->getCompositionData(destAddress);
 }
 
 BluetoothError Bluez5MeshElement::setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff)
 {
 	auto model = mModels.find(GENERIC_ONOFF_CLIENT_MODEL_ID);
-	Bluez5MeshModelOnOffClient *onoffClient = (Bluez5MeshModelOnOffClient *)model->second;
+	Bluez5MeshModelOnOffClient *onoffClient = (Bluez5MeshModelOnOffClient *)(model->second).get();
 	return onoffClient->setOnOff(destAddress, appIndex, onoff);
 }
