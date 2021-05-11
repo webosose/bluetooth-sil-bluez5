@@ -54,9 +54,12 @@ bool Bluez5MeshModelOnOffClient::recvData(uint16_t srcAddress, uint16_t destAddr
 	bool isMsgHandled = false;
 	int32_t n = 0;
 	bool onoff = false;
+	uint8_t *dataToSend = data;
+	uint32_t dataLenToSend = dataLen;
 
     if (meshOpcodeGet(data, dataLen, &opcode, &n))
 	{
+		DEBUG("length of opcode: %d", n);
 		dataLen -= n;
 		data += n;
 	}
@@ -84,13 +87,14 @@ bool Bluez5MeshModelOnOffClient::recvData(uint16_t srcAddress, uint16_t destAddr
 		    DEBUG("Op code not handled");
 	    }
 	}
-	//Todo: check why not getting any msgCB from bluez/nodeDevice
 	if(isMsgHandled)
 	{
 		//if onOFF cmd Status ack msg received
 		mMeshProfile->getMeshObserver()->modelSetOnOffResult(
 			convertAddressToLowerCase(mAdapter->getAddress()),
 			onoff, BLUETOOTH_ERROR_NONE);
+		mMeshProfile->getMeshObserver()->modelDataReceived(convertAddressToLowerCase(mAdapter->getAddress()),
+				srcAddress, destAddress, appIndex, dataToSend, dataLenToSend);
 		return true;
 	}
 	return false;

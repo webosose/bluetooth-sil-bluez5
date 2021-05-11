@@ -27,8 +27,8 @@
 
 #define PRIMARY_ELEMENT_IDX 0x00
 
-#define CONFIG_CLIENT_MODEL_ID 0001
-#define GENERIC_ONOFF_CLIENT_MODEL_ID 1001
+#define CONFIG_CLIENT_MODEL_ID 0x0001
+#define GENERIC_ONOFF_CLIENT_MODEL_ID 0x1001
 
 Bluez5ProfileMesh::Bluez5ProfileMesh(Bluez5Adapter *adapter) : Bluez5ProfileBase(adapter, "")
 {

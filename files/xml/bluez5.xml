@@ -646,7 +646,9 @@
                         <arg name="source" type="q" direction="in"/>
                         <arg name="key_index" type="q" direction="in"/>
                         <arg name="destination" type="v" direction="in"/>
-                        <arg name="data" type="ay" direction="in"/>
+                        <arg name="data" type="ay" direction="in">
+                            <annotation name="org.gtk.GDBus.C.ForceGVariant" value="true"/>
+                        </arg>
                 </method>
                 <method name="DevKeyMessageReceived">
                         <arg name="source" type="q" direction="in"/>

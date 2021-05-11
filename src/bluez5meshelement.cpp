@@ -30,8 +30,8 @@
 #include <cstdint>
 #include <vector>
 
-#define CONFIG_CLIENT_MODEL_ID 0001
-#define GENERIC_ONOFF_CLIENT_MODEL_ID 1001
+#define CONFIG_CLIENT_MODEL_ID 0x0001
+#define GENERIC_ONOFF_CLIENT_MODEL_ID 0x1001
 #define BLUEZ_MESH_ELEMENT_PATH "/element"
 
 /* Generic onoff model opration status */
@@ -118,18 +118,21 @@ gboolean Bluez5MeshElement::handleMessageReceived(BluezMeshElement1 *object,
 	DEBUG("handleMessageReceived: src: %d, appkeyIndex: %d",
 		  argSource, argKeyIndex);
 	Bluez5MeshElement *meshElement = (Bluez5MeshElement *)userData;
-	uint8_t *data;
+	uint8_t *data = nullptr;
 	gsize dataLen = 0;
 	uint16_t destAddr = 0;
 
+	meshElement->mMeshAdv->stopReqTimer();
+
 	data = (uint8_t *)g_variant_get_fixed_array(argData, &dataLen, sizeof(guint8));
-	destAddr = g_variant_get_uint16 (argDestination);
+	GVariant *destAddrVar = g_variant_get_variant(argDestination);
+	destAddr = g_variant_get_uint16(destAddrVar);
 
 	DEBUG("Received msg with length: %d", dataLen);
 
 	for ( auto model : meshElement->mModels)
 	{
-		if (model.second.get()->recvData(argSource, 0, 0, data, dataLen))
+		if (model.second.get()->recvData(argSource, destAddr, argKeyIndex, data, dataLen))
 		{
 			break;
 		}

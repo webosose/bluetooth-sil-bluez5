@@ -443,8 +443,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 	if (opCodeHandled)
 	{
 		mMeshProfile->getMeshObserver()->modelConfigResult(convertAddressToLowerCase(mAdapter->getAddress()), configuration, BLUETOOTH_ERROR_NONE);
-		mMeshProfile->getMeshObserver()->modelDataReceived(convertAddressToLowerCase(mAdapter->getAddress()),
-				srcAddress, 0, 0xffff, data, dataLen);
 		return true;
 	}
 	return false;
