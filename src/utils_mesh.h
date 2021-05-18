@@ -135,9 +135,6 @@
 #define IS_FIXED_GROUP_ADDRESS(x)	((x) >= PROXIES_ADDRESS)
 #define IS_ALL_NODES(x)	((x) == ALL_NODES_ADDRESS)
 
-
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #define le16_to_cpu(val) (val)
 #define le32_to_cpu(val) (val)
@@ -183,25 +180,6 @@ do {						\
 	} *__p = (__typeof__(__p)) (ptr);	\
 	__p->__v = (val);			\
 } while (0)
-
-#define PTR_TO_UINT(p) ((unsigned int) ((uintptr_t) (p)))
-#define UINT_TO_PTR(u) ((void *) ((uintptr_t) (u)))
-
-#define PTR_TO_INT(p) ((int) ((intptr_t) (p)))
-#define INT_TO_PTR(u) ((void *) ((intptr_t) (u)))
-
-#define new0(type, count)			\
-	(type *) (__extension__ ({		\
-		size_t __n = (size_t) (count);	\
-		size_t __s = sizeof(type);	\
-		void *__p;			\
-		__p = btd_malloc(__n * __s);	\
-		memset(__p, 0, __n * __s);	\
-		__p;				\
-	}))
-
-#define newa(t, n) ((t*) alloca(sizeof(t)*(n)))
-#define malloc0(n) (calloc((n), 1))
 
 static inline int8_t get_s8(const void *ptr)
 {

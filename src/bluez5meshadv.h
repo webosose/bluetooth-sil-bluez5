@@ -47,8 +47,6 @@ public:
 	static void handleBluezMeshServiceStopped(GDBusConnection *conn, const gchar *name, gpointer user_data);
 	static void handleObjectAdded(GDBusObjectManager *objectManager, GDBusObject *object, void *userData);
 	static void handleObjectRemoved(GDBusObjectManager *objectManager, GDBusObject *object, void *userData);
-	static gboolean handleJoinComplete(BluezMeshApplication1 *object, GDBusMethodInvocation *invocation, guint64 argToken, gpointer userData);
-	static gboolean handleJoinFailed(BluezMeshApplication1 *object, GDBusMethodInvocation *invocation, const gchar *argReason, gpointer userData);
 
 	/* Mesh APIs */
 	BluetoothError createNetwork();
