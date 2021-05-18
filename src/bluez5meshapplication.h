@@ -47,7 +47,6 @@ public:
 private:
 	Bluez5Adapter *mAdapter;
 	Bluez5ProfileMesh *mMesh;
-	Bluez5MeshAdv *mMeshAdv;
 };
 
 #endif //BLUEZ5MESHAPPLICATION_H

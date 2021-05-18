@@ -19,7 +19,6 @@
 
 #include <bluetooth-sil-api.h>
 #include <cstdint>
-#include "utils_mesh.h"
 
 extern "C"
 {

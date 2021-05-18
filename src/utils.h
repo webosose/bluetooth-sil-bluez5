@@ -21,8 +21,8 @@
 #include <string>
 #include <vector>
 #include <glib.h>
-
 #include "logging.h"
+#include "utils_mesh.h"
 
 #define UNUSED(expr) do { (void)(expr); } while (0)
 

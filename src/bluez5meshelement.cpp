@@ -23,7 +23,6 @@
 #include "asyncutils.h"
 #include "bluez5meshmodelconfigclient.h"
 #include "bluez5meshmodelonoffclient.h"
-#include "utils_mesh.h"
 #include "bluez5meshadv.h"
 #include "bluez5profilemesh.h"
 #include "bluez5adapter.h"

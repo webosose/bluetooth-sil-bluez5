@@ -26,7 +26,6 @@
 #include "bluez5meshadvprovagent.h"
 #include "bluez5meshapplication.h"
 #include <openssl/rand.h>
-#include "utils_mesh.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -55,6 +54,10 @@ mDbusConn(nullptr),
 mMeshAdvProv(nullptr),
 mMeshAdvProvAgent(nullptr),
 mMeshApplication(nullptr),
+mMgmtInterface(nullptr),
+mNodeInterface(nullptr),
+mTransacId(0),
+mReqExpTimerId(0),
 mToken(0)
 {
 	GError *error = 0;
@@ -93,6 +96,18 @@ Bluez5MeshAdv::~Bluez5MeshAdv()
 	{
 		g_object_unref(mMeshApplication);
 		mMeshApplication = 0;
+	}
+
+	if (mNetworkInterface)
+	{
+		g_object_unref(mNetworkInterface);
+		mNetworkInterface = 0;
+	}
+
+	if (mMgmtInterface)
+	{
+		g_object_unref(mMgmtInterface);
+		mMgmtInterface = 0;
 	}
 
 	if (mNetworkInterface)

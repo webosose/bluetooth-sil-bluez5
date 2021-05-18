@@ -15,7 +15,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <utils.h>
-#include <utils_mesh.h>
 #include <vector>
 #include <algorithm>
 

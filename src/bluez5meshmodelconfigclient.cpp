@@ -16,7 +16,6 @@
 
 #include "bluez5meshmodel.h"
 #include "utils.h"
-#include "utils_mesh.h"
 #include "logging.h"
 #include "asyncutils.h"
 #include "bluez5profilemesh.h"

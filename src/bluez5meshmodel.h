@@ -39,7 +39,7 @@ public:
 	mMeshProfile(meshProfile),
 	mMeshAdv(meshAdv),
 	mAdapter(adapter) {}
-	~Bluez5MeshModel() {}
+	virtual ~Bluez5MeshModel() {}
 	virtual BluetoothError sendData(uint16_t srcAddress, uint16_t destAddress,
 									uint16_t appIndex, uint8_t data[])
 									{ return BLUETOOTH_ERROR_UNSUPPORTED; }
