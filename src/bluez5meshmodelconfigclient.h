@@ -30,6 +30,15 @@ extern "C"
 class Bluez5MeshModel;
 class Bluez5MeshModelConfigClient;
 
+class BleMeshKeyRefreshData
+{
+public:
+	uint16_t netKeyIndex;
+	uint16_t appKeyIndex;
+	int32_t waitTime;
+	int32_t numberOfElements;
+};
+
 class BleMeshPendingRequest
 {
 public:
@@ -39,6 +48,7 @@ public:
 	uint16_t addr;
 	uint8_t count;
 	std::string desc;
+	BleMeshKeyRefreshData keyRefreshData;
 	Bluez5MeshModelConfigClient *configClient;
 };
 
@@ -60,7 +70,8 @@ public:
 	BluetoothError configSet(
 		uint16_t destAddress, const std::string &config,
 		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
-		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus);
+		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus, int32_t waitTime = 0,
+		int32_t numberOfElements = 1, uint8_t phase = 3);
 	BluetoothError getCompositionData(uint16_t destAddress);
 	BluetoothError deleteNode(uint16_t destAddress, uint8_t count);
 
@@ -75,7 +86,8 @@ private:
 	BluetoothError configAppKeyAdd(uint16_t destAddress,
 								   uint16_t netKeyIndex, uint16_t appKeyIndex);
 	BluetoothError configAppKeyUpdate(uint16_t destAddress,
-								   uint16_t netKeyIndex, uint16_t appKeyIndex);
+								   uint16_t netKeyIndex, uint16_t appKeyIndex,
+									int32_t waitTime = 0);
 	BluetoothError configBindAppKey(uint16_t destAddress,
 									uint16_t netKeyIndex, uint16_t appKeyIndex, uint32_t modelId);
 	BluetoothError setDefaultTTL(uint16_t destAddress, uint16_t netKeyIndex, uint8_t ttl);
@@ -83,8 +95,9 @@ private:
 	BluetoothError setRelay(uint16_t destAddress, uint16_t netKeyIndex, BleMeshRelayStatus *relayStatus);
 	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
 	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex,
-								uint16_t appKeyIndex, bool update);
+								uint16_t appKeyIndex, bool update, int32_t waitTime = 0);
 	BluetoothError addPendingRequest(uint32_t opcode, uint16_t destAddr, uint8_t count = 0);
+	BluetoothError addPendingRequest(uint32_t opcode, uint16_t destAddr, BleMeshKeyRefreshData keyRefreshData);
 	bool requestExists(uint32_t opcode, uint16_t destAddr);
 	BluetoothError deletePendingRequest(uint32_t opcode, uint16_t destAddr);
 	std::vector<BleMeshPendingRequest>::iterator getRequestFromResponse(uint32_t opcode,
@@ -93,6 +106,11 @@ private:
 										uint16_t appKeyIndex);
 	BluetoothError configUnBindAppKey(uint16_t destAddress, uint16_t netKeyIndex,
 										uint16_t appKeyIndex, uint32_t modelId);
+	BluetoothError configNetKeyUpdate(uint16_t destAddress,
+										uint16_t netKeyIndex, int32_t waitTime,
+										int32_t numberOfElements);
+	BluetoothError configKrPhaseSet(uint16_t destAddress,
+			uint16_t netKeyIndex, uint8_t phase);
 
 public:
 	/* Mutex used to synchronise the access to pending request Q */

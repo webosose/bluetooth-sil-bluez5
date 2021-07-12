@@ -85,12 +85,22 @@ public:
 	void stopReqTimer();
 	BluezMeshNode1* getBluezNodeInterface() { return mNodeInterface; }
 	uint8_t getTransactionId() { return mTransacId++; }
+	void keyRefresh(BluetoothResultCallback callback, bool refreshAppKeys,
+								  std::vector<uint16_t> appKeyIndexesToRefresh,
+								  std::vector<uint16_t> blackListedNodes,
+								  std::vector<BleMeshNode> nodes,
+								  uint16_t netKeyIndex = 0,
+								  int32_t waitTime = 0);
 
 private:
 	void getRandomBytes(unsigned char *buf, int size);
 	GVariant* createEmptyStringArrayVariant();
 	GVariant* prepareSendDevKeyData(uint8_t *msg, uint16_t n);
 	void startTimer(const std::string config);
+	void setKeyRefreshPhase(uint16_t netKeyIndex, uint16_t phase, std::vector<BleMeshNode> nodes);
+	void distributeKeys(bool refreshAppKeys, std::vector<uint16_t> appKeyIndexesToRefresh,
+					std::vector<BleMeshNode> &nodes, uint16_t netKeyIndex,
+					int32_t waitTime);
 
 private:
 	GDBusConnection *mDbusConn;

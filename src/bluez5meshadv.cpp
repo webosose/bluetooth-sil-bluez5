@@ -29,12 +29,14 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <thread>
 
 #define BLUEZ_MESH_NAME "org.bluez.mesh"
 #define BLUEZ_MESH_APP_PATH "/" //"/silbluez/mesh"
 #define BLUEZ_MESH_ELEMENT_PATH "/element"
 #define ONE_SECOND				1000
 #define RESPOND_WAIT_DURATION	2
+#define LOCAL_NODE_ADDRESS 001
 
 
 /* Generic OnOff model opcodes */
@@ -581,6 +583,7 @@ BluetoothError Bluez5MeshAdv::devKeySend(uint16_t destAddress, uint16_t netKeyIn
 		silError = BLUETOOTH_ERROR_FAIL;
 
 		g_error_free(error);
+		error = NULL;
 		stopReqTimer();
 		return silError;
 	}
@@ -660,7 +663,7 @@ BluetoothError Bluez5MeshAdv::updateNodeInfo(std::vector<uint16_t> &unicastAddre
 
 BluetoothError Bluez5MeshAdv::deleteRemoteNodeFromLocalKeyDatabase(uint16_t primaryAddress, uint8_t count)
 {
-
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
 	if (!mMgmtInterface)
 	{
 		return BLUETOOTH_ERROR_NOT_ALLOWED;
@@ -675,7 +678,235 @@ BluetoothError Bluez5MeshAdv::deleteRemoteNodeFromLocalKeyDatabase(uint16_t prim
 	{
 		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "deleteRemoteNode failed: %s :%d", error->message, primaryAddress);
 		g_error_free(error);
+		error = NULL;
 		return BLUETOOTH_ERROR_FAIL;
 	}
 	return BLUETOOTH_ERROR_NONE;
+}
+
+void Bluez5MeshAdv::distributeKeys(bool refreshAppKeys, std::vector<uint16_t> appKeyIndexesToRefresh,
+	std::vector<BleMeshNode> &nodes, uint16_t netKeyIndex, int32_t waitTime)
+{
+	BluetoothError btError = BLUETOOTH_ERROR_NONE;
+	std::string status = "active";
+	GError *error = 0;
+	for (auto node = nodes.begin(); node != nodes.end();)
+	{
+		DEBUG("updating netkeyindex to : %d", node->getPrimaryElementAddress());
+		btError = mElements[0].configSet(node->getPrimaryElementAddress(),
+						"NETKEY_UPDATE", 0, netKeyIndex, 0, 0, 0, NULL,
+						waitTime, node->getNumberOfElements());
+		if (BLUETOOTH_ERROR_NONE != btError)
+		{
+			/* Adding update net key failed, delete the node,
+			* Call observer API with appropriate info for subscription
+			* response for keyRefresh
+			*/
+			ERROR(MSGID_MESH_PROFILE_ERROR, 0,
+					"netKey update to:%d failed", node->getNumberOfElements());
+			deleteRemoteNodeFromLocalKeyDatabase(node->getPrimaryElementAddress(),
+											node->getNumberOfElements());
+			mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_NETKEY_UPDATE_FAILED,
+										convertAddressToLowerCase(mAdapter->getAddress()),
+										netKeyIndex, status, 1, node->getPrimaryElementAddress());
+			node = nodes.erase(node);
+		}
+		else
+		{
+			++node;
+		}
+	}
+	DEBUG("Distributing netKeyIndex to remote nodes completed");
+	if (refreshAppKeys)
+	{
+		// Refresh All keys is handled in service. service has the info
+		// regarding all the appkeys created. So it sends all the app keys in
+		// appKeyIndexesToRefresh parameter
+		for (auto appKeyIndex : appKeyIndexesToRefresh)
+		{
+			DEBUG("appKeyIndex: %d", appKeyIndex);
+			bluez_mesh_management1_call_update_app_key_sync(
+				mMgmtInterface, appKeyIndex, NULL, &error);
+			if (error)
+			{
+				// Generating new key for appIndex failed
+				ERROR(MSGID_MESH_PROFILE_ERROR, 0,
+					"Generating new key for appIndex:%d failed", appKeyIndex);
+				mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY,
+										convertAddressToLowerCase(mAdapter->getAddress()),
+										netKeyIndex, status, 1, appKeyIndex);
+
+				g_error_free(error);
+				error = NULL;
+				continue;
+			}
+			btError = mElements[0].configSet(LOCAL_NODE_ADDRESS,
+								"APPKEY_UPDATE", 0, netKeyIndex, appKeyIndex,
+								0, 0, NULL, waitTime);
+			if (BLUETOOTH_ERROR_NONE != btError)
+			{
+				mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY,
+						convertAddressToLowerCase(mAdapter->getAddress()),
+						netKeyIndex, status, 1,
+						LOCAL_NODE_ADDRESS, appKeyIndex);
+			}
+			DEBUG("Generating new app key for index : %d completed", appKeyIndex);
+			for (auto node : nodes)
+			{
+				std::vector<uint16_t> appKeyIndexes = node.getAppKeyIndexes();
+				if (appKeyIndexes.end() != std::find(appKeyIndexes.begin(),
+						appKeyIndexes.end(), appKeyIndex))
+				{
+					DEBUG("Distributing appKeyIndex: %d to remote node: %d", appKeyIndex,
+									node.getPrimaryElementAddress());
+					btError = mElements[0].configSet(node.getPrimaryElementAddress(),
+								"APPKEY_UPDATE", 0, netKeyIndex, appKeyIndex,
+								0, 0, NULL, waitTime);
+					if (BLUETOOTH_ERROR_NONE != btError)
+					{
+						mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY,
+								convertAddressToLowerCase(mAdapter->getAddress()),
+								netKeyIndex, status, 1,
+								node.getPrimaryElementAddress(), appKeyIndex);
+					}
+				}
+			}
+		}
+	}
+}
+
+void Bluez5MeshAdv::setKeyRefreshPhase(uint16_t netKeyIndex, uint16_t phase, std::vector<BleMeshNode> nodes)
+{
+	GError *error = nullptr;
+	std::string	status = "active";
+	BluetoothError btError = BLUETOOTH_ERROR_NONE;
+
+	bluez_mesh_management1_call_set_key_phase_sync(mMgmtInterface, netKeyIndex, phase, NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "Set key phase failed: %s", error->message);
+		g_error_free(error);
+		error = NULL;
+		mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_FAIL,
+										convertAddressToLowerCase(mAdapter->getAddress()),
+										netKeyIndex, status, phase - 1);
+	}
+	else
+	{
+		mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_NONE,
+										convertAddressToLowerCase(mAdapter->getAddress()),
+										netKeyIndex, status, phase);
+	}
+	/* Set key phase in local node */
+	mElements[0].configSet(LOCAL_NODE_ADDRESS,
+								"KR_PHASE_SET", 0, netKeyIndex, 0,
+								0, 0, NULL, 0, 0, phase);
+	/* Set key phase in remote nodes */
+	for (auto node : nodes)
+	{
+		btError = mElements[0].configSet(node.getPrimaryElementAddress(),
+								"KR_PHASE_SET", 0, netKeyIndex, 0,
+								0, 0, NULL, 0, 0, phase);
+		if (BLUETOOTH_ERROR_NONE != btError)
+		{
+			ERROR(MSGID_MESH_PROFILE_ERROR, 0, "Set key phase failed for node: %d",
+					node.getPrimaryElementAddress());
+		}
+	}
+}
+
+void Bluez5MeshAdv::keyRefresh(BluetoothResultCallback callback,
+	bool refreshAppKeys, std::vector<uint16_t> appKeyIndexesToRefresh,
+	std::vector<uint16_t> blackListedNodes,
+	std::vector<BleMeshNode> nodes, uint16_t netKeyIndex, int32_t waitTime)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	GError *error = 0;
+
+	std::thread t( [this, callback, refreshAppKeys, appKeyIndexesToRefresh,
+									blackListedNodes, nodes, netKeyIndex, waitTime]() mutable
+	{
+		std::string status = "idle";
+
+		GError *error = 0;
+
+		/* Start of phase 1 */
+		/* Update netKey in the provisioner */
+		bluez_mesh_management1_call_update_subnet_sync(mMgmtInterface, netKeyIndex,
+		NULL, &error);
+		if (error)
+		{
+			ERROR(MSGID_MESH_PROFILE_ERROR, 0, "devKeySend failed: %s", error->message);
+			if (strstr(error->message, "Does not exist")) // Wrong net key
+			{
+				callback(BLUETOOTH_ERROR_MESH_NET_KEY_INDEX_DOES_NOT_EXIST);
+			}
+			else
+				callback(BLUETOOTH_ERROR_FAIL);
+			g_error_free(error);
+			error = NULL;
+			return;
+		}
+		DEBUG("Updating netKeyIndex in provisioner completed");
+		callback(BLUETOOTH_ERROR_NONE);
+		mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_NONE,
+										convertAddressToLowerCase(mAdapter->getAddress()),
+										netKeyIndex, status, 0);
+
+		status = "active";
+		mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_NONE,
+											convertAddressToLowerCase(mAdapter->getAddress()),
+											netKeyIndex, status, 1);
+		// Update network key in local node
+		bluez_mesh_node1_call_add_net_key_sync(
+			mNodeInterface, BLUEZ_MESH_ELEMENT_PATH, LOCAL_NODE_ADDRESS, 0, 0, true, NULL, &error);
+		if (error)
+		{
+			// Adding local node to the network failed. this should never happen!!
+			mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_NETKEY_UPDATE_FAILED,
+											convertAddressToLowerCase(mAdapter->getAddress()),
+											netKeyIndex, status, 1, LOCAL_NODE_ADDRESS);
+			g_error_free(error);
+			error = NULL;
+		}
+		DEBUG("Distributing netKeyIndex to local node completed");
+
+		/* Remove blackilisted node from list of nodes so that keys are distributed to
+		* nodes that are not blacklisted
+		*/
+		for (int i = 0 ; i < blackListedNodes.size(); ++i)
+		{
+			for (auto node = nodes.begin(); node != nodes.end();)
+			{
+				if (blackListedNodes[i] == node->getPrimaryElementAddress())
+				{
+					//delete the blacklisted node
+					deleteRemoteNodeFromLocalKeyDatabase(node->getPrimaryElementAddress(), node->getNumberOfElements());
+					node = nodes.erase(node);
+				}
+				else
+				{
+					++node;
+				}
+			}
+		}
+
+		distributeKeys(refreshAppKeys, appKeyIndexesToRefresh,
+						nodes, netKeyIndex, waitTime);
+		sleep(waitTime);
+		/* Start of Phase 2 */
+		setKeyRefreshPhase(netKeyIndex, 2, nodes);
+		sleep(waitTime);
+		/* Start of Phase 3 */
+		setKeyRefreshPhase(netKeyIndex, 3, nodes);
+		sleep(waitTime);
+		/* Normal Operation */
+		status = "completed";
+		mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_NONE,
+											convertAddressToLowerCase(mAdapter->getAddress()),
+											netKeyIndex, status, 0);
+	});
+	t.detach();
+
+	return;
 }

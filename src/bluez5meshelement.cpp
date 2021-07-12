@@ -168,13 +168,14 @@ BluetoothError Bluez5MeshElement::configGet(uint16_t destAddress,
 BluetoothError Bluez5MeshElement::configSet(
 		uint16_t destAddress, const std::string &config,
 		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
-		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus)
+		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus,
+		int32_t waitTime, int32_t numberOfElements, uint8_t phase)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
 	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->configSet(destAddress, config, gattProxyState,
 									netKeyIndex, appKeyIndex, modelId,
-									ttl, relayStatus);
+									ttl, relayStatus, waitTime, numberOfElements, phase);
 }
 
 BluetoothError Bluez5MeshElement::deleteNode(uint16_t destAddress, uint8_t count)

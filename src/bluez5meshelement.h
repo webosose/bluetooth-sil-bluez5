@@ -64,8 +64,9 @@ public:
 								uint16_t netKeyIndex);
 	BluetoothError configSet(
 		uint16_t destAddress, const std::string &config,
-		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
-		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus);
+		uint8_t gattProxyState, uint16_t netKeyIndex = 0, uint16_t appKeyIndex = 0,
+		uint32_t modelId = 0, uint8_t ttl = 0, BleMeshRelayStatus *relayStatus = NULL,
+		int32_t waitTime = 0, int32_t numberOfElements = 1, uint8_t phase = 3);
 	BluetoothError getCompositionData(uint16_t destAddress);
 	BluetoothError deleteNode(uint16_t destAddress, uint8_t count);
 

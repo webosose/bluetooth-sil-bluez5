@@ -300,3 +300,25 @@ BluetoothError Bluez5ProfileMesh::updateNodeInfo(const std::string &bearer,
 
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
+
+void Bluez5ProfileMesh::keyRefresh(BluetoothResultCallback callback,
+							  const std::string &bearer, bool refreshAppKeys,
+							  std::vector<uint16_t> appKeyIndexesToRefresh,
+							  std::vector<uint16_t> blackListedNodes,
+							  std::vector<BleMeshNode> nodes,
+							  uint16_t netKeyIndex,
+							  int32_t waitTime)
+{
+	if (bearer == "PB-GATT")
+	{
+		callback(BLUETOOTH_ERROR_UNSUPPORTED);
+	}
+	else if (bearer == "PB-ADV")
+	{
+		mMeshAdv->keyRefresh(callback, refreshAppKeys, appKeyIndexesToRefresh,
+				blackListedNodes, nodes, netKeyIndex, waitTime);
+
+	}
+	else
+		callback(BLUETOOTH_ERROR_PARAM_INVALID);
+}

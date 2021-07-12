@@ -74,6 +74,13 @@ public:
 	BluetoothError updateNodeInfo(const std::string &bearer,
 								std::vector<uint16_t> &unicastAddresses);
 	BluetoothError deleteNode(const std::string &bearer, uint16_t destAddress, uint8_t count);
+	void keyRefresh(BluetoothResultCallback callback, const std::string &bearer,
+								  bool refreshAppKeys,
+								  std::vector<uint16_t> appKeyIndexesToRefresh,
+								  std::vector<uint16_t> blackListedNodes,
+								  std::vector<BleMeshNode> nodes,
+								  uint16_t netKeyIndex = 0,
+								  int32_t waitTime = 0);
 
 private:
 	GDBusObjectManager *mObjectManager;

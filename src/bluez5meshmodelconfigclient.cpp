@@ -116,7 +116,7 @@ static struct BleMeshConfigCmd cmds[] = {
 	{OP_APPKEY_GET, OP_APPKEY_LIST, "APPKEYINDEX"},
 	{OP_APPKEY_LIST, NO_RESPONSE, ""},
 	{OP_APPKEY_STATUS, NO_RESPONSE, ""},
-	{OP_APPKEY_UPDATE, OP_APPKEY_STATUS, ""},
+	{OP_APPKEY_UPDATE, OP_APPKEY_STATUS, "APPKEY_UPDATE"},
 	{OP_DEV_COMP_GET, OP_DEV_COMP_STATUS, "COMPOSITION_DATA"},
 	{OP_DEV_COMP_STATUS, NO_RESPONSE, ""},
 	{OP_CONFIG_BEACON_GET, OP_CONFIG_BEACON_STATUS, ""},
@@ -172,7 +172,7 @@ static struct BleMeshConfigCmd cmds[] = {
 	{OP_NETKEY_GET, OP_NETKEY_LIST, ""},
 	{OP_NETKEY_LIST, NO_RESPONSE, ""},
 	{OP_NETKEY_STATUS, NO_RESPONSE, ""},
-	{OP_NETKEY_UPDATE, OP_NETKEY_STATUS, ""},
+	{OP_NETKEY_UPDATE, OP_NETKEY_STATUS, "NETKEY_UPDATE"},
 	{OP_NODE_IDENTITY_GET, OP_NODE_IDENTITY_STATUS, ""},
 	{OP_NODE_IDENTITY_SET, OP_NODE_IDENTITY_STATUS, ""},
 	{OP_NODE_IDENTITY_STATUS, NO_RESPONSE, ""},
@@ -231,6 +231,22 @@ static gboolean pendingRequestTimerExpired(gpointer userdata)
 	pendingReq->configClient->mMeshAdv->mMesh->getMeshObserver()->modelConfigResult(
 		convertAddressToLowerCase(pendingReq->configClient->mMeshAdv->mAdapter->getAddress()),
 		meshConfig, BLUETOOTH_ERROR_MESH_NO_RESPONSE_FROM_NODE);
+	if (pendingReq->resp == OP_NETKEY_STATUS)
+	{
+		std::string status = "active";
+		pendingReq->configClient->mMeshAdv->mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_NETKEY_UPDATE_FAILED,
+										convertAddressToLowerCase(pendingReq->configClient->mMeshAdv->mAdapter->getAddress()),
+										pendingReq->keyRefreshData.netKeyIndex, status, 1,
+										pendingReq->addr);
+	}
+	if (pendingReq->resp == OP_APPKEY_STATUS)
+	{
+		std::string status = "active";
+		pendingReq->configClient->mMeshAdv->mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY,
+										convertAddressToLowerCase(pendingReq->configClient->mMeshAdv->mAdapter->getAddress()),
+										pendingReq->keyRefreshData.netKeyIndex, status, 1,
+										pendingReq->addr, pendingReq->keyRefreshData.appKeyIndex);
+	}
 
 	if(pendingReq->req == OP_NODE_RESET)
 	{
@@ -313,9 +329,43 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 			pendingReq.configClient = this;
 			pendingReq.timer = 0;
 			pendingRequests.push_back(pendingReq);
-
 			pendingRequests.back().timer =
 				g_timeout_add(RESPOND_WAIT_DURATION * ONE_SECOND,
+							  pendingRequestTimerExpired, &pendingRequests.back());
+
+		}
+	}
+
+	return BLUETOOTH_ERROR_NONE;
+}
+
+BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
+											   uint16_t destAddr,
+												BleMeshKeyRefreshData keyRefreshData)
+{
+	if (requestExists(opcode, destAddr))
+	{
+		return BLUETOOTH_ERROR_BUSY;
+	}
+	BleMeshPendingRequest pendingReq;
+	for (int i = 0; i < (sizeof(cmds)/sizeof(cmds[0])); ++i)
+	{
+		if (opcode == cmds[i].opcode && NO_RESPONSE != cmds[i].rsp)
+		{
+			pendingReq.req = opcode;
+			pendingReq.resp = cmds[i].rsp;
+			pendingReq.desc = cmds[i].desc;
+			pendingReq.addr = destAddr;
+			pendingReq.configClient = this;
+			pendingRequests.push_back(pendingReq);
+			if (!keyRefreshData.waitTime)
+				keyRefreshData.waitTime = RESPOND_WAIT_DURATION * ONE_SECOND;
+			else
+				keyRefreshData.waitTime = keyRefreshData.waitTime * ONE_SECOND;
+			pendingReq.keyRefreshData = keyRefreshData;
+
+			pendingRequests.back().timer =
+				g_timeout_add(keyRefreshData.waitTime * ONE_SECOND,
 							  pendingRequestTimerExpired, &pendingRequests.back());
 
 		}
@@ -777,6 +827,39 @@ uint16_t Bluez5MeshModelConfigClient::putModelId(uint8_t *buf, uint32_t *args, b
 		return n;
 }
 
+BluetoothError Bluez5MeshModelConfigClient::configNetKeyUpdate(uint16_t destAddress,
+												uint16_t netKeyIndex, int32_t waitTime,
+												int32_t numberOfElements)
+{
+	uint16_t n;
+	uint8_t msg[32];
+	GError *error = 0;
+
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	BleMeshKeyRefreshData keyRefreshData;
+	keyRefreshData.netKeyIndex = netKeyIndex;
+	keyRefreshData.waitTime = waitTime;
+	keyRefreshData.numberOfElements = numberOfElements;
+	int32_t status = addPendingRequest(OP_NETKEY_UPDATE, destAddress,
+							keyRefreshData);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
+	bluez_mesh_node1_call_add_net_key_sync(
+			mMeshAdv->getBluezNodeInterface(), BLUEZ_MESH_ELEMENT_PATH,
+										destAddress, netKeyIndex, netKeyIndex, true, NULL, &error);
+	if (error)
+	{
+		DEBUG("bluez_mesh_node1_call_add_net_key_sync failed: %s", error->message);
+		g_error_free(error);
+		error = NULL;
+		deletePendingRequest(OP_NETKEY_UPDATE, destAddress);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	return BLUETOOTH_ERROR_NONE;
+}
+
 BluetoothError Bluez5MeshModelConfigClient::configUnBindAppKey(uint16_t destAddress,
 												uint16_t netKeyIndex, uint16_t appKeyIndex, uint32_t modelId)
 {
@@ -890,7 +973,8 @@ BluetoothError Bluez5MeshModelConfigClient::setRelay(uint16_t destAddress, uint1
 }
 
 BluetoothError Bluez5MeshModelConfigClient::addAppKey(uint16_t destAddress,
-											uint16_t netKeyIndex, uint16_t appKeyIndex, bool update)
+											uint16_t netKeyIndex, uint16_t appKeyIndex,
+											bool update, int32_t waitTime)
 {
 	GError *error = 0;
 	BluetoothError silError = BLUETOOTH_ERROR_NONE;
@@ -915,7 +999,11 @@ BluetoothError Bluez5MeshModelConfigClient::addAppKey(uint16_t destAddress,
 	{
 		if (update)
 		{
-			addPendingRequest(OP_APPKEY_UPDATE, destAddress);
+			BleMeshKeyRefreshData keyRefreshData;
+			keyRefreshData.netKeyIndex = netKeyIndex;
+			keyRefreshData.appKeyIndex = appKeyIndex;
+			keyRefreshData.waitTime = waitTime;
+			addPendingRequest(OP_APPKEY_UPDATE, destAddress, keyRefreshData);
 		}
 		else
 		{
@@ -956,16 +1044,18 @@ BluetoothError Bluez5MeshModelConfigClient::configAppKeyAdd(uint16_t destAddress
 }
 
 BluetoothError Bluez5MeshModelConfigClient::configAppKeyUpdate(uint16_t destAddress,
-												uint16_t netKeyIndex, uint16_t appKeyIndex)
+												uint16_t netKeyIndex, uint16_t appKeyIndex,
+												int32_t waitTime)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-	return addAppKey(destAddress, netKeyIndex, appKeyIndex, true);
+	return addAppKey(destAddress, netKeyIndex, appKeyIndex, true, waitTime);
 }
 
 BluetoothError Bluez5MeshModelConfigClient::configSet(
 		uint16_t destAddress, const std::string &config,
 		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
-		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus)
+		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus, int32_t waitTime,
+		int32_t numberOfElements, uint8_t phase)
 {
 	if(config == "APPKEY_ADD")
 	{
@@ -973,7 +1063,7 @@ BluetoothError Bluez5MeshModelConfigClient::configSet(
 	}
 	else if(config == "APPKEY_UPDATE")
 	{
-		return configAppKeyUpdate(destAddress, netKeyIndex, appKeyIndex);
+		return configAppKeyUpdate(destAddress, netKeyIndex, appKeyIndex, waitTime);
 	}
 	else if(config == "APPKEY_BIND")
 	{
@@ -999,7 +1089,29 @@ BluetoothError Bluez5MeshModelConfigClient::configSet(
 	{
 		return configUnBindAppKey(destAddress, netKeyIndex, appKeyIndex, modelId);
 	}
+	else if(config == "NETKEY_UPDATE")
+	{
+		return configNetKeyUpdate(destAddress, netKeyIndex, waitTime, numberOfElements);
+	}
+	else if(config == "KR_PHASE_SET")
+	{
+		return configKrPhaseSet(destAddress, netKeyIndex, phase);
+	}
 	return BLUETOOTH_ERROR_PARAM_INVALID;
+}
+
+BluetoothError Bluez5MeshModelConfigClient::configKrPhaseSet(uint16_t destAddress,
+			uint16_t netKeyIndex, uint8_t phase)
+{
+	uint16_t n;
+	uint8_t msg[32];
+
+	n = meshOpcodeSet(OP_CONFIG_KEY_REFRESH_PHASE_SET, msg);
+	put_le16(netKeyIndex, msg + n);
+	n += 2;
+
+	msg[n++] = phase;
+	return mMeshAdv->devKeySend(destAddress, DEFAULT_NET_KEY_INDEX, msg, n);
 }
 
 BluetoothError Bluez5MeshModelConfigClient::getCompositionData(uint16_t destAddress)
