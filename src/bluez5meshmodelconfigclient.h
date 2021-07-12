@@ -87,10 +87,14 @@ private:
 	BluetoothError deletePendingRequest(uint32_t opcode, uint16_t destAddr);
 	std::vector<BleMeshPendingRequest>::iterator getRequestFromResponse(uint32_t opcode,
 											uint16_t destAddr);
+	BluetoothError configAppKeyDelete(uint16_t destAddress, uint16_t netKeyIndex,
+										uint16_t appKeyIndex);
+	BluetoothError configUnBindAppKey(uint16_t destAddress, uint16_t netKeyIndex,
+										uint16_t appKeyIndex, uint32_t modelId);
+
 public:
 	/* Mutex used to synchronise the access to pending request Q */
 	std::mutex pendingReqMutex;
-
 };
 
 #endif //BLUEZ5MESHCONFIGCLIENT_H
