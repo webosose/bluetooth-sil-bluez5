@@ -484,7 +484,6 @@ BluetoothError Bluez5MeshAdv::configGet(uint16_t destAddress,
 										const std::string &config,
 										uint16_t netKeyIndex)
 {
-	startTimer(config);
 	return mElements[0].configGet(destAddress, config, netKeyIndex);
 
 }
@@ -498,8 +497,6 @@ BluetoothError Bluez5MeshAdv::configSet(
 	{
 		return BLUETOOTH_ERROR_NOT_ALLOWED;
 	}
-
-	startTimer(config);
 
 	return mElements[0].configSet(destAddress, config, gattProxyState, netKeyIndex,
 									appKeyIndex, modelId, ttl, relayStatus);
@@ -643,7 +640,6 @@ void Bluez5MeshAdv::stopReqTimer()
 
 BluetoothError Bluez5MeshAdv::getCompositionData(uint16_t destAddress)
 {
-	startTimer("COMPOSITION_DATA");
 	return mElements[0].getCompositionData(destAddress);
 }
 

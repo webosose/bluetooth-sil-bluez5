@@ -19,6 +19,7 @@
 
 #include <bluetooth-sil-api.h>
 #include <cstdint>
+#include <mutex>
 
 extern "C"
 {
@@ -27,10 +28,24 @@ extern "C"
 }
 
 class Bluez5MeshModel;
+class Bluez5MeshModelConfigClient;
+
+class BleMeshPendingRequest
+{
+public:
+	guint timer;
+	uint32_t req;
+	uint32_t resp;
+	uint16_t addr;
+	std::string desc;
+	Bluez5MeshModelConfigClient *configClient;
+};
 
 class Bluez5MeshModelConfigClient : public Bluez5MeshModel
 {
 public:
+	std::vector<BleMeshPendingRequest> pendingRequests;
+
 	Bluez5MeshModelConfigClient(uint32_t modelId, Bluez5ProfileMesh *meshProfile,
 								Bluez5MeshAdv *meshAdv, Bluez5Adapter *adapter);
 	~Bluez5MeshModelConfigClient();
@@ -67,6 +82,14 @@ private:
 	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
 	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex,
 								uint16_t appKeyIndex, bool update);
+	BluetoothError addPendingRequest(uint32_t opcode, uint16_t destAddr);
+	bool requestExists(uint32_t opcode, uint16_t destAddr);
+	BluetoothError deletePendingRequest(uint32_t opcode, uint16_t destAddr);
+	std::vector<BleMeshPendingRequest>::iterator getRequestFromResponse(uint32_t opcode,
+											uint16_t destAddr);
+public:
+	/* Mutex used to synchronise the access to pending request Q */
+	std::mutex pendingReqMutex;
 
 };
 

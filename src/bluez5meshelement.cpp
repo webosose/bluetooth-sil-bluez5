@@ -91,7 +91,6 @@ gboolean Bluez5MeshElement::handleDevKeyMessageReceived(BluezMeshElement1 *objec
 	uint8_t *data;
 	gsize dataLen = 0;
 
-	meshElement->mMeshAdv->stopReqTimer();
 	data = (uint8_t *)g_variant_get_fixed_array(argData, &dataLen, sizeof(guint8));
 
 	DEBUG("Received msg with length: %d", dataLen);

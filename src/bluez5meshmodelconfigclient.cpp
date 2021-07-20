@@ -26,6 +26,9 @@
 
 #define BLUEZ_MESH_ELEMENT_PATH "/element"
 
+#define ONE_SECOND 1000
+#define RESPOND_WAIT_DURATION 2
+
 #define DEFAULT_NET_KEY_INDEX 0x0000
 
 #define OP_APPKEY_ADD				0x00
@@ -99,6 +102,86 @@
 #define OP_MODEL_APP_LIST			0x804C
 #define OP_VEND_MODEL_APP_GET			0x804D
 #define OP_VEND_MODEL_APP_LIST			0x804E
+#define NO_RESPONSE 0xFFFFFFFF
+
+struct BleMeshConfigCmd {
+	uint32_t opcode;
+	uint32_t rsp;
+	std::string desc;
+};
+
+static struct BleMeshConfigCmd cmds[] = {
+	{OP_APPKEY_ADD, OP_APPKEY_STATUS, "APPKEY_ADD"},
+	{OP_APPKEY_DELETE, OP_APPKEY_STATUS, "APPKEY_DELETE"},
+	{OP_APPKEY_GET, OP_APPKEY_LIST, "APPKEYINDEX"},
+	{OP_APPKEY_LIST, NO_RESPONSE, ""},
+	{OP_APPKEY_STATUS, NO_RESPONSE, ""},
+	{OP_APPKEY_UPDATE, OP_APPKEY_STATUS, ""},
+	{OP_DEV_COMP_GET, OP_DEV_COMP_STATUS, "COMPOSITION_DATA"},
+	{OP_DEV_COMP_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_BEACON_GET, OP_CONFIG_BEACON_STATUS, ""},
+	{OP_CONFIG_BEACON_SET, OP_CONFIG_BEACON_STATUS, ""},
+	{OP_CONFIG_BEACON_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_DEFAULT_TTL_GET, OP_CONFIG_DEFAULT_TTL_STATUS, "DEFAULT_TTL"},
+	{OP_CONFIG_DEFAULT_TTL_SET, OP_CONFIG_DEFAULT_TTL_STATUS, "DEFAULT_TTL"},
+	{OP_CONFIG_DEFAULT_TTL_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_FRIEND_GET, OP_CONFIG_FRIEND_STATUS, ""},
+	{OP_CONFIG_FRIEND_SET, OP_CONFIG_FRIEND_STATUS, ""},
+	{OP_CONFIG_FRIEND_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_PROXY_GET, OP_CONFIG_PROXY_STATUS, "GATT_PROXY"},
+	{OP_CONFIG_PROXY_SET, OP_CONFIG_PROXY_STATUS, "GATT_PROXY"},
+	{OP_CONFIG_PROXY_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_KEY_REFRESH_PHASE_GET, OP_CONFIG_KEY_REFRESH_PHASE_STATUS, ""},
+	{OP_CONFIG_KEY_REFRESH_PHASE_SET, OP_CONFIG_KEY_REFRESH_PHASE_STATUS, ""},
+	{OP_CONFIG_KEY_REFRESH_PHASE_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_MODEL_PUB_GET, OP_CONFIG_MODEL_PUB_STATUS, ""},
+	{OP_CONFIG_MODEL_PUB_SET, OP_CONFIG_MODEL_PUB_STATUS, ""},
+	{OP_CONFIG_MODEL_PUB_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_MODEL_PUB_VIRT_SET, OP_CONFIG_MODEL_PUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_ADD, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_DELETE, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_DELETE_ALL, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_OVERWRITE, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_MODEL_SUB_VIRT_ADD, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_VIRT_DELETE, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_MODEL_SUB_VIRT_OVERWRITE, OP_CONFIG_MODEL_SUB_STATUS, ""},
+	{OP_CONFIG_NETWORK_TRANSMIT_GET, OP_CONFIG_NETWORK_TRANSMIT_STATUS, ""},
+	{OP_CONFIG_NETWORK_TRANSMIT_SET, OP_CONFIG_NETWORK_TRANSMIT_STATUS, ""},
+	{OP_CONFIG_NETWORK_TRANSMIT_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_RELAY_GET, OP_CONFIG_RELAY_STATUS, "RELAY"},
+	{OP_CONFIG_RELAY_SET, OP_CONFIG_RELAY_STATUS, "RELAY"},
+	{OP_CONFIG_RELAY_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_MODEL_SUB_GET, OP_CONFIG_MODEL_SUB_LIST, ""},
+	{OP_CONFIG_MODEL_SUB_LIST, NO_RESPONSE, ""},
+	{OP_CONFIG_VEND_MODEL_SUB_GET, OP_CONFIG_VEND_MODEL_SUB_LIST, ""},
+	{OP_CONFIG_VEND_MODEL_SUB_LIST, NO_RESPONSE, ""},
+	{OP_CONFIG_POLL_TIMEOUT_LIST, OP_CONFIG_POLL_TIMEOUT_STATUS, ""},
+	{OP_CONFIG_POLL_TIMEOUT_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_HEARTBEAT_PUB_GET, OP_CONFIG_HEARTBEAT_PUB_STATUS, ""},
+	{OP_CONFIG_HEARTBEAT_PUB_SET, OP_CONFIG_HEARTBEAT_PUB_STATUS, ""},
+	{OP_CONFIG_HEARTBEAT_PUB_STATUS, NO_RESPONSE, ""},
+	{OP_CONFIG_HEARTBEAT_SUB_GET, OP_CONFIG_HEARTBEAT_SUB_STATUS, ""},
+	{OP_CONFIG_HEARTBEAT_SUB_SET, OP_CONFIG_HEARTBEAT_SUB_STATUS, ""},
+	{OP_CONFIG_HEARTBEAT_SUB_STATUS, NO_RESPONSE, ""},
+	{OP_MODEL_APP_BIND, OP_MODEL_APP_STATUS, "APPKEY_BIND"},
+	{OP_MODEL_APP_STATUS, NO_RESPONSE, ""},
+	{OP_MODEL_APP_UNBIND, OP_MODEL_APP_STATUS, "APPKEY_UNBIND"},
+	{OP_NETKEY_ADD, OP_NETKEY_STATUS, ""},
+	{OP_NETKEY_DELETE, OP_NETKEY_STATUS, ""},
+	{OP_NETKEY_GET, OP_NETKEY_LIST, ""},
+	{OP_NETKEY_LIST, NO_RESPONSE, ""},
+	{OP_NETKEY_STATUS, NO_RESPONSE, ""},
+	{OP_NETKEY_UPDATE, OP_NETKEY_STATUS, ""},
+	{OP_NODE_IDENTITY_GET, OP_NODE_IDENTITY_STATUS, ""},
+	{OP_NODE_IDENTITY_SET, OP_NODE_IDENTITY_STATUS, ""},
+	{OP_NODE_IDENTITY_STATUS, NO_RESPONSE, ""},
+	{OP_NODE_RESET, OP_NODE_RESET_STATUS, ""},
+	{OP_NODE_RESET_STATUS, NO_RESPONSE, ""},
+	{OP_MODEL_APP_GET, OP_MODEL_APP_LIST, ""},
+	{OP_MODEL_APP_LIST, NO_RESPONSE, ""},
+	{OP_VEND_MODEL_APP_GET, OP_VEND_MODEL_APP_LIST, ""},
+	{OP_VEND_MODEL_APP_LIST, NO_RESPONSE, ""}};
 
 Bluez5MeshModelConfigClient::Bluez5MeshModelConfigClient(uint32_t modelId,
 								Bluez5ProfileMesh *meshProfile, Bluez5MeshAdv *meshAdv,
@@ -115,6 +198,118 @@ BluetoothError Bluez5MeshModelConfigClient::sendData(uint16_t srcAddress, uint16
 										 uint16_t appIndex, uint8_t data[])
 {
 	return BLUETOOTH_ERROR_UNSUPPORTED;
+}
+
+std::vector<BleMeshPendingRequest>::iterator Bluez5MeshModelConfigClient::getRequestFromResponse(uint32_t opcode,
+											   uint16_t destAddr)
+{
+	DEBUG("%s::%d, destAddr: %d", __FUNCTION__, __LINE__ , destAddr);
+	std::lock_guard<std::mutex> guard(pendingReqMutex);
+	for (auto req = pendingRequests.begin();
+			req != pendingRequests.end(); ++req)
+	{
+		DEBUG("resp: %d, opcode: %d, addr: %d", req->resp, opcode, req->addr);
+		if (req->resp == opcode && req->addr == destAddr)
+		{
+			return req;
+		}
+	}
+	return pendingRequests.end();
+}
+
+static gboolean pendingRequestTimerExpired(gpointer userdata)
+{
+	BleMeshPendingRequest *pendingReq = (BleMeshPendingRequest *)userdata;
+	BleMeshConfiguration meshConfig;
+	meshConfig.setConfig(pendingReq->desc);
+
+	DEBUG("No response for: %s, destAddress: %d\n", pendingReq->desc.c_str(), pendingReq->addr);
+	pendingReq->configClient->mMeshAdv->mMesh->getMeshObserver()->modelConfigResult(
+		convertAddressToLowerCase(pendingReq->configClient->mMeshAdv->mAdapter->getAddress()),
+		meshConfig, BLUETOOTH_ERROR_MESH_NO_RESPONSE_FROM_NODE);
+
+	std::lock_guard<std::mutex> guard(pendingReq->configClient->pendingReqMutex);
+	for (auto req = pendingReq->configClient->pendingRequests.begin();
+			req != pendingReq->configClient->pendingRequests.end(); ++req)
+	{
+		if (req->req == pendingReq->req)
+		{
+			DEBUG("Erasing request");
+			pendingReq->configClient->pendingRequests.erase(req);
+			break;
+		}
+	}
+	return false;
+}
+
+bool Bluez5MeshModelConfigClient::requestExists(uint32_t opcode,
+											   uint16_t destAddr)
+{
+	std::lock_guard<std::mutex> guard(pendingReqMutex);
+	for (auto req = pendingRequests.begin();
+			req != pendingRequests.end(); ++req)
+	{
+		if ((*req).req == opcode && (*req).addr == destAddr)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+BluetoothError Bluez5MeshModelConfigClient::deletePendingRequest(uint32_t opcode,
+											   uint16_t destAddr)
+{
+	DEBUG("%s::%d, destAddr: %d", __FUNCTION__, __LINE__ , destAddr);
+	std::lock_guard<std::mutex> guard(pendingReqMutex);
+	for (auto req = pendingRequests.begin();
+			req != pendingRequests.end(); )
+	{
+
+		DEBUG("resp: %d, opcode: %d, addr: %d", req->resp, opcode, req->addr);
+		if (req->resp == opcode && req->addr == destAddr)
+		{
+			DEBUG("Found the request in queue, deleting it");
+			g_source_remove(req->timer);
+			req = pendingRequests.erase(req);
+			/* We continue checking because get and set may have been called
+			 * on the same config and the response for both is same. */
+		}
+		else
+		{
+			++req;
+		}
+	}
+	return BLUETOOTH_ERROR_NONE;
+}
+
+BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
+											   uint16_t destAddr)
+{
+	if (requestExists(opcode, destAddr))
+	{
+		return BLUETOOTH_ERROR_BUSY;
+	}
+	BleMeshPendingRequest pendingReq;
+	for (int i = 0; i < (sizeof(cmds)/sizeof(cmds[0])); ++i)
+	{
+		if (opcode == cmds[i].opcode && NO_RESPONSE != cmds[i].rsp)
+		{
+			pendingReq.req = opcode;
+			pendingReq.resp = cmds[i].rsp;
+			pendingReq.desc = cmds[i].desc;
+			pendingReq.addr = destAddr;
+			pendingReq.configClient = this;
+			pendingRequests.push_back(pendingReq);
+
+			pendingRequests.back().timer =
+				g_timeout_add(RESPOND_WAIT_DURATION * ONE_SECOND,
+							  pendingRequestTimerExpired, &pendingRequests.back());
+
+		}
+	}
+
+	return BLUETOOTH_ERROR_NONE;
 }
 
 uint32_t Bluez5MeshModelConfigClient::printModId(uint8_t *data, bool vendor, const char *offset)
@@ -310,6 +505,13 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 		return false;
 	}
 	DEBUG("Opcode received: %x", opcode);
+	auto req = getRequestFromResponse(opcode, srcAddress);
+	if (req == pendingRequests.end())
+	{
+		return false;
+	}
+	configuration.setConfig(req->desc);
+	deletePendingRequest(opcode, srcAddress);
 
 	switch (opcode & ~OP_UNRELIABLE)
 	{
@@ -324,7 +526,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 
 			DEBUG("NetKey\t%3.3x\n", net_idx);
 			DEBUG("AppKey\t%3.3x\n", app_idx);
-			configuration.setConfig("APPKEY_ADD");
 			opCodeHandled = true;
 			break;
 		}
@@ -361,7 +562,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 				appKeyList.push_back(get_le16(data));
 			}
 
-			configuration.setConfig("APPKEYINDEX");
 			configuration.setAppKeyIndexes(appKeyList);
 			opCodeHandled = true;
 			break;
@@ -381,7 +581,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 			DEBUG("Model ID\t %4.4x\n",mod_id);
 
 			DEBUG("AppIdx\t\t%3.3x\n ", app_idx);
-			configuration.setConfig("APPKEY_BIND");
 			opCodeHandled = true;
 			break;
 		}
@@ -391,7 +590,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 				break;
 
 			DEBUG("Node %4.4x  Default TTL %d\n", srcAddress, data[0]);
-			configuration.setConfig("DEFAULT_TTL");
 			configuration.setTTL(data[0]);
 			DEBUG("Config:%s\n",configuration.getConfig());
 			opCodeHandled = true;
@@ -401,7 +599,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 		{
 			if (dataLen != 1)
 				break;
-			configuration.setConfig("GATT_PROXY");
 			configuration.setGattProxyState(data[0]);
 			DEBUG("Node %4.4x  Proxy state 0x%02x\n", srcAddress, data[0]);
 			opCodeHandled = true;
@@ -417,7 +614,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 			relayStatus.setRelayRetransmitCount(data[1] & 0x7);
 			relayStatus.setRelayRetransmitIntervalSteps(data[1] >> 3);
 
-			configuration.setConfig("RELAY");
 			configuration.setRelayStatus(relayStatus);
 
 			DEBUG("Node %4.4x: Relay 0x%02x, cnt %d, steps %d\n",
@@ -430,7 +626,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 			DEBUG("OP_DEV_COMP_STATUS");
 			BleMeshCompositionData compositionData;
 			compositionReceived(data, dataLen, compositionData);
-			configuration.setConfig("COMPOSITION_DATA");
 			configuration.setCompositionData(compositionData);
 			opCodeHandled = true;
 			break;
@@ -453,6 +648,11 @@ BluetoothError Bluez5MeshModelConfigClient::getDefaultTTL(uint16_t destAddress, 
 	uint16_t n;
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	int32_t status = addPendingRequest(OP_CONFIG_DEFAULT_TTL_GET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 
 	n = meshOpcodeSet(OP_CONFIG_DEFAULT_TTL_GET, msg);
 
@@ -465,6 +665,11 @@ BluetoothError Bluez5MeshModelConfigClient::getGATTProxy(uint16_t destAddress, u
 	uint16_t n;
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	int32_t status = addPendingRequest(OP_CONFIG_PROXY_GET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 
 	n = meshOpcodeSet(OP_CONFIG_PROXY_GET, msg);
 
@@ -477,6 +682,11 @@ BluetoothError Bluez5MeshModelConfigClient::getRelay(uint16_t destAddress, uint1
 	uint16_t n;
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	int32_t status = addPendingRequest(OP_CONFIG_RELAY_GET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 
 	n = meshOpcodeSet(OP_CONFIG_RELAY_GET, msg);
 
@@ -489,7 +699,11 @@ BluetoothError Bluez5MeshModelConfigClient::getAppKeyIndex(uint16_t destAddress,
 	uint16_t n;
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-
+	int32_t status = addPendingRequest(OP_APPKEY_GET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 	n = meshOpcodeSet(OP_APPKEY_GET, msg);
 
 	put_le16(netKeyIndex, msg + n);
@@ -544,7 +758,11 @@ BluetoothError Bluez5MeshModelConfigClient::configBindAppKey(uint16_t destAddres
 	uint8_t msg[32];
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-
+	int32_t status = addPendingRequest(OP_MODEL_APP_BIND, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 	n = meshOpcodeSet(OP_MODEL_APP_BIND, msg);
 
 	put_le16(destAddress, msg + n);
@@ -567,6 +785,11 @@ BluetoothError Bluez5MeshModelConfigClient::setDefaultTTL(uint16_t destAddress, 
 	if (ttl > TTL_MASK)
 		return BLUETOOTH_ERROR_PARAM_INVALID;
 
+	int32_t status = addPendingRequest(OP_CONFIG_DEFAULT_TTL_SET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 	n = meshOpcodeSet(OP_CONFIG_DEFAULT_TTL_SET, msg);
 	msg[n++] = ttl;
 
@@ -579,7 +802,11 @@ BluetoothError Bluez5MeshModelConfigClient::setGATTProxy(uint16_t destAddress, u
 	uint16_t n;
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-
+	int32_t status = addPendingRequest(OP_CONFIG_PROXY_SET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 	n = meshOpcodeSet(OP_CONFIG_PROXY_SET, msg);
 	msg[n++] = gattProxyState;
 
@@ -593,6 +820,11 @@ BluetoothError Bluez5MeshModelConfigClient::setRelay(uint16_t destAddress, uint1
 
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
 	DEBUG("%d::%d::%d",relayStatus->getRelay(),relayStatus->getrelayRetransmitCount(), relayStatus->getRelayRetransmitIntervalSteps());
+	int32_t status = addPendingRequest(OP_CONFIG_RELAY_SET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 	n = meshOpcodeSet(OP_CONFIG_RELAY_SET, msg);
 
 	msg[n++] = relayStatus->getRelay();
@@ -606,6 +838,19 @@ BluetoothError Bluez5MeshModelConfigClient::addAppKey(uint16_t destAddress,
 {
 	GError *error = 0;
 	BluetoothError silError = BLUETOOTH_ERROR_FAIL;
+	int32_t status;
+	if (update)
+	{
+		status = addPendingRequest(OP_APPKEY_UPDATE, destAddress);
+	}
+	else
+	{
+		status = addPendingRequest(OP_APPKEY_ADD, destAddress);
+	}
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 
 	bluez_mesh_node1_call_add_app_key_sync(mMeshAdv->getBluezNodeInterface(), BLUEZ_MESH_ELEMENT_PATH,
 										destAddress, appKeyIndex, netKeyIndex, update, NULL, &error);
@@ -679,6 +924,11 @@ BluetoothError Bluez5MeshModelConfigClient::getCompositionData(uint16_t destAddr
 	uint16_t n;
 	uint8_t msg[32];
 
+	int32_t status = addPendingRequest(OP_DEV_COMP_GET, destAddress);
+	if (BLUETOOTH_ERROR_NONE != status)
+	{
+		return (BluetoothError)status;
+	}
 	n = meshOpcodeSet(OP_DEV_COMP_GET, msg);
 
 	/* By default, use page 0 */
