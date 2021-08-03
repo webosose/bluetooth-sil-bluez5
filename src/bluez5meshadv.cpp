@@ -502,6 +502,16 @@ BluetoothError Bluez5MeshAdv::configSet(
 									appKeyIndex, modelId, ttl, relayStatus);
 }
 
+BluetoothError Bluez5MeshAdv::deleteNode(uint16_t destAddress, uint8_t count)
+{
+	if (!mNodeInterface)
+	{
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	return mElements[0].deleteNode(destAddress, count);
+}
+
 GVariant* Bluez5MeshAdv::createEmptyStringArrayVariant()
 {
 	GVariantBuilder *builder = 0;
@@ -646,4 +656,26 @@ BluetoothError Bluez5MeshAdv::getCompositionData(uint16_t destAddress)
 BluetoothError Bluez5MeshAdv::updateNodeInfo(std::vector<uint16_t> &unicastAddresses)
 {
 	return mMeshAdvProv->updateNodeInfo(unicastAddresses);
+}
+
+BluetoothError Bluez5MeshAdv::deleteRemoteNodeFromLocalKeyDatabase(uint16_t primaryAddress, uint8_t count)
+{
+
+	if (!mMgmtInterface)
+	{
+		return BLUETOOTH_ERROR_NOT_ALLOWED;
+	}
+
+	GError *error = 0;
+	BluetoothError silError = BLUETOOTH_ERROR_FAIL;
+
+	bluez_mesh_management1_call_delete_remote_node_sync(mMgmtInterface,
+													primaryAddress, count, NULL, &error);
+	if (error)
+	{
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "deleteRemoteNode failed: %s :%d", error->message, primaryAddress);
+		g_error_free(error);
+		return BLUETOOTH_ERROR_FAIL;
+	}
+	return BLUETOOTH_ERROR_NONE;
 }

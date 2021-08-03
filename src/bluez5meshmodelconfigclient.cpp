@@ -176,7 +176,7 @@ static struct BleMeshConfigCmd cmds[] = {
 	{OP_NODE_IDENTITY_GET, OP_NODE_IDENTITY_STATUS, ""},
 	{OP_NODE_IDENTITY_SET, OP_NODE_IDENTITY_STATUS, ""},
 	{OP_NODE_IDENTITY_STATUS, NO_RESPONSE, ""},
-	{OP_NODE_RESET, OP_NODE_RESET_STATUS, ""},
+	{OP_NODE_RESET, OP_NODE_RESET_STATUS, "NODE_RESET"},
 	{OP_NODE_RESET_STATUS, NO_RESPONSE, ""},
 	{OP_MODEL_APP_GET, OP_MODEL_APP_LIST, ""},
 	{OP_MODEL_APP_LIST, NO_RESPONSE, ""},
@@ -220,13 +220,23 @@ std::vector<BleMeshPendingRequest>::iterator Bluez5MeshModelConfigClient::getReq
 static gboolean pendingRequestTimerExpired(gpointer userdata)
 {
 	BleMeshPendingRequest *pendingReq = (BleMeshPendingRequest *)userdata;
-	BleMeshConfiguration meshConfig;
-	meshConfig.setConfig(pendingReq->desc);
 
 	DEBUG("No response for: %s, destAddress: %d\n", pendingReq->desc.c_str(), pendingReq->addr);
+
+	BleMeshConfiguration meshConfig;
+
+	meshConfig.setConfig(pendingReq->desc);
+	meshConfig.setNodeAddress(pendingReq->addr);
+
 	pendingReq->configClient->mMeshAdv->mMesh->getMeshObserver()->modelConfigResult(
 		convertAddressToLowerCase(pendingReq->configClient->mMeshAdv->mAdapter->getAddress()),
 		meshConfig, BLUETOOTH_ERROR_MESH_NO_RESPONSE_FROM_NODE);
+
+	if(pendingReq->req == OP_NODE_RESET)
+	{
+		pendingReq->configClient->mMeshAdv->deleteRemoteNodeFromLocalKeyDatabase(
+			pendingReq->addr, pendingReq->count);
+	}
 
 	std::lock_guard<std::mutex> guard(pendingReq->configClient->pendingReqMutex);
 	for (auto req = pendingReq->configClient->pendingRequests.begin();
@@ -284,7 +294,7 @@ BluetoothError Bluez5MeshModelConfigClient::deletePendingRequest(uint32_t opcode
 }
 
 BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
-											   uint16_t destAddr)
+											   uint16_t destAddr, uint8_t count)
 {
 	if (requestExists(opcode, destAddr))
 	{
@@ -296,6 +306,7 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 		if (opcode == cmds[i].opcode && NO_RESPONSE != cmds[i].rsp)
 		{
 			pendingReq.req = opcode;
+			pendingReq.count = count;
 			pendingReq.resp = cmds[i].rsp;
 			pendingReq.desc = cmds[i].desc;
 			pendingReq.addr = destAddr;
@@ -491,10 +502,13 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 									uint16_t appIndex, uint8_t data[], uint32_t dataLen)
 {
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	DEBUG("srcAddress:%d::destAddress:%d",srcAddress,destAddress);
 	int32_t n = 0;
 	uint32_t opcode;
 	bool opCodeHandled = false;
 	BleMeshConfiguration configuration;
+
+	configuration.setNodeAddress(srcAddress);
 
 	if (meshOpcodeGet(data, dataLen, &opcode, &n))
 	{
@@ -512,7 +526,6 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 		return false;
 	}
 	configuration.setConfig(req->desc);
-	deletePendingRequest(opcode, srcAddress);
 
 	switch (opcode & ~OP_UNRELIABLE)
 	{
@@ -631,9 +644,15 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 			opCodeHandled = true;
 			break;
 		}
+		case OP_NODE_RESET_STATUS:
+		{
+			mMeshAdv->deleteRemoteNodeFromLocalKeyDatabase(req->addr, req->count);
+		}
 		default:
 			DEBUG("Op code not handled");
 	}
+
+	deletePendingRequest(opcode, srcAddress);
 
 	if (opCodeHandled)
 	{
@@ -994,6 +1013,23 @@ BluetoothError Bluez5MeshModelConfigClient::getCompositionData(uint16_t destAddr
 	if (BLUETOOTH_ERROR_NONE == btError)
 	{
 		addPendingRequest(OP_DEV_COMP_GET, destAddress);
+	}
+	return btError;
+}
+
+BluetoothError Bluez5MeshModelConfigClient::deleteNode(uint16_t destAddress, uint8_t count)
+{
+	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	uint8_t msg[32];
+	uint16_t n;
+	BluetoothError btError = BLUETOOTH_ERROR_NONE;
+
+	n = meshOpcodeSet(OP_NODE_RESET, msg);
+
+	btError = mMeshAdv->devKeySend(destAddress, DEFAULT_NET_KEY_INDEX, msg, n);
+	if (BLUETOOTH_ERROR_NONE == btError)
+	{
+		addPendingRequest(OP_NODE_RESET, destAddress, count);
 	}
 	return btError;
 }

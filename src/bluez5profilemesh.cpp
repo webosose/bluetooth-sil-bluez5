@@ -260,6 +260,21 @@ BluetoothError Bluez5ProfileMesh::configSet(const std::string &bearer,
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
+BluetoothError Bluez5ProfileMesh::deleteNode(
+		const std::string &bearer, uint16_t destAddress, uint8_t count)
+{
+	if (bearer == "PB-GATT")
+	{
+		return BLUETOOTH_ERROR_UNSUPPORTED;
+	}
+	else if (bearer == "PB-ADV")
+	{
+		return mMeshAdv->deleteNode(destAddress, count);
+	}
+
+	return BLUETOOTH_ERROR_PARAM_INVALID;
+}
+
 void Bluez5ProfileMesh::getProperties(const std::string &address,
 									BluetoothPropertiesResultCallback callback)
 {

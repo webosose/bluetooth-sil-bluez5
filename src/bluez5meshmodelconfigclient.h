@@ -37,6 +37,7 @@ public:
 	uint32_t req;
 	uint32_t resp;
 	uint16_t addr;
+	uint8_t count;
 	std::string desc;
 	Bluez5MeshModelConfigClient *configClient;
 };
@@ -61,6 +62,7 @@ public:
 		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
 		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus);
 	BluetoothError getCompositionData(uint16_t destAddress);
+	BluetoothError deleteNode(uint16_t destAddress, uint8_t count);
 
 private:
 	const char * sigModelString(uint16_t sigModelId);
@@ -82,7 +84,7 @@ private:
 	uint16_t putModelId(uint8_t *buf, uint32_t *args, bool vendor);
 	BluetoothError addAppKey(uint16_t destAddress,	uint16_t netKeyIndex,
 								uint16_t appKeyIndex, bool update);
-	BluetoothError addPendingRequest(uint32_t opcode, uint16_t destAddr);
+	BluetoothError addPendingRequest(uint32_t opcode, uint16_t destAddr, uint8_t count = 0);
 	bool requestExists(uint32_t opcode, uint16_t destAddr);
 	BluetoothError deletePendingRequest(uint32_t opcode, uint16_t destAddr);
 	std::vector<BleMeshPendingRequest>::iterator getRequestFromResponse(uint32_t opcode,

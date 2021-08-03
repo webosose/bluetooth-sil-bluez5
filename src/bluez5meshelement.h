@@ -67,6 +67,7 @@ public:
 		uint8_t gattProxyState, uint16_t netKeyIndex, uint16_t appKeyIndex,
 		uint32_t modelId, uint8_t ttl, BleMeshRelayStatus *relayStatus);
 	BluetoothError getCompositionData(uint16_t destAddress);
+	BluetoothError deleteNode(uint16_t destAddress, uint8_t count);
 
 	/* Generic onoff client model's APIs */
 	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff);

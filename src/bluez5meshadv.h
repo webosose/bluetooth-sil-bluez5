@@ -69,6 +69,8 @@ public:
 		uint16_t destAddress, const std::string &config,
 		uint8_t gattProxyState, uint16_t netKeyIndex = 0, uint16_t appKeyIndex = 0,
 		uint32_t modelId = 0, uint8_t ttl = 0, BleMeshRelayStatus *relayStatus = NULL);
+	BluetoothError deleteNode(uint16_t destAddress, uint8_t count);
+	BluetoothError deleteRemoteNodeFromLocalKeyDatabase(uint16_t primaryAddress, uint8_t count);
 	BluetoothError setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff, bool ack = false);
 	BluetoothError sendPassThrough(uint16_t destAddress, uint16_t appIndex, const std::vector<uint8_t> value);
 	BluetoothError updateNodeInfo(std::vector<uint16_t> &unicastAddresses);

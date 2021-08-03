@@ -73,6 +73,7 @@ public:
 							uint16_t destAddress, uint16_t appKeyIndex, bool onoff, bool ack = false);
 	BluetoothError updateNodeInfo(const std::string &bearer,
 								std::vector<uint16_t> &unicastAddresses);
+	BluetoothError deleteNode(const std::string &bearer, uint16_t destAddress, uint8_t count);
 
 private:
 	GDBusObjectManager *mObjectManager;

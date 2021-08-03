@@ -177,6 +177,13 @@ BluetoothError Bluez5MeshElement::configSet(
 									ttl, relayStatus);
 }
 
+BluetoothError Bluez5MeshElement::deleteNode(uint16_t destAddress, uint8_t count)
+{
+	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
+	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
+	return configClient->deleteNode(destAddress, count);
+}
+
 BluetoothError Bluez5MeshElement::getCompositionData(uint16_t destAddress)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
