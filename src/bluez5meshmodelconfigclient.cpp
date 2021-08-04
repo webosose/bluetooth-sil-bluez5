@@ -540,6 +540,9 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 
 			DEBUG("NetKey\t%3.3x\n", net_idx);
 			DEBUG("AppKey\t%3.3x\n", app_idx);
+
+			configuration.setNetKeyIndex(net_idx);
+			configuration.setAppKeyIndex(app_idx);
 			opCodeHandled = true;
 			break;
 		}
