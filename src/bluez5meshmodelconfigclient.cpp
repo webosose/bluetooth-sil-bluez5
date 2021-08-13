@@ -300,6 +300,7 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 			pendingReq.desc = cmds[i].desc;
 			pendingReq.addr = destAddr;
 			pendingReq.configClient = this;
+			pendingReq.timer = 0;
 			pendingRequests.push_back(pendingReq);
 
 			pendingRequests.back().timer =
