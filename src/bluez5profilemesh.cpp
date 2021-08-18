@@ -34,9 +34,6 @@ Bluez5ProfileMesh::Bluez5ProfileMesh(Bluez5Adapter *adapter) : Bluez5ProfileBase
 {
 	GError *error = 0;
 
-	g_bus_watch_name(G_BUS_TYPE_SYSTEM, BLUEZ_MESH_NAME, G_BUS_NAME_WATCHER_FLAGS_NONE,
-					 handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);
-
 	std::vector<uint32_t> sigModelIds = {CONFIG_CLIENT_MODEL_ID, GENERIC_ONOFF_CLIENT_MODEL_ID};
 	std::vector<uint32_t> vendorModelIds;
 
@@ -51,49 +48,6 @@ Bluez5ProfileMesh::~Bluez5ProfileMesh()
 		delete mMeshAdv;
 		mMeshAdv = nullptr;
 	}
-}
-
-void Bluez5ProfileMesh::handleBluezServiceStarted(GDBusConnection *conn, const gchar *name,
-												  const gchar *nameOwner, gpointer userData)
-{
-	Bluez5ProfileMesh *mesh = static_cast<Bluez5ProfileMesh *>(userData);
-
-	GError *error = 0;
-	mesh->mObjectManager = g_dbus_object_manager_client_new_sync(
-		conn, G_DBUS_OBJECT_MANAGER_CLIENT_FLAGS_NONE,
-		"org.bluez", "/", NULL, NULL, NULL, NULL, &error);
-	if (error)
-	{
-		ERROR(MSGID_MESH_PROFILE_ERROR, 0,
-			  "Failed to create object manager: %s", error->message);
-		g_error_free(error);
-		return;
-	}
-
-	g_signal_connect(mesh->mObjectManager, "object-added", G_CALLBACK(handleObjectAdded), mesh);
-	g_signal_connect(mesh->mObjectManager, "object-removed", G_CALLBACK(handleObjectRemoved), mesh);
-}
-
-void Bluez5ProfileMesh::handleBluezServiceStopped(GDBusConnection *conn, const gchar *name,
-												  gpointer userData)
-{
-}
-
-void Bluez5ProfileMesh::handleObjectAdded(GDBusObjectManager *objectManager,
-										  GDBusObject *object, void *userData)
-{
-	DEBUG("handleObjectAdded");
-	Bluez5ProfileMesh *mesh = static_cast<Bluez5ProfileMesh *>(userData);
-	std::string objectPath = g_dbus_object_get_object_path(object);
-
-	auto adapterPath = mesh->mAdapter->getObjectPath();
-	if (objectPath.compare(0, adapterPath.length(), adapterPath))
-		return;
-}
-
-void Bluez5ProfileMesh::handleObjectRemoved(GDBusObjectManager *objectManager,
-											GDBusObject *object, void *userData)
-{
 }
 
 BluetoothError Bluez5ProfileMesh::createNetwork(const std::string &bearer)

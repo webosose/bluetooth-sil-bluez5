@@ -40,12 +40,6 @@ public:
 	~Bluez5ProfileMesh();
 	BluetoothMeshObserver* getMeshObserver() { return BluetoothMeshProfile::getMeshObserver(); }
 
-	/* Dbus callback */
-	static void handleBluezServiceStarted(GDBusConnection* conn, const gchar* name, const gchar* nameOwner, gpointer user_data);
-	static void handleBluezServiceStopped(GDBusConnection* conn, const gchar* name, gpointer user_data);
-	static void handleObjectAdded(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
-	static void handleObjectRemoved(GDBusObjectManager* objectManager, GDBusObject* object, void* userData);
-
 	void getProperties(const std::string &address, BluetoothPropertiesResultCallback callback);
 	void getProperty(const std::string &address, BluetoothProperty::Type type, BluetoothPropertyResultCallback callback);
 
