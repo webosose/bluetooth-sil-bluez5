@@ -993,6 +993,8 @@ BluetoothError Bluez5MeshModelConfigClient::addAppKey(uint16_t destAddress,
 		{
 			silError = BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY;
 		}
+		else
+			silError = BLUETOOTH_ERROR_FAIL;
 		g_error_free(error);
 	}
 	if (BLUETOOTH_ERROR_NONE == silError)

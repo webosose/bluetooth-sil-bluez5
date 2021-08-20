@@ -33,6 +33,11 @@ class Bluez5MeshModelConfigClient;
 class BleMeshKeyRefreshData
 {
 public:
+	BleMeshKeyRefreshData():
+	netKeyIndex(0),
+	appKeyIndex(0),
+	waitTime(0),
+	numberOfElements(0) {}
 	uint16_t netKeyIndex;
 	uint16_t appKeyIndex;
 	int32_t waitTime;
@@ -42,6 +47,12 @@ public:
 class BleMeshPendingRequest
 {
 public:
+	BleMeshPendingRequest():
+	timer(0),
+	req(0),
+	resp(0),
+	addr(0),
+	count(0) {}
 	guint timer;
 	uint32_t req;
 	uint32_t resp;
