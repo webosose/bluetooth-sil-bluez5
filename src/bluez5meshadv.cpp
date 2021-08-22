@@ -703,7 +703,7 @@ void Bluez5MeshAdv::distributeKeys(bool refreshAppKeys, std::vector<uint16_t> ap
 			* response for keyRefresh
 			*/
 			ERROR(MSGID_MESH_PROFILE_ERROR, 0,
-					"netKey update to:%d failed", node->getNumberOfElements());
+					"netKey update to:%d failed", node->getPrimaryElementAddress());
 			deleteRemoteNodeFromLocalKeyDatabase(node->getPrimaryElementAddress(),
 											node->getNumberOfElements());
 			mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_NETKEY_UPDATE_FAILED,
@@ -893,7 +893,11 @@ void Bluez5MeshAdv::keyRefresh(BluetoothResultCallback callback,
 
 		distributeKeys(refreshAppKeys, appKeyIndexesToRefresh,
 						nodes, netKeyIndex, waitTime);
-		sleep(waitTime);
+		/* RESPOND_WAIT_DURATION is added because otherwise it is observed that
+		 * timer expired and fail response
+		 * was sent to application after entering phase 2.
+		 */
+		sleep(waitTime + RESPOND_WAIT_DURATION);
 		/* Start of Phase 2 */
 		setKeyRefreshPhase(netKeyIndex, 2, nodes);
 		sleep(waitTime);

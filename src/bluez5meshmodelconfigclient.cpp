@@ -357,15 +357,15 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 			pendingReq.desc = cmds[i].desc;
 			pendingReq.addr = destAddr;
 			pendingReq.configClient = this;
-			pendingRequests.push_back(pendingReq);
 			if (!keyRefreshData.waitTime)
 				keyRefreshData.waitTime = RESPOND_WAIT_DURATION * ONE_SECOND;
 			else
 				keyRefreshData.waitTime = keyRefreshData.waitTime * ONE_SECOND;
 			pendingReq.keyRefreshData = keyRefreshData;
+			pendingRequests.push_back(pendingReq);
 
 			pendingRequests.back().timer =
-				g_timeout_add(keyRefreshData.waitTime * ONE_SECOND,
+				g_timeout_add(keyRefreshData.waitTime,
 							  pendingRequestTimerExpired, &pendingRequests.back());
 
 		}
@@ -573,6 +573,7 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 	auto req = getRequestFromResponse(opcode, srcAddress);
 	if (req == pendingRequests.end())
 	{
+		DEBUG("Request not present\n");
 		return false;
 	}
 	configuration.setConfig(req->desc);
@@ -700,6 +701,16 @@ bool Bluez5MeshModelConfigClient::recvData(uint16_t srcAddress, uint16_t destAdd
 		case OP_NODE_RESET_STATUS:
 		{
 			mMeshAdv->deleteRemoteNodeFromLocalKeyDatabase(req->addr, req->count);
+			break;
+		}
+		case OP_NETKEY_STATUS:
+		{
+			if (dataLen != 3)
+				break;
+
+			DEBUG("Node %4.4x NetKey status %d\n", srcAddress,
+							data[0]);
+			break;
 		}
 		default:
 			DEBUG("Op code not handled");
@@ -835,7 +846,7 @@ BluetoothError Bluez5MeshModelConfigClient::configNetKeyUpdate(uint16_t destAddr
 	uint8_t msg[32];
 	GError *error = 0;
 
-	DEBUG("%s::%s",__FILE__,__FUNCTION__);
+	DEBUG("%s::%s::waitTime: %d",__FILE__,__FUNCTION__, waitTime);
 	BleMeshKeyRefreshData keyRefreshData;
 	keyRefreshData.netKeyIndex = netKeyIndex;
 	keyRefreshData.waitTime = waitTime;
@@ -844,6 +855,7 @@ BluetoothError Bluez5MeshModelConfigClient::configNetKeyUpdate(uint16_t destAddr
 							keyRefreshData);
 	if (BLUETOOTH_ERROR_NONE != status)
 	{
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "Request already present");
 		return (BluetoothError)status;
 	}
 	bluez_mesh_node1_call_add_net_key_sync(
@@ -851,10 +863,10 @@ BluetoothError Bluez5MeshModelConfigClient::configNetKeyUpdate(uint16_t destAddr
 										destAddress, netKeyIndex, netKeyIndex, true, NULL, &error);
 	if (error)
 	{
-		DEBUG("bluez_mesh_node1_call_add_net_key_sync failed: %s", error->message);
+		ERROR(MSGID_MESH_PROFILE_ERROR, 0, "bluez_mesh_node1_call_add_net_key_sync failed: %s", error->message);
 		g_error_free(error);
 		error = NULL;
-		deletePendingRequest(OP_NETKEY_UPDATE, destAddress);
+		deletePendingRequest(OP_NETKEY_STATUS, destAddress);
 		return BLUETOOTH_ERROR_FAIL;
 	}
 	return BLUETOOTH_ERROR_NONE;
