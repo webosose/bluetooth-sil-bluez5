@@ -238,6 +238,8 @@ static gboolean pendingRequestTimerExpired(gpointer userdata)
 										convertAddressToLowerCase(pendingReq->configClient->mMeshAdv->mAdapter->getAddress()),
 										pendingReq->keyRefreshData.netKeyIndex, status, 1,
 										pendingReq->addr);
+		pendingReq->configClient->mMeshAdv->deleteRemoteNodeFromLocalKeyDatabase(
+			pendingReq->addr, pendingReq->count);
 	}
 	if (pendingReq->resp == OP_APPKEY_STATUS)
 	{
@@ -297,6 +299,7 @@ BluetoothError Bluez5MeshModelConfigClient::deletePendingRequest(uint32_t opcode
 		{
 			DEBUG("Found the request in queue, deleting it");
 			g_source_remove(req->timer);
+			req->timer = 0;
 			req = pendingRequests.erase(req);
 			/* We continue checking because get and set may have been called
 			 * on the same config and the response for both is same. */
@@ -312,10 +315,7 @@ BluetoothError Bluez5MeshModelConfigClient::deletePendingRequest(uint32_t opcode
 BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 											   uint16_t destAddr, uint8_t count)
 {
-	if (requestExists(opcode, destAddr))
-	{
-		return BLUETOOTH_ERROR_BUSY;
-	}
+
 	BleMeshPendingRequest pendingReq;
 	for (int i = 0; i < (sizeof(cmds)/sizeof(cmds[0])); ++i)
 	{
@@ -328,11 +328,12 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 			pendingReq.addr = destAddr;
 			pendingReq.configClient = this;
 			pendingReq.timer = 0;
+			std::lock_guard<std::mutex> guard(pendingReqMutex);
 			pendingRequests.push_back(pendingReq);
 			pendingRequests.back().timer =
 				g_timeout_add(RESPOND_WAIT_DURATION * ONE_SECOND,
 							  pendingRequestTimerExpired, &pendingRequests.back());
-
+			break;
 		}
 	}
 
@@ -343,15 +344,12 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 											   uint16_t destAddr,
 												BleMeshKeyRefreshData keyRefreshData)
 {
-	if (requestExists(opcode, destAddr))
-	{
-		return BLUETOOTH_ERROR_BUSY;
-	}
 	BleMeshPendingRequest pendingReq;
 	for (int i = 0; i < (sizeof(cmds)/sizeof(cmds[0])); ++i)
 	{
 		if (opcode == cmds[i].opcode && NO_RESPONSE != cmds[i].rsp)
 		{
+			DEBUG("%s::%d::opcode: %d, destAddr: %d", __FUNCTION__, __LINE__, opcode, destAddr);
 			pendingReq.req = opcode;
 			pendingReq.resp = cmds[i].rsp;
 			pendingReq.desc = cmds[i].desc;
@@ -362,11 +360,13 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 			else
 				keyRefreshData.waitTime = keyRefreshData.waitTime * ONE_SECOND;
 			pendingReq.keyRefreshData = keyRefreshData;
+			std::lock_guard<std::mutex> guard(pendingReqMutex);
 			pendingRequests.push_back(pendingReq);
 
 			pendingRequests.back().timer =
 				g_timeout_add(keyRefreshData.waitTime,
 							  pendingRequestTimerExpired, &pendingRequests.back());
+			break;
 
 		}
 	}
