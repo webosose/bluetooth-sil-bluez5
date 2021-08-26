@@ -66,7 +66,7 @@ public:
 class Bluez5MeshModelConfigClient : public Bluez5MeshModel
 {
 public:
-	std::vector<BleMeshPendingRequest> pendingRequests;
+	std::vector<BleMeshPendingRequest *> pendingRequests;
 
 	Bluez5MeshModelConfigClient(uint32_t modelId, Bluez5ProfileMesh *meshProfile,
 								Bluez5MeshAdv *meshAdv, Bluez5Adapter *adapter);
@@ -111,7 +111,7 @@ private:
 	BluetoothError addPendingRequest(uint32_t opcode, uint16_t destAddr, BleMeshKeyRefreshData keyRefreshData);
 	bool requestExists(uint32_t opcode, uint16_t destAddr);
 	BluetoothError deletePendingRequest(uint32_t opcode, uint16_t destAddr);
-	std::vector<BleMeshPendingRequest>::iterator getRequestFromResponse(uint32_t opcode,
+	std::vector<BleMeshPendingRequest *>::iterator getRequestFromResponse(uint32_t opcode,
 											uint16_t destAddr);
 	BluetoothError configAppKeyDelete(uint16_t destAddress, uint16_t netKeyIndex,
 										uint16_t appKeyIndex);

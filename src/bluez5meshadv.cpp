@@ -732,14 +732,11 @@ void Bluez5MeshAdv::distributeKeys(bool refreshAppKeys, std::vector<uint16_t> ap
 				// Generating new key for appIndex failed
 				ERROR(MSGID_MESH_PROFILE_ERROR, 0,
 					"Generating new key for appIndex:%d failed", appKeyIndex);
-				mMesh->getMeshObserver()->keyRefreshResult(BLUETOOTH_ERROR_MESH_CANNOT_UPDATE_APPKEY,
-										convertAddressToLowerCase(mAdapter->getAddress()),
-										netKeyIndex, status, 1, appKeyIndex);
-
 				g_error_free(error);
 				error = NULL;
 				continue;
 			}
+			DEBUG("Generating new app key for index : %d completed", appKeyIndex);
 			btError = mElements[0].configSet(LOCAL_NODE_ADDRESS,
 								"APPKEY_UPDATE", 0, netKeyIndex, appKeyIndex,
 								0, 0, NULL, waitTime);
@@ -750,7 +747,7 @@ void Bluez5MeshAdv::distributeKeys(bool refreshAppKeys, std::vector<uint16_t> ap
 						netKeyIndex, status, 1,
 						LOCAL_NODE_ADDRESS, appKeyIndex);
 			}
-			DEBUG("Generating new app key for index : %d completed", appKeyIndex);
+			DEBUG("Updated appkeyIndex : %d in local node", appKeyIndex);
 			for (auto node : nodes)
 			{
 				std::vector<uint16_t> appKeyIndexes = node.getAppKeyIndexes();
