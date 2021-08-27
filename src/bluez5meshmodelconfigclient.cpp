@@ -333,12 +333,12 @@ BluetoothError Bluez5MeshModelConfigClient::deletePendingRequest(uint32_t opcode
 BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 											   uint16_t destAddr, uint8_t count)
 {
-
-	BleMeshPendingRequest *pendingReq = new BleMeshPendingRequest();
 	for (int i = 0; i < (sizeof(cmds)/sizeof(cmds[0])); ++i)
 	{
 		if (opcode == cmds[i].opcode && NO_RESPONSE != cmds[i].rsp)
 		{
+			DEBUG("%s::%d::opcode: %d, destAddr: %d", __FUNCTION__, __LINE__, opcode, destAddr);
+			BleMeshPendingRequest *pendingReq = new BleMeshPendingRequest();
 			pendingReq->req = opcode;
 			pendingReq->count = count;
 			pendingReq->resp = cmds[i].rsp;
@@ -360,12 +360,12 @@ BluetoothError Bluez5MeshModelConfigClient::addPendingRequest(uint32_t opcode,
 											   uint16_t destAddr,
 												BleMeshKeyRefreshData keyRefreshData)
 {
-	BleMeshPendingRequest *pendingReq = new BleMeshPendingRequest();
 	for (int i = 0; i < (sizeof(cmds)/sizeof(cmds[0])); ++i)
 	{
 		if (opcode == cmds[i].opcode && NO_RESPONSE != cmds[i].rsp)
 		{
 			DEBUG("%s::%d::opcode: %d, destAddr: %d", __FUNCTION__, __LINE__, opcode, destAddr);
+			BleMeshPendingRequest *pendingReq = new BleMeshPendingRequest();
 			pendingReq->req = opcode;
 			pendingReq->resp = cmds[i].rsp;
 			pendingReq->desc = cmds[i].desc;
