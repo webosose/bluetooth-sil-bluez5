@@ -52,7 +52,8 @@ public:
 	req(0),
 	resp(0),
 	addr(0),
-	count(0) {}
+	count(0),
+	configClient(nullptr) {}
 	guint timer;
 	uint32_t req;
 	uint32_t resp;
