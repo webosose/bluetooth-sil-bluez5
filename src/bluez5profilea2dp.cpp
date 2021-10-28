@@ -525,7 +525,7 @@ void Bluez5ProfileA2dp::updateTransportProperties(Bluez5ProfileA2dp *pA2dp)
 		return;
 
 	free_desktop_dbus_properties_call_get_all_sync(pA2dp->mPropertiesProxy, "org.bluez.MediaTransport1", &propsVar, NULL, &error);
-	if (!error)
+	if (!error && propsVar != NULL)
 	{
 		for (int n = 0; n < g_variant_n_children(propsVar); n++)
 		{

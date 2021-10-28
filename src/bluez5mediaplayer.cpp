@@ -1,4 +1,4 @@
-// Copyright (c) 2020 LG Electronics, Inc.
+// Copyright (c) 2020-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -103,7 +103,8 @@ void Bluez5MediaPlayer::getAllProperties()
 	free_desktop_dbus_properties_call_get_all_sync(
 		mPropertiesProxy,
 		"org.bluez.MediaPlayer1", &propsVar, NULL, NULL);
-	mediaPlayerPropertiesChanged(propsVar);
+	if (propsVar != NULL)
+		mediaPlayerPropertiesChanged(propsVar);
 	g_variant_unref(propsVar);
 }
 
@@ -529,74 +530,77 @@ bool Bluez5MediaPlayer::updatePlayerProperties()
 		free_desktop_dbus_properties_call_get_all_sync(
 			mPropertiesProxy,
 			"org.bluez.MediaPlayer1", &changedProperties, NULL, NULL);
-		for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+		if (changedProperties != NULL)
 		{
-			GVariant *propertyVar = g_variant_get_child_value(changedProperties, n);
-			GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
-			GVariant *propVar = g_variant_get_child_value(propertyVar, 1);
+			for (int n = 0; n < g_variant_n_children(changedProperties); n++)
+			{
+				GVariant *propertyVar = g_variant_get_child_value(changedProperties, n);
+				GVariant *keyVar = g_variant_get_child_value(propertyVar, 0);
+				GVariant *propVar = g_variant_get_child_value(propertyVar, 1);
 
-			std::string key = g_variant_get_string(keyVar, NULL);
-			if ("Name" == key)
-			{
-				std::string value = g_variant_get_string(
-					g_variant_get_variant(propVar), NULL);
-				if (mPlayerInfo.getName() != value)
+				std::string key = g_variant_get_string(keyVar, NULL);
+				if ("Name" == key)
 				{
-					mPlayerInfo.setName(value);
-					changed = true;
-					DEBUG("Name: %s", value.c_str());
+					std::string value = g_variant_get_string(
+						g_variant_get_variant(propVar), NULL);
+					if (mPlayerInfo.getName() != value)
+					{
+						mPlayerInfo.setName(value);
+						changed = true;
+						DEBUG("Name: %s", value.c_str());
+					}
 				}
-			}
-			else if ("Type" == key)
-			{
-				std::string value = g_variant_get_string(
-					g_variant_get_variant(propVar), NULL);
-				BluetoothAvrcpPlayerType type = playerTypeStringToEnum(value);
-				if (mPlayerInfo.getType() != type)
+				else if ("Type" == key)
 				{
-					mPlayerInfo.setType(type);
-					changed = true;
-					DEBUG("type: %s", value.c_str());
-				}
-			}
-			else if ("Playlist" == key)
-			{
-				std::string value = g_variant_get_string(
+					std::string value = g_variant_get_string(
 					g_variant_get_variant(propVar), NULL);
+					BluetoothAvrcpPlayerType type = playerTypeStringToEnum(value);
+					if (mPlayerInfo.getType() != type)
+					{
+						mPlayerInfo.setType(type);
+						changed = true;
+						DEBUG("type: %s", value.c_str());
+					}
+				}
+				else if ("Playlist" == key)
+				{
+					std::string value = g_variant_get_string(
+						g_variant_get_variant(propVar), NULL);
 
-				size_t pos = value.find("player");
-				if (pos != std::string::npos)
-				{
-					value.erase(0, pos);
-				}
-				if (mPlayerInfo.getPlayListPath() != value)
-				{
+					size_t pos = value.find("player");
+					if (pos != std::string::npos)
+					{
+						value.erase(0, pos);
+					}
+					if (mPlayerInfo.getPlayListPath() != value)
+					{
 
-					mPlayerInfo.setPlayListPath(value);
-					changed = true;
-					DEBUG("playlist path: %s", value.c_str());
+						mPlayerInfo.setPlayListPath(value);
+						changed = true;
+						DEBUG("playlist path: %s", value.c_str());
+					}
 				}
-			}
-			else if ("Browsable" == key)
-			{
-				bool browsable = g_variant_get_boolean(
-					g_variant_get_variant(propVar));
-				if (mPlayerInfo.getBrowsable() != browsable)
+				else if ("Browsable" == key)
 				{
-					mPlayerInfo.setBrowsable(browsable);
-					changed = true;
-					DEBUG("Browsable: %d", browsable);
+					bool browsable = g_variant_get_boolean(
+						g_variant_get_variant(propVar));
+					if (mPlayerInfo.getBrowsable() != browsable)
+					{
+						mPlayerInfo.setBrowsable(browsable);
+						changed = true;
+						DEBUG("Browsable: %d", browsable);
+					}
 				}
-			}
-			else if ("Searchable" == key)
-			{
-				bool searchable = g_variant_get_boolean(
-					g_variant_get_variant(propVar));
-				if (mPlayerInfo.getSearchable() != searchable)
+				else if ("Searchable" == key)
 				{
-					mPlayerInfo.setSearchable(searchable);
-					changed = true;
-					DEBUG("searchable: %d", searchable);
+					bool searchable = g_variant_get_boolean(
+						g_variant_get_variant(propVar));
+					if (mPlayerInfo.getSearchable() != searchable)
+					{
+						mPlayerInfo.setSearchable(searchable);
+						changed = true;
+						DEBUG("searchable: %d", searchable);
+					}
 				}
 			}
 		}

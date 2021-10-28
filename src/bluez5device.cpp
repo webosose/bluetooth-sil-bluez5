@@ -91,7 +91,7 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), this);
 
 	free_desktop_dbus_properties_call_get_all_sync(mPropertiesProxy, "org.bluez.Device1", &propsVar, NULL, NULL);
-	if(!error)
+	if(!error && propsVar != NULL)
 	{
 		for (int n = 0; n < g_variant_n_children(propsVar); n++)
 		{

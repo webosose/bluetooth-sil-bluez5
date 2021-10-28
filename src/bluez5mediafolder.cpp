@@ -1,4 +1,4 @@
-// Copyright (c) 2020 LG Electronics, Inc.
+// Copyright (c) 2020-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,8 @@ Bluez5MediaFolder::Bluez5MediaFolder(Bluez5ProfileAvcrp *avrcp,
 	free_desktop_dbus_properties_call_get_all_sync(
 			mPropertiesProxy,
 			"org.bluez.MediaFolder1", &propsVar, NULL, NULL);
-	mediaFolderPropertiesChanged(propsVar);
+	if (propsVar != NULL)
+		mediaFolderPropertiesChanged(propsVar);
 	g_variant_unref(propsVar);
 }
 
