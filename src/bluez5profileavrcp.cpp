@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2020 LG Electronics, Inc.
+// Copyright (c) 2018-2021 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ mConnectedTarget(false),
 mObjectManager(nullptr),
 mAddressedMediaPlayer(nullptr)
 {
-	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
+	mWatcherId = g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
 		handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);
 }
 
@@ -64,6 +64,9 @@ Bluez5ProfileAvcrp::~Bluez5ProfileAvcrp()
 		g_object_unref(mObjectManager);
 		mObjectManager = nullptr;
 	}
+	/* Stops watching a name */
+	if (mWatcherId)
+		g_bus_unwatch_name(mWatcherId);
 }
 
 void Bluez5ProfileAvcrp::connect(const std::string& address, BluetoothResultCallback callback)

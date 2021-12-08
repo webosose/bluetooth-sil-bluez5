@@ -30,7 +30,7 @@ Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 	mState(NOT_PLAYING),
 	mConnected(false)
 {
-	g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
+	mWatcherId = g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
 					 handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);
 }
 
@@ -48,6 +48,9 @@ Bluez5ProfileA2dp::~Bluez5ProfileA2dp()
 		g_object_unref(mPropertiesProxy);
 		mPropertiesProxy = 0;
 	}
+	/* Stops watching a name */
+	if (mWatcherId)
+		g_bus_unwatch_name(mWatcherId);
 }
 
 void Bluez5ProfileA2dp::getProperties(const std::string &address, BluetoothPropertiesResultCallback callback)

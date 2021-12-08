@@ -76,7 +76,7 @@ mToken(0)
 	mMeshAdvProvAgent = new Bluez5MeshAdvProvAgent(mAdapter, mMesh);
 	mMeshApplication = new Bluez5MeshApplication(mAdapter, mMesh);
 
-	g_bus_watch_name(G_BUS_TYPE_SYSTEM, BLUEZ_MESH_NAME, G_BUS_NAME_WATCHER_FLAGS_NONE,
+	mWatcherId = g_bus_watch_name(G_BUS_TYPE_SYSTEM, BLUEZ_MESH_NAME, G_BUS_NAME_WATCHER_FLAGS_NONE,
 					 handleBluezMeshServiceStarted, handleBluezMeshServiceStopped, this, NULL);
 }
 
@@ -124,6 +124,9 @@ Bluez5MeshAdv::~Bluez5MeshAdv()
 		mObjectManager = 0;
 	}
 
+	/* Stops watching a name */
+	if (mWatcherId)
+		g_bus_unwatch_name(mWatcherId);
 }
 
 void Bluez5MeshAdv::getRandomBytes(unsigned char *buf, int size)

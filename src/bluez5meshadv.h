@@ -115,6 +115,7 @@ private:
 	std::vector<Bluez5MeshElement> mElements;
 	uint8_t mTransacId;
 	guint mReqExpTimerId;
+	guint mWatcherId;
 
 public:
 	uint64_t mToken;

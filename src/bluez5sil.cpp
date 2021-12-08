@@ -56,6 +56,10 @@ Bluez5SIL::~Bluez5SIL()
 		    delete *iter;
 	}
 	mAdapters.clear();
+
+	/* Stops watching a name */
+	if (nameWatch)
+		g_bus_unwatch_name(nameWatch);
 }
 
 void Bluez5SIL::handleBluezServiceStarted(GDBusConnection *conn, const gchar *name,

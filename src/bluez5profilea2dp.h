@@ -69,6 +69,7 @@ private:
 	FreeDesktopDBusProperties *mPropertiesProxy;
 	BluezMediaTransport1 *mInterface;
 	std::string mTransportUuid;
+	guint mWatcherId;
 };
 
 #endif
