@@ -58,6 +58,7 @@ mMeshAdvProvAgent(nullptr),
 mMeshApplication(nullptr),
 mMgmtInterface(nullptr),
 mNodeInterface(nullptr),
+mWatcherId(0),
 mTransacId(0),
 mReqExpTimerId(0),
 mToken(0)
