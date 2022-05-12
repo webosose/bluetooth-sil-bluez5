@@ -14,6 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include <array>
+
 #include "logging.h"
 #include "bluez5device.h"
 #include "bluez5adapter.h"
