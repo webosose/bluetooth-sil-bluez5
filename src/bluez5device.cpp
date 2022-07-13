@@ -64,7 +64,7 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	mConnectedRole(BLUETOOTH_DEVICE_ROLE)
 {
 	GError *error = 0;
-	GVariant *propsVar;
+	GVariant *propsVar = NULL;
 
 	mDeviceProxy = bluez_device1_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
 														"org.bluez", objectPath.c_str(), NULL, &error);
@@ -91,6 +91,8 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	g_signal_connect(G_OBJECT(mPropertiesProxy), "properties-changed", G_CALLBACK(handlePropertiesChanged), this);
 
 	free_desktop_dbus_properties_call_get_all_sync(mPropertiesProxy, "org.bluez.Device1", &propsVar, NULL, NULL);
+
+	DEBUG("Before calling g_variant_n_children() propsVar value %p\n", propsVar);
 	if(!error && propsVar != NULL)
 	{
 		for (int n = 0; n < g_variant_n_children(propsVar); n++)
