@@ -93,7 +93,7 @@ public:
 								  int32_t waitTime = 0);
 
 private:
-	void getRandomBytes(unsigned char *buf, int size);
+	void getRandomBytes(unsigned char *buf);
 	GVariant* createEmptyStringArrayVariant();
 	GVariant* prepareSendDevKeyData(uint8_t *msg, uint16_t n);
 	void startTimer(const std::string config);

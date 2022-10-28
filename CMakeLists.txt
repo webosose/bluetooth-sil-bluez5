@@ -54,6 +54,10 @@ pkg_check_modules(PMLOG REQUIRED PmLogLib)
 include_directories(${PMLOG_INCLUDE_DIRS})
 webos_add_compiler_flags(ALL ${PMLOG_CFLAGS_OTHER})
 
+pkg_check_modules(UUID REQUIRED uuid)
+include_directories(${UUID_INCLUDE_DIRS})
+webos_add_compiler_flags(ALL ${UUID_CFLAGS_OTHER})
+
 set(CMAKE_SHARED_MODULE_PREFIX "")
 
 webos_add_linker_options(ALL --no-undefined)
@@ -138,5 +142,5 @@ file(GLOB SOURCES
 
 add_library(bluez5 MODULE ${SOURCES})
 target_link_libraries(bluez5 ${GLIB2_LDFLAGS} ${PMLOG_LDFLAGS}
-                             ${GIO2_LDFLAGS} ${GIO-UNIX_LDFLAGS} ssl crypto)
+                             ${GIO2_LDFLAGS} ${GIO-UNIX_LDFLAGS} ${UUID_LDFLAGS})
 install(TARGETS bluez5 DESTINATION ${WEBOS_INSTALL_LIBDIR}/bluetooth-sils)

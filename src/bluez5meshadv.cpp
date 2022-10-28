@@ -25,7 +25,7 @@
 #include "bluez5meshadvprovisioner.h"
 #include "bluez5meshadvprovagent.h"
 #include "bluez5meshapplication.h"
-#include <openssl/rand.h>
+#include <uuid/uuid.h>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -130,9 +130,9 @@ Bluez5MeshAdv::~Bluez5MeshAdv()
 		g_bus_unwatch_name(mWatcherId);
 }
 
-void Bluez5MeshAdv::getRandomBytes(unsigned char *buf, int size)
+void Bluez5MeshAdv::getRandomBytes(unsigned char *buf)
 {
-	RAND_bytes(buf, size);
+	uuid_generate(buf);
 }
 
 void Bluez5MeshAdv::updateNetworkId()
@@ -176,7 +176,7 @@ BluetoothError Bluez5MeshAdv::createNetwork()
 		return BLUETOOTH_ERROR_NOT_ALLOWED;
 
 	GError *error = 0;
-	getRandomBytes(mUuid, 16);
+	getRandomBytes(mUuid);
 
 	GBytes *bytes = g_bytes_new(mUuid, 16);
 
