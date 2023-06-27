@@ -58,7 +58,7 @@ void waitForBus(GBusType busType, StatusCallback callback)
 				return false;
 			};
 
-			g_timeout_add(100, glibSourceMethodWrapper,
+			g_timeout_add(250, glibSourceMethodWrapper,
 			              new GlibSourceFunctionWrapper(timeoutCallback));
 			return;
 		}
