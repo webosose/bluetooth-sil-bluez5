@@ -17,6 +17,7 @@
 #ifndef DBUSCONNECTION_H
 #define DBUSCONNECTION_H
 
+#include <cstdint>
 #include <functional>
 #include <string>
 
