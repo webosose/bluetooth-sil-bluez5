@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2021 LG Electronics, Inc.
+# Copyright (c) 2018-2024 LG Electronics, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -62,10 +62,8 @@ set(CMAKE_SHARED_MODULE_PREFIX "")
 
 webos_add_linker_options(ALL --no-undefined)
 
-if(WEBOS_TARGET_DISTRO STREQUAL "webos-auto")
-        if(WEBOS_TARGET_MACHINE STREQUAL "sa8155" OR WEBOS_TARGET_MACHINE STREQUAL "qemux86" OR WEBOS_TARGET_MACHINE STREQUAL "qemux86-64")
-                add_definitions(-DWEBOS_AUTO)
-        endif()
+if(EXTENSION_WEBOS_AUTO)
+    add_definitions(-DWEBOS_AUTO)
 endif()
 
 set(GDBUS_IF_DIR ${WEBOS_BINARY_CONFIGURED_DIR}/src)
