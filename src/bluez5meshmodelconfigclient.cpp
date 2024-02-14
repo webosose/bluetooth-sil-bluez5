@@ -1,4 +1,4 @@
-// Copyright (c) 2021 LG Electronics, Inc.
+// Copyright (c) 2024 LG Electronics, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -838,17 +838,11 @@ BluetoothError Bluez5MeshModelConfigClient::configGet(uint16_t destAddress,
 	return BLUETOOTH_ERROR_PARAM_INVALID;
 }
 
-uint16_t Bluez5MeshModelConfigClient::putModelId(uint8_t *buf, uint32_t *args, bool vendor)
+uint16_t Bluez5MeshModelConfigClient::putModelId(uint8_t *buf, uint32_t *args)
 {
 		uint16_t n = 2;
 
-		if (vendor) {
-				put_le16(args[1], buf);
-				buf += 2;
-				n = 4;
-		}
-
-		put_le16(args[0], buf);
+		put_le16((uint16_t)(*args), buf);
 
 		return n;
 }
@@ -897,7 +891,7 @@ BluetoothError Bluez5MeshModelConfigClient::configUnBindAppKey(uint16_t destAddr
 	n += 2;
 	put_le16(appKeyIndex, msg + n);
 	n += 2;
-	n += putModelId(msg + n, &modelId, false);
+	n += putModelId(msg + n, &modelId);
 
 	btError = mMeshAdv->devKeySend(destAddress, netKeyIndex, msg, n);
 	if (BLUETOOTH_ERROR_NONE == btError)
@@ -922,7 +916,7 @@ BluetoothError Bluez5MeshModelConfigClient::configBindAppKey(uint16_t destAddres
 	put_le16(appKeyIndex, msg + n);
 	n += 2;
 
-	n += putModelId(msg + n, &modelId, false);
+	n += putModelId(msg + n, &modelId);
 
 	btError = mMeshAdv->devKeySend(destAddress, netKeyIndex, msg, n);
 	if (BLUETOOTH_ERROR_NONE == btError)
