@@ -33,9 +33,9 @@ static std::vector<std::string> stateString = {"idle", "idle", "active", "active
 
 Bluez5ProfilePbap::Bluez5ProfilePbap(Bluez5Adapter *adapter) :
     Bluez5ObexProfileBase(Bluez5ObexSession::Type::PBAP, adapter, BLUETOOTH_PROFILE_PBAP_UUID),
+    mAdapter(adapter),
     mObjectPhonebookProxy(nullptr),
-    mPropertiesProxy(nullptr),
-    mAdapter(adapter)
+    mPropertiesProxy(nullptr)
 {
     INFO(MSGID_PBAP_PROFILE_ERROR, 0, "Supported PBAP Version:%s",VERSION);
 }

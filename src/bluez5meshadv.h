@@ -118,10 +118,10 @@ private:
 	guint mWatcherId;
 
 public:
-	uint64_t mToken;
 	BleMeshConfiguration mConfiguration;
 	Bluez5ProfileMesh *mMesh;
 	Bluez5Adapter *mAdapter;
+	uint64_t mToken;
 };
 
 #endif //BLUEZ5MESHADV_H

@@ -161,6 +161,7 @@ BluetoothError Bluez5MeshElement::configGet(uint16_t destAddress,
 										uint16_t netKeyIndex)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
+	if (model == mModels.end()) return BLUETOOTH_ERROR_FAIL;
 	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->configGet(destAddress, config, netKeyIndex);
 }
@@ -172,6 +173,7 @@ BluetoothError Bluez5MeshElement::configSet(
 		int32_t waitTime, int32_t numberOfElements, uint8_t phase)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
+	if (model == mModels.end()) return BLUETOOTH_ERROR_FAIL;
 	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->configSet(destAddress, config, gattProxyState,
 									netKeyIndex, appKeyIndex, modelId,
@@ -181,6 +183,7 @@ BluetoothError Bluez5MeshElement::configSet(
 BluetoothError Bluez5MeshElement::deleteNode(uint16_t destAddress, uint8_t count)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
+	if (model == mModels.end()) return BLUETOOTH_ERROR_FAIL;
 	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->deleteNode(destAddress, count);
 }
@@ -188,6 +191,7 @@ BluetoothError Bluez5MeshElement::deleteNode(uint16_t destAddress, uint8_t count
 BluetoothError Bluez5MeshElement::getCompositionData(uint16_t destAddress)
 {
 	auto model = mModels.find(CONFIG_CLIENT_MODEL_ID);
+	if (model == mModels.end()) return BLUETOOTH_ERROR_FAIL;
 	Bluez5MeshModelConfigClient *configClient = (Bluez5MeshModelConfigClient *)(model->second).get();
 	return configClient->getCompositionData(destAddress);
 }
@@ -195,6 +199,7 @@ BluetoothError Bluez5MeshElement::getCompositionData(uint16_t destAddress)
 BluetoothError Bluez5MeshElement::setOnOff(uint16_t destAddress, uint16_t appIndex, bool onoff)
 {
 	auto model = mModels.find(GENERIC_ONOFF_CLIENT_MODEL_ID);
+	if (model == mModels.end()) return BLUETOOTH_ERROR_FAIL;
 	Bluez5MeshModelOnOffClient *onoffClient = (Bluez5MeshModelOnOffClient *)(model->second).get();
 	return onoffClient->setOnOff(destAddress, appIndex, onoff);
 }

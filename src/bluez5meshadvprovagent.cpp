@@ -85,7 +85,7 @@ BluetoothError Bluez5MeshAdvProvAgent::supplyStatic(const std::string &oobData)
 	uint8_t out[16] = {0};
 	for (int i = 0; i < 16; i++)
 	{
-		sscanf(&oobData[i * 2], "%02hhx", &out[i]);
+		if (i*2 < oobData.length()) sscanf(&oobData[i * 2], "%02hhx", &out[i]);
 	}
 	GBytes *bytes = g_bytes_new(out, 16);
 	GVariant *oobVar = g_variant_new_from_bytes(G_VARIANT_TYPE_BYTESTRING, bytes, true);

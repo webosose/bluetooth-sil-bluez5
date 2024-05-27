@@ -68,8 +68,8 @@ Bluez5Adapter::Bluez5Adapter(const std::string &objectPath) :
 	mObexClient(0),
 	mCancelDiscCallback(0),
 	mAdvertising(false),
-	mMediaManager(nullptr),
-	mPlayer(nullptr)
+	mPlayer(nullptr),
+	mMediaManager(nullptr)
 {
 	GError *error = 0;
 

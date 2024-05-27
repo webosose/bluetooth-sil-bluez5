@@ -56,13 +56,13 @@ Bluez5Device::Bluez5Device(Bluez5Adapter *adapter, const std::string &objectPath
 	mClassOfDevice(0),
 	mType(BLUETOOTH_DEVICE_TYPE_UNKNOWN),
 	mPaired(false),
+	mDeviceProxy(0),
+	mPropertiesProxy(0),
 	mConnected(false),
 	mTrusted(false),
 	mBlocked(false),
 	mTxPower(0),
 	mRSSI(0),
-	mDeviceProxy(0),
-	mPropertiesProxy(0),
 	mConnectedRole(BLUETOOTH_DEVICE_ROLE)
 {
 	GError *error = 0;
@@ -390,7 +390,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 			key_code = key;
 			GVariantIter it_array;
 			g_variant_iter_init(&it_array, array);
-			int i = 0;
+			unsigned int i = 0;
 			while(g_variant_iter_loop(&it_array, "y", &val))
 			{
 				state[i++] = val;

@@ -24,11 +24,11 @@ const std::string BLUETOOTH_PROFILE_A2DP_SINK_UUID = "0000110b-0000-1000-8000-00
 
 Bluez5ProfileA2dp::Bluez5ProfileA2dp(Bluez5Adapter *adapter) :
 	Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_A2DP_SINK_UUID),
+	mConnected(false),
 	mObjectManager(0),
-	mPropertiesProxy(0),
-	mInterface(nullptr),
 	mState(NOT_PLAYING),
-	mConnected(false)
+	mPropertiesProxy(0),
+	mInterface(nullptr)
 {
 	mWatcherId = g_bus_watch_name(G_BUS_TYPE_SYSTEM, "org.bluez", G_BUS_NAME_WATCHER_FLAGS_NONE,
 					 handleBluezServiceStarted, handleBluezServiceStopped, this, NULL);

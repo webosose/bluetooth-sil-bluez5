@@ -46,10 +46,10 @@ Bluez5ProfileAvcrp::Bluez5ProfileAvcrp(Bluez5Adapter* adapter):
 Bluez5ProfileBase(adapter, BLUETOOTH_PROFILE_AVRCP_REMOTE_UUID),
 mMetaDataRequestId(0),
 mMediaPlayStatusRequestId(0),
-mConnected(false),
-mConnectedDeviceAddress(""),
 mConnectedController(false),
 mConnectedTarget(false),
+mConnected(false),
+mConnectedDeviceAddress(""),
 mObjectManager(nullptr),
 mAddressedMediaPlayer(nullptr)
 {

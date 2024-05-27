@@ -26,10 +26,10 @@ Bluez5ObexTransfer::Bluez5ObexTransfer(const std::string &objectPath, TransferTy
 	mObjectPath(objectPath),
 	mTransferProxy(0),
 	mPropertiesProxy(0),
+	mWatchCallback(nullptr),
 	mBytesTransferred(0),
 	mFileSize(0),
 	mState(INACTIVE),
-	mWatchCallback(nullptr),
 	mTransferType(type)
 {
 	GError *error = 0;

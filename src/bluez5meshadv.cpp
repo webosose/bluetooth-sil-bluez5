@@ -48,19 +48,19 @@
 #define TTL_MASK	0x7f
 
 Bluez5MeshAdv::Bluez5MeshAdv(Bluez5ProfileMesh *mesh, Bluez5Adapter *adapter):
-mMesh(mesh),
-mAdapter(adapter),
-mNetworkInterface(nullptr),
-mObjectManager(nullptr),
 mDbusConn(nullptr),
+mObjectManager(nullptr),
+mNetworkInterface(nullptr),
+mMgmtInterface(nullptr),
+mNodeInterface(nullptr),
 mMeshAdvProv(nullptr),
 mMeshAdvProvAgent(nullptr),
 mMeshApplication(nullptr),
-mMgmtInterface(nullptr),
-mNodeInterface(nullptr),
-mWatcherId(0),
 mTransacId(0),
 mReqExpTimerId(0),
+mWatcherId(0),
+mMesh(mesh),
+mAdapter(adapter),
 mToken(0)
 {
 	GError *error = 0;

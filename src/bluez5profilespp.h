@@ -77,11 +77,11 @@ private:
 			, mUuid (uuid)
 			, mChannelId(connectedChannelID)
 			, mDeviceRole(deviceRole)
-			, mSppProfile(sppProfile)
+			, mInterface(nullptr)
 			, mSockfd(-1)
 			, mChannel(nullptr)
-			, mInterface(nullptr)
 			, mIoWatchId(0)
+			, mSppProfile(sppProfile)
 		{
 		}
 

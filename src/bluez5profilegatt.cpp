@@ -1585,7 +1585,7 @@ void Bluez5ProfileGatt::addService(uint16_t appId, const BluetoothGattService &s
 	for (auto it : BluetoothUuidList)
 		uuidArray[index++] = it.toString().c_str();
 
-	uuidArray[index] = NULL;
+	if (index < sizeof(uuidArray)) uuidArray[index] = NULL;
 
 	BluezObjectSkeleton *object = bluez_object_skeleton_new(serviceObjPath.c_str());
 
@@ -1790,7 +1790,7 @@ void Bluez5ProfileGatt::addCharacteristic(uint16_t appId, uint16_t serviceId, co
 		return;
 	}
 
-	for (int i = 0; flags[i] != NULL; i++)
+	for (int i = 0; i < sizeof(flags) && flags[i] != NULL; i++)
 	{
 		g_variant_builder_add(builder, "s", flags[i]);
 	}
@@ -1947,7 +1947,7 @@ void Bluez5ProfileGatt::addDescriptor(uint16_t appId, uint16_t serviceId, const 
 		return;
 	}
 
-	for (int i = 0; flags[i] != NULL; i++)
+	for (int i = 0; i < sizeof(flags) && flags[i] != NULL; i++)
 	{
 		g_variant_builder_add(builder, "s", flags[i]);
 	}
@@ -2165,7 +2165,7 @@ void Bluez5ProfileGatt::updatePropertyFlags(const BluetoothGattCharacteristic &c
 		}
 	}
 
-	propertyflags[index] = NULL;
+	if (index < sizeof(propertyflags)) propertyflags[index] = NULL;
 }
 
 void Bluez5ProfileGatt::updatePermissionFlags(const BluetoothGattDescriptor &descriptor, const char **permissionflags)
@@ -2183,7 +2183,7 @@ void Bluez5ProfileGatt::updatePermissionFlags(const BluetoothGattDescriptor &des
 		}
 	}
 
-	permissionflags[index] = NULL;
+	if (index < sizeof(permissionflags)) permissionflags[index] = NULL;
 }
 
 void Bluez5ProfileGatt::onCharacteristicPropertiesChanged(GattRemoteCharacteristic* characteristic, GVariant *changed_properties)

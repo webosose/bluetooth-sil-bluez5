@@ -189,7 +189,7 @@ void Bluez5Advertise::advertiseServiceUuids(uint8_t advId, std::unordered_map<st
 		uuids[i++] = it->first.c_str();
 	}
 
-	uuids[i] = NULL;
+	if (i < serviceList.size()+1) uuids[i] = NULL;
 	bluez_leadvertisement1_set_service_uuids (interface, uuids);
 }
 
