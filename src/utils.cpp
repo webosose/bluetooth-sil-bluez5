@@ -142,7 +142,7 @@ void objPathToDevAddress(const std::string &objectPath, std::string &devAddress)
 	}
 }
 
-bool meshOpcodeGet(const uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n)
+bool meshOpcodeGet(uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n)
 {
 	if (!n || !opcode || sz < 1)
 		return false;

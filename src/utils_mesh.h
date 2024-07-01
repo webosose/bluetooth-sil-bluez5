@@ -168,57 +168,57 @@
 #define get_unaligned(ptr)			\
 __extension__ ({				\
 	struct __attribute__((packed)) {	\
-		__typeof__(*(ptr)) __v;		\
-	} *__p = (__typeof__(__p)) (ptr);	\
-	__p->__v;				\
+		__typeof__(*(ptr)) v;		\
+	} *p = (__typeof__(p)) (ptr);	\
+	p->v;				\
 })
 
 #define put_unaligned(val, ptr)			\
 do {						\
 	struct __attribute__((packed)) {	\
-		__typeof__(*(ptr)) __v;		\
-	} *__p = (__typeof__(__p)) (ptr);	\
-	__p->__v = (val);			\
+		__typeof__(*(ptr)) v;		\
+	} *p = (__typeof__(p)) (ptr);	\
+	p->v = (val);			\
 } while (0)
 
-static inline int8_t get_s8(const void *ptr)
+static inline int8_t get_s8(void *ptr)
 {
 	return *((int8_t *) ptr);
 }
 
-static inline uint8_t get_u8(const void *ptr)
+static inline uint8_t get_u8(void *ptr)
 {
 	return *((uint8_t *) ptr);
 }
 
-static inline uint16_t get_le16(const void *ptr)
+static inline uint16_t get_le16(void *ptr)
 {
-	return le16_to_cpu(get_unaligned((const uint16_t *) ptr));
+	return le16_to_cpu(get_unaligned((uint16_t *) ptr));
 }
 
-static inline uint16_t get_be16(const void *ptr)
+static inline uint16_t get_be16(void *ptr)
 {
-	return be16_to_cpu(get_unaligned((const uint16_t *) ptr));
+	return be16_to_cpu(get_unaligned((uint16_t *) ptr));
 }
 
-static inline uint32_t get_le32(const void *ptr)
+static inline uint32_t get_le32(void *ptr)
 {
-	return le32_to_cpu(get_unaligned((const uint32_t *) ptr));
+	return le32_to_cpu(get_unaligned((uint32_t *) ptr));
 }
 
-static inline uint32_t get_be32(const void *ptr)
+static inline uint32_t get_be32(void *ptr)
 {
-	return be32_to_cpu(get_unaligned((const uint32_t *) ptr));
+	return be32_to_cpu(get_unaligned((uint32_t *) ptr));
 }
 
-static inline uint64_t get_le64(const void *ptr)
+static inline uint64_t get_le64(void *ptr)
 {
-	return le64_to_cpu(get_unaligned((const uint64_t *) ptr));
+	return le64_to_cpu(get_unaligned((uint64_t *) ptr));
 }
 
-static inline uint64_t get_be64(const void *ptr)
+static inline uint64_t get_be64(void *ptr)
 {
-	return be64_to_cpu(get_unaligned((const uint64_t *) ptr));
+	return be64_to_cpu(get_unaligned((uint64_t *) ptr));
 }
 
 static inline void put_le16(uint16_t val, void *dst)
@@ -226,7 +226,7 @@ static inline void put_le16(uint16_t val, void *dst)
 	put_unaligned(cpu_to_le16(val), (uint16_t *) dst);
 }
 
-static inline void put_be16(uint16_t val, const void *ptr)
+static inline void put_be16(uint16_t val, void *ptr)
 {
 	put_unaligned(cpu_to_be16(val), (uint16_t *) ptr);
 }
@@ -250,7 +250,7 @@ static inline void put_be64(uint64_t val, void *dst)
 {
 	put_unaligned(cpu_to_be64(val), (uint64_t *) dst);
 }
-bool meshOpcodeGet(const uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n);
+bool meshOpcodeGet(uint8_t *buf, uint16_t sz, uint32_t *opcode, int *n);
 uint16_t meshOpcodeSet(uint32_t opcode, uint8_t *buf);
 #ifdef __cplusplus
   }
