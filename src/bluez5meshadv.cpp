@@ -638,7 +638,7 @@ void Bluez5MeshAdv::startTimer(const std::string config)
 {
 	stopReqTimer();
 	DEBUG("%s::%s",__FILE__,__FUNCTION__);
-	mConfiguration.setConfig(config);
+	mConfiguration.setConfig(std::move(config));
 	mReqExpTimerId = g_timeout_add( RESPOND_WAIT_DURATION * ONE_SECOND, atTimeOut, this);
 	DEBUG("Request timer started [%d]",mReqExpTimerId);
 }

@@ -91,7 +91,7 @@ std::vector<std::string>convertArrayStringGVariantToVector(GVariant *iter)
 
 	while (g_variant_iter_loop(valueIter, "s", &valueByte)) {
 		std::string s(valueByte);
-		value.push_back(s);
+		value.push_back(std::move(s));
 	}
 
 	g_variant_iter_free(valueIter);

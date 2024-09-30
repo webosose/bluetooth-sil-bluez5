@@ -237,7 +237,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
 
 			std::string uuid = g_variant_get_string(uuidVar, NULL);
-			mConnectedUuids.push_back(uuid);
+			mConnectedUuids.push_back(std::move(uuid));
 			g_variant_unref(uuidVar);
 		}
 		updateConnectedRole();
@@ -253,7 +253,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
 
 			std::string uuid = g_variant_get_string(uuidVar, NULL);
-			mUuids.push_back(uuid);
+			mUuids.push_back(std::move(uuid));
 
 			g_variant_unref(uuidVar);
 		}
@@ -269,7 +269,7 @@ bool Bluez5Device::parsePropertyFromVariant(const std::string &key, GVariant *va
 			GVariant *mapInstanceVar = g_variant_get_child_value(valueVar, m);
 
 			std::string mapInstance = g_variant_get_string(mapInstanceVar, NULL);
-			mMapInstancesName.push_back(mapInstance);
+			mMapInstancesName.push_back(std::move(mapInstance));
 
 			g_variant_unref(mapInstanceVar);
 		}

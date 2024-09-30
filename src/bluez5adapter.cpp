@@ -380,7 +380,7 @@ bool Bluez5Adapter::addPropertyFromVariant(BluetoothPropertiesList& properties, 
 			GVariant *uuidVar = g_variant_get_child_value(valueVar, m);
 
 			std::string uuid = g_variant_get_string(uuidVar, NULL);
-			mUuids.push_back(uuid);
+			mUuids.push_back(std::move(uuid));
 
 			g_variant_unref(uuidVar);
 		}
@@ -1284,7 +1284,7 @@ BluetoothProfile* Bluez5Adapter::createProfile(const std::string& profileId)
 			mUuids.push_back(BLUETOOTH_PROFILE_REMOTE_HFP_HF_UUID);
 		}
 		else
-			mUuids.push_back(uuid);
+			mUuids.push_back(std::move(uuid));
 	}
 
 	return profile;
